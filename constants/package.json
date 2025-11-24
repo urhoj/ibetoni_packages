@@ -1,0 +1,46 @@
+{
+  "name": "@ibetoni/constants",
+  "version": "1.0.0",
+  "description": "Shared constants for betoni.online platform",
+  "main": "index.js",
+  "module": "src/index.js",
+  "exports": {
+    ".": {
+      "import": "./src/index.js",
+      "require": "./index.js"
+    },
+    "./http": {
+      "import": "./src/http.js",
+      "require": "./src/http.cjs"
+    },
+    "./errors": {
+      "import": "./src/errors.js",
+      "require": "./src/errors.cjs"
+    },
+    "./cache": {
+      "import": "./src/cache.js",
+      "require": "./src/cache.cjs"
+    },
+    "./security": {
+      "import": "./src/security.js",
+      "require": "./src/security.cjs"
+    },
+    "./domains": {
+      "import": "./src/domains.js",
+      "require": "./src/domains.cjs"
+    }
+  },
+  "keywords": [
+    "betoni",
+    "constants",
+    "cors",
+    "domains",
+    "http",
+    "errors",
+    "cache",
+    "security"
+  ],
+  "author": "betoni.online",
+  "license": "UNLICENSED",
+  "private": true
+}

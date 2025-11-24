@@ -1,0 +1,27 @@
+{
+  "name": "@ibetoni/cache",
+  "version": "1.0.0",
+  "description": "Shared Redis cache and invalidation system for betoni.online",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "redis",
+    "cache",
+    "invalidation",
+    "betoni"
+  ],
+  "author": "betoni.online",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "ioredis": "^5.8.2"
+  },
+  "peerDependencies": {
+    "winston": "^3.x.x"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

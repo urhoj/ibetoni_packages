@@ -1,0 +1,28 @@
+{
+  "name": "@ibetoni/ocr-utils",
+  "version": "1.0.0",
+  "description": "Reusable OCR utilities for betoni.online - classification, confidence scoring, and validation",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./constants": "./src/constants.js",
+    "./classification": "./src/classification.js",
+    "./confidence": "./src/confidence.js",
+    "./validation": "./src/validation.js",
+    "./statusTransitions": "./src/statusTransitions.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "ocr",
+    "document-intelligence",
+    "classification",
+    "confidence",
+    "validation",
+    "betoni"
+  ],
+  "author": "iBetoni",
+  "license": "UNLICENSED",
+  "private": true
+}

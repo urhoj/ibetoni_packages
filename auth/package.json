@@ -1,0 +1,21 @@
+{
+  "name": "@ibetoni/auth",
+  "version": "1.0.0",
+  "description": "Shared authentication utilities for betoni.online platform",
+  "main": "src/index.js",
+  "keywords": [
+    "betoni",
+    "authentication",
+    "jwt",
+    "oauth",
+    "google"
+  ],
+  "author": "betoni.online",
+  "license": "UNLICENSED",
+  "private": true,
+  "peerDependencies": {
+    "jsonwebtoken": "^9.0.0",
+    "bcryptjs": "^2.4.3 || ^3.0.0",
+    "google-auth-library": "^9.0.0 || ^10.0.0"
+  }
+}

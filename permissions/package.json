@@ -1,0 +1,29 @@
+{
+  "name": "@ibetoni/permissions",
+  "version": "1.0.0",
+  "description": "Shared permission validation system for betoni.online frontend and backend",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./frontend": "./src/frontend/index.js",
+    "./backend": "./src/backend/index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "permissions",
+    "authorization",
+    "validation",
+    "keikka",
+    "betoni"
+  ],
+  "author": "betoni.online",
+  "license": "UNLICENSED",
+  "peerDependencies": {
+    "winston": "^3.x.x"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
