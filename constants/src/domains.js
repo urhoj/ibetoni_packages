@@ -58,7 +58,7 @@ const allowedOrigins = [
   "https://api-latest.betoni.online",
   "https://api-latest.ibetoni.fi",
   "https://api-staging.betoni.online",
-  "https://api-prod.ibetoni.fi",
+  "https://api-staging.ibetoni.fi",
 
   // localhost for development
   "http://localhost:3000",
