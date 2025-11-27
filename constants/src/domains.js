@@ -27,6 +27,7 @@ const allowedOrigins = [
   "https://puminet7functions.azurewebsites.net",
 
   // staging environment
+  "https://wonderful-rock-08f826703-staging.westeurope.3.azurestaticapps.net",
   "https://puminet7app-staging.azurewebsites.net",
   "https://staging.betoni.online",
   "https://staging.ibetoni.fi",
@@ -41,6 +42,7 @@ const allowedOrigins = [
   "https://staging.betoni.online",
 
   // production (live)
+  "https://wonderful-rock-08f826703.azurestaticapps.net",
   "https://puminet7app.azurewebsites.net",
   "https://puminet7api.azurewebsites.net",
   "https://betoni.online",
@@ -58,7 +60,7 @@ const allowedOrigins = [
   "https://api-latest.betoni.online",
   "https://api-latest.ibetoni.fi",
   "https://api-staging.betoni.online",
-  "https://api-prod.ibetoni.fi",
+  "https://api-staging.ibetoni.fi",
 
   // localhost for development
   "http://localhost:3000",
