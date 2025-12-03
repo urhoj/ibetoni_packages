@@ -61,13 +61,8 @@ export async function checkEndpointHealth(endpoint) {
 
     // Check if we got a successful response
     if (response.status === 200) {
-      // Try to extract version/status from response based on endpoint type
-      if (endpoint.type === 'infrastructure') {
-        // Infrastructure endpoints return connected status
-        if (response.data && response.data.connected !== undefined) {
-          result.version = response.data.connected ? 'Connected' : 'Disconnected';
-        }
-      } else if (endpoint.type === 'functions') {
+      // Try to extract version from response based on endpoint type
+      if (endpoint.type === 'functions') {
         // Functions endpoints return plain text
         result.version = 'Active';
       } else if (response.data && response.data.version) {

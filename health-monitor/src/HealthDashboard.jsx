@@ -67,12 +67,11 @@ export default function HealthDashboard({
 
   // Group results by type
   const groupedResults = groupResultsByType(results);
-  const typeOrder = ['frontend', 'backend', 'functions', 'infrastructure'];
+  const typeOrder = ['frontend', 'backend', 'functions'];
   const typeLabels = {
     frontend: 'Frontend',
     backend: 'Backend API',
-    functions: 'Azure Functions',
-    infrastructure: 'Infrastructure'
+    functions: 'Azure Functions'
   };
 
   return (
@@ -173,8 +172,7 @@ function getTypeBadgeColor(type) {
   const colors = {
     frontend: { bg: '#e3f2fd', text: '#1976d2' },
     backend: { bg: '#f3e5f5', text: '#7b1fa2' },
-    functions: { bg: '#fff3e0', text: '#e65100' },
-    infrastructure: { bg: '#e8f5e9', text: '#2e7d32' }
+    functions: { bg: '#fff3e0', text: '#e65100' }
   };
   return colors[type] || { bg: '#f5f5f5', text: '#666' };
 }
@@ -231,7 +229,7 @@ function EndpointCard({ result }) {
             </span>
             {result.version && (
               <span>
-                <strong>{result.type === 'infrastructure' ? 'Status' : 'Version'}:</strong> {result.version}
+                <strong>Version:</strong> {result.version}
               </span>
             )}
             {result.error && (

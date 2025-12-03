@@ -19,15 +19,16 @@ This package provides comprehensive health checking functionality for monitoring
 
 ### Frontend (puminet4)
 - Production: `https://ibetoni.fi`
-- Staging: `https://staging.ibetoni.fi`
-- Latest: `https://latest.ibetoni.fi`
-- Stable: `https://stable.ibetoni.fi`
+- Staging: `https://wonderful-rock-08f826703-staging.westeurope.3.azurestaticapps.net`
 
 ### Backend API (puminet5api)
 - Production: `https://api.ibetoni.fi`
 - Staging: `https://api-staging.ibetoni.fi`
-- Latest: `https://api-latest.ibetoni.fi`
-- Stable: `https://api.stable.ibetoni.fi`
+
+### Azure Functions (puminet7-functions-app)
+- Production: `https://functions.ibetoni.fi`
+
+> **Note:** Azure Static Web Apps staging environments cannot have custom domains, hence the full Azure URL for staging frontend.
 
 ## Installation
 
@@ -130,12 +131,12 @@ Gets all configured endpoints.
 **Returns:** `Array<Object>` - All endpoint configurations
 
 #### `getEndpointsByType(type)`
-Gets endpoints by type ('frontend' or 'backend').
+Gets endpoints by type ('frontend', 'backend', or 'functions').
 
 **Returns:** `Array<Object>` - Filtered endpoints
 
 #### `getEndpointsByEnvironment(environment)`
-Gets endpoints by environment ('production', 'staging', 'latest', 'stable').
+Gets endpoints by environment ('production' or 'staging').
 
 **Returns:** `Array<Object>` - Filtered endpoints
 

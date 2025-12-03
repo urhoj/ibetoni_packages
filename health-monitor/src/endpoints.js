@@ -44,22 +44,6 @@ export const ENDPOINTS = {
       environment: "production",
     },
   ],
-  infrastructure: [
-    {
-      name: "Database",
-      url: "https://api.ibetoni.fi/api/test/sql",
-      versionEndpoint: "https://api.ibetoni.fi/api/test/sql",
-      type: "infrastructure",
-      environment: "production",
-    },
-    {
-      name: "Redis",
-      url: "https://api.ibetoni.fi/api/test/redis",
-      versionEndpoint: "https://api.ibetoni.fi/api/test/redis",
-      type: "infrastructure",
-      environment: "production",
-    },
-  ],
 };
 
 /**
@@ -70,7 +54,6 @@ export function getAllEndpoints() {
     ...ENDPOINTS.frontend,
     ...ENDPOINTS.backend,
     ...ENDPOINTS.functions,
-    ...ENDPOINTS.infrastructure,
   ];
 }
 
