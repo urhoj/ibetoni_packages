@@ -13,7 +13,7 @@ import {
   getStatusIcon,
   getStatusColor,
   formatTimestamp,
-  groupResultsByEnvironment
+  groupResultsByType
 } from './index.js';
 
 /**
@@ -65,9 +65,15 @@ export default function HealthDashboard({
     return () => clearInterval(interval);
   }, [autoRefresh, refreshInterval, checkHealth]);
 
-  // Group results by environment
-  const groupedResults = groupResultsByEnvironment(results);
-  const environments = ['production', 'staging', 'latest', 'stable'];
+  // Group results by type
+  const groupedResults = groupResultsByType(results);
+  const typeOrder = ['frontend', 'backend', 'functions', 'infrastructure'];
+  const typeLabels = {
+    frontend: 'Frontend',
+    backend: 'Backend API',
+    functions: 'Azure Functions',
+    infrastructure: 'Infrastructure'
+  };
 
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', padding: '20px', ...style }}>
@@ -124,26 +130,25 @@ export default function HealthDashboard({
         </button>
       </div>
 
-      {/* Results by Environment */}
-      {environments.map(env => {
-        const envResults = groupedResults[env] || [];
-        if (envResults.length === 0) return null;
+      {/* Results by Type */}
+      {typeOrder.map(type => {
+        const typeResults = groupedResults[type] || [];
+        if (typeResults.length === 0) return null;
 
         return (
-          <div key={env} style={{ marginBottom: '30px' }}>
+          <div key={type} style={{ marginBottom: '30px' }}>
             <h2 style={{
               fontSize: '20px',
               fontWeight: 600,
               marginBottom: '15px',
-              textTransform: 'capitalize',
               borderBottom: '2px solid #ddd',
               paddingBottom: '8px'
             }}>
-              {env} Environment
+              {typeLabels[type] || type}
             </h2>
 
             <div style={{ display: 'grid', gap: '15px' }}>
-              {envResults.map((result, index) => (
+              {typeResults.map((result, index) => (
                 <EndpointCard key={index} result={result} />
               ))}
             </div>
@@ -159,6 +164,19 @@ export default function HealthDashboard({
       )}
     </div>
   );
+}
+
+/**
+ * Get badge color based on endpoint type
+ */
+function getTypeBadgeColor(type) {
+  const colors = {
+    frontend: { bg: '#e3f2fd', text: '#1976d2' },
+    backend: { bg: '#f3e5f5', text: '#7b1fa2' },
+    functions: { bg: '#fff3e0', text: '#e65100' },
+    infrastructure: { bg: '#e8f5e9', text: '#2e7d32' }
+  };
+  return colors[type] || { bg: '#f5f5f5', text: '#666' };
 }
 
 /**
@@ -185,12 +203,12 @@ function EndpointCard({ result }) {
               fontSize: '11px',
               fontWeight: 600,
               padding: '2px 8px',
-              backgroundColor: result.type === 'frontend' ? '#e3f2fd' : '#f3e5f5',
-              color: result.type === 'frontend' ? '#1976d2' : '#7b1fa2',
+              backgroundColor: getTypeBadgeColor(result.type).bg,
+              color: getTypeBadgeColor(result.type).text,
               borderRadius: '12px',
               textTransform: 'uppercase'
             }}>
-              {result.type}
+              {result.environment}
             </span>
           </div>
 
@@ -213,7 +231,7 @@ function EndpointCard({ result }) {
             </span>
             {result.version && (
               <span>
-                <strong>Version:</strong> {result.version}
+                <strong>{result.type === 'infrastructure' ? 'Status' : 'Version'}:</strong> {result.version}
               </span>
             )}
             {result.error && (

@@ -13,24 +13,10 @@ export const ENDPOINTS = {
     },
     {
       name: "Staging Frontend",
-      url: "https://staging.ibetoni.fi",
-      versionEndpoint: "https://staging.ibetoni.fi/version",
+      url: "https://wonderful-rock-08f826703-staging.westeurope.3.azurestaticapps.net",
+      versionEndpoint: "https://wonderful-rock-08f826703-staging.westeurope.3.azurestaticapps.net/version",
       type: "frontend",
       environment: "staging",
-    },
-    {
-      name: "Latest Frontend",
-      url: "https://latest.ibetoni.fi",
-      versionEndpoint: "https://latest.ibetoni.fi/version",
-      type: "frontend",
-      environment: "latest",
-    },
-    {
-      name: "Stable Frontend",
-      url: "https://stable.ibetoni.fi",
-      versionEndpoint: "https://stable.ibetoni.fi/version",
-      type: "frontend",
-      environment: "stable",
     },
   ],
   backend: [
@@ -48,19 +34,30 @@ export const ENDPOINTS = {
       type: "backend",
       environment: "staging",
     },
+  ],
+  functions: [
     {
-      name: "Latest API",
-      url: "https://api-latest.ibetoni.fi",
-      versionEndpoint: "https://api-latest.ibetoni.fi/api/version",
-      type: "backend",
-      environment: "latest",
+      name: "Azure Functions",
+      url: "https://functions.ibetoni.fi",
+      versionEndpoint: "https://functions.ibetoni.fi/api/httpTest",
+      type: "functions",
+      environment: "production",
+    },
+  ],
+  infrastructure: [
+    {
+      name: "Database",
+      url: "https://api.ibetoni.fi/api/test/sql",
+      versionEndpoint: "https://api.ibetoni.fi/api/test/sql",
+      type: "infrastructure",
+      environment: "production",
     },
     {
-      name: "Stable API",
-      url: "https://api-stable.ibetoni.fi",
-      versionEndpoint: "https://api-stable.ibetoni.fi/api/version",
-      type: "backend",
-      environment: "stable",
+      name: "Redis",
+      url: "https://api.ibetoni.fi/api/test/redis",
+      versionEndpoint: "https://api.ibetoni.fi/api/test/redis",
+      type: "infrastructure",
+      environment: "production",
     },
   ],
 };
@@ -69,7 +66,12 @@ export const ENDPOINTS = {
  * Get all endpoints as a flat array
  */
 export function getAllEndpoints() {
-  return [...ENDPOINTS.frontend, ...ENDPOINTS.backend];
+  return [
+    ...ENDPOINTS.frontend,
+    ...ENDPOINTS.backend,
+    ...ENDPOINTS.functions,
+    ...ENDPOINTS.infrastructure,
+  ];
 }
 
 /**
