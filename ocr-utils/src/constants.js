@@ -70,12 +70,10 @@ export const PROCESSING_STATUS_NAMES = {
 /**
  * Source Asiakas IDs (who printed the document)
  * Maps to asiakas table in database
- *
- * NOTE: Rudus and PEAB IDs are placeholders - update with actual asiakasId from production
  */
 export const SOURCE_ASIAKAS_IDS = {
-  KALLE_URHO: 1,      // Internal betoni.online kuormakirjas (standard format)
-  RUDUS: 123,         // Rudus concrete plant kuormakirjas (TBD - actual asiakasId)
+  KALLE_URHO: 8,      // Internal betoni.online kuormakirjas (asiakasId = 8)
+  RUDUS: 30,          // Rudus concrete plant kuormakirjas (asiakasId = 30)
   PEAB: 456           // PEAB concrete plant kuormakirjas (TBD - actual asiakasId)
 };
 
@@ -83,8 +81,8 @@ export const SOURCE_ASIAKAS_IDS = {
  * Source Asiakas Names (for display)
  */
 export const SOURCE_ASIAKAS_NAMES = {
-  1: 'Kalle Urho',
-  123: 'Rudus',
+  8: 'Kalle Urho',
+  30: 'Rudus',
   456: 'PEAB'
 };
 
