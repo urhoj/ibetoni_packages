@@ -30,12 +30,33 @@ function removeEiTietoaFromBetoniString(betoniString) {
 /**
  * Get an array of all betoni string components including attributes
  * @param {Object} betoni - Betoni object
+ * @param {Object} options - Optional settings
+ * @param {boolean} options.includeWeatherResistant - If true, prepends "Säänkestävä" when applicable
  * @returns {string[]} Array of string components
  */
-function betoni_getStrings(betoni) {
+function betoni_getStrings(betoni, options = {}) {
   if (!betoni) return null;
+  const { includeWeatherResistant = false } = options;
   const betoniStrings = [];
-  betoniStrings.push(betoni_getString_noAttr(betoni));
+
+  // Check weather resistance if requested
+  let weatherPrefix = "";
+  if (includeWeatherResistant) {
+    const rasitusLuokat = betoni.rasitus?.rasitusluokat || betoni.rasitusluokat;
+    if (rasitusLuokat) {
+      let rasitusArray = [];
+      if (typeof rasitusLuokat === "string") {
+        rasitusArray = rasitusLuokat.split(",").map((r) => r.trim().toUpperCase());
+      } else if (Array.isArray(rasitusLuokat)) {
+        rasitusArray = rasitusLuokat.map((r) => r.trim().toUpperCase());
+      }
+      if (rasitusArray.some((r) => WEATHER_RESISTANT_CLASSES.includes(r))) {
+        weatherPrefix = "Säänkestävä ";
+      }
+    }
+  }
+
+  betoniStrings.push(weatherPrefix + betoni_getString_noAttr(betoni));
   if (betoni.betoniComment) betoniStrings.push(betoni.betoniComment);
   const attrs = betoni.attr?.attr || [];
   attrs.forEach((attr) => {
