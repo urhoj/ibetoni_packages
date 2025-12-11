@@ -127,11 +127,29 @@ Comprehensive format without attributes.
 
 ---
 
-#### `betoni_getStrings(betoni)`
+#### `betoni_getStrings(betoni, options)`
 
 Get an array of all betoni string components including attributes.
 
+**Parameters:**
+
+- `betoni` (Object): Betoni object
+- `options` (Object): Optional settings
+  - `includeWeatherResistant` (Boolean): If true, prepends "Säänkestävä" when betoni has XF1/XF3 exposure class (default: false)
+
 **Returns:** Array of strings - [baseString, comment, attr1, attr2, ...]
+
+**Example:**
+
+```javascript
+// Without weather resistance indicator
+const strings = betoni_getStrings(betoni);
+// ["Lattiabetoni C25/30 S2 XF1", "Comment", "Lisä1"]
+
+// With weather resistance indicator
+const strings = betoni_getStrings(betoni, { includeWeatherResistant: true });
+// ["Säänkestävä Lattiabetoni C25/30 S2 XF1", "Comment", "Lisä1"]
+```
 
 ---
 
