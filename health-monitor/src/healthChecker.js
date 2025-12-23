@@ -50,10 +50,7 @@ export async function checkEndpointHealth(endpoint) {
     // Ping the version endpoint to check health AND get version
     const response = await axios.get(endpoint.versionEndpoint, {
       timeout: THRESHOLDS.SLOW_MAX,
-      validateStatus: (status) => status < 500, // Accept all non-5xx as "up"
-      headers: {
-        'User-Agent': 'ibetoni-health-monitor/1.0'
-      }
+      validateStatus: (status) => status < 500 // Accept all non-5xx as "up"
     });
 
     const responseTime = Date.now() - startTime;

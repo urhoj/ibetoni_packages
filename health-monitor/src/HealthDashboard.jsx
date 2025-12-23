@@ -2,9 +2,10 @@
  * Health Dashboard React Component
  *
  * Displays status of all monitored endpoints with real-time health checks
+ * Supports light and dark mode via the darkMode prop
  */
 
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import {
   getAllEndpoints,
@@ -17,11 +18,54 @@ import {
   groupResultsByType
 } from './index.js';
 
-// Styles extracted to prevent re-creation on every render
-const styles = {
+// Color themes for light and dark mode
+const themes = {
+  light: {
+    background: '#ffffff',
+    backgroundAlt: '#f5f5f5',
+    text: '#000000',
+    textMuted: '#666666',
+    textSecondary: '#444444',
+    border: '#dddddd',
+    cardBackground: '#ffffff',
+    cardShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    primary: '#1976d2',
+    error: '#d32f2f',
+    badges: {
+      frontend: { bg: '#e3f2fd', text: '#1976d2' },
+      backend: { bg: '#f3e5f5', text: '#7b1fa2' },
+      functions: { bg: '#fff3e0', text: '#e65100' },
+      default: { bg: '#f5f5f5', text: '#666666' }
+    }
+  },
+  dark: {
+    background: '#121212',
+    backgroundAlt: '#1e1e1e',
+    text: '#ffffff',
+    textMuted: '#b0b0b0',
+    textSecondary: '#9e9e9e',
+    border: '#333333',
+    cardBackground: '#1e1e1e',
+    cardShadow: '0 2px 4px rgba(0,0,0,0.3)',
+    primary: '#90caf9',
+    error: '#ef5350',
+    badges: {
+      frontend: { bg: '#1e3a5f', text: '#90caf9' },
+      backend: { bg: '#3d2a4d', text: '#ce93d8' },
+      functions: { bg: '#3d2c1f', text: '#ffb74d' },
+      default: { bg: '#2a2a2a', text: '#b0b0b0' }
+    }
+  }
+};
+
+// Generate styles based on theme
+const getStyles = (theme) => ({
   container: {
     fontFamily: 'system-ui, sans-serif',
-    padding: '20px'
+    padding: '20px',
+    backgroundColor: theme.background,
+    color: theme.text,
+    minHeight: '100%'
   },
   header: {
     marginBottom: '30px'
@@ -29,28 +73,31 @@ const styles = {
   headerTitle: {
     margin: 0,
     fontSize: '28px',
-    fontWeight: 600
+    fontWeight: 600,
+    color: theme.text
   },
   headerSubtitle: {
     margin: '8px 0 0 0',
-    color: '#666',
+    color: theme.textMuted,
     fontSize: '14px'
   },
   summaryBox: {
     padding: '20px',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.backgroundAlt,
     borderRadius: '8px',
     marginBottom: '30px'
   },
   summaryTitle: {
     fontSize: '18px',
     fontWeight: 600,
-    marginBottom: '10px'
+    marginBottom: '10px',
+    color: theme.text
   },
   summaryStats: {
     display: 'flex',
     gap: '20px',
-    fontSize: '14px'
+    fontSize: '14px',
+    color: theme.textSecondary
   },
   buttonContainer: {
     marginBottom: '20px'
@@ -59,8 +106,8 @@ const styles = {
     padding: '10px 20px',
     fontSize: '14px',
     fontWeight: 500,
-    backgroundColor: '#1976d2',
-    color: 'white',
+    backgroundColor: theme.primary,
+    color: '#ffffff',
     border: 'none',
     borderRadius: '4px'
   },
@@ -71,8 +118,9 @@ const styles = {
     fontSize: '20px',
     fontWeight: 600,
     marginBottom: '15px',
-    borderBottom: '2px solid #ddd',
-    paddingBottom: '8px'
+    borderBottom: `2px solid ${theme.border}`,
+    paddingBottom: '8px',
+    color: theme.text
   },
   grid: {
     display: 'grid',
@@ -81,13 +129,13 @@ const styles = {
   noResults: {
     textAlign: 'center',
     padding: '40px',
-    color: '#666'
+    color: theme.textMuted
   },
   card: {
     padding: '15px',
-    backgroundColor: 'white',
+    backgroundColor: theme.cardBackground,
     borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    boxShadow: theme.cardShadow
   },
   cardContent: {
     display: 'flex',
@@ -108,7 +156,8 @@ const styles = {
   },
   cardName: {
     fontSize: '16px',
-    fontWeight: 600
+    fontWeight: 600,
+    color: theme.text
   },
   badge: {
     fontSize: '11px',
@@ -119,42 +168,37 @@ const styles = {
   },
   cardUrl: {
     fontSize: '13px',
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: '8px'
   },
   link: {
-    color: '#1976d2',
+    color: theme.primary,
     textDecoration: 'none'
   },
   cardDetails: {
     display: 'flex',
     gap: '20px',
     fontSize: '13px',
-    color: '#444'
+    color: theme.textSecondary
   },
   errorText: {
-    color: '#d32f2f'
+    color: theme.error
   }
-};
+});
 
 /**
- * Get badge color based on endpoint type
+ * Get badge color based on endpoint type and theme
  */
-function getTypeBadgeColor(type) {
-  const colors = {
-    frontend: { bg: '#e3f2fd', text: '#1976d2' },
-    backend: { bg: '#f3e5f5', text: '#7b1fa2' },
-    functions: { bg: '#fff3e0', text: '#e65100' }
-  };
-  return colors[type] || { bg: '#f5f5f5', text: '#666' };
+function getTypeBadgeColor(type, theme) {
+  return theme.badges[type] || theme.badges.default;
 }
 
 /**
  * Individual endpoint status card
  */
-const EndpointCard = memo(function EndpointCard({ result }) {
+const EndpointCard = memo(function EndpointCard({ result, theme, styles }) {
   const statusColor = getStatusColor(result.status);
-  const badgeColors = getTypeBadgeColor(result.type);
+  const badgeColors = getTypeBadgeColor(result.type, theme);
 
   return (
     <div style={{
@@ -220,7 +264,9 @@ EndpointCard.propTypes = {
     responseTime: PropTypes.number,
     version: PropTypes.string,
     error: PropTypes.string
-  }).isRequired
+  }).isRequired,
+  theme: PropTypes.object.isRequired,
+  styles: PropTypes.object.isRequired
 };
 
 const typeOrder = ['frontend', 'backend', 'functions'];
@@ -238,17 +284,23 @@ const typeLabels = {
  * @param {boolean} props.autoRefresh - Enable auto-refresh (default: true)
  * @param {Object} props.style - Custom styling
  * @param {Object} props.logger - Custom logger (default: console)
+ * @param {boolean} props.darkMode - Enable dark mode (default: false)
  */
 export default function HealthDashboard({
   refreshInterval = 60000,
   autoRefresh = true,
   style = {},
-  logger = console
+  logger = console,
+  darkMode = false
 }) {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [summary, setSummary] = useState(null);
+
+  // Select theme and generate styles
+  const theme = darkMode ? themes.dark : themes.light;
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   const checkHealth = useCallback(async () => {
     setLoading(true);
@@ -343,7 +395,12 @@ export default function HealthDashboard({
 
             <div style={styles.grid}>
               {typeResults.map((result) => (
-                <EndpointCard key={result.url} result={result} />
+                <EndpointCard
+                  key={result.url}
+                  result={result}
+                  theme={theme}
+                  styles={styles}
+                />
               ))}
             </div>
           </div>
@@ -366,5 +423,6 @@ HealthDashboard.propTypes = {
   style: PropTypes.object,
   logger: PropTypes.shape({
     error: PropTypes.func
-  })
+  }),
+  darkMode: PropTypes.bool
 };

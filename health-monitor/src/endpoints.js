@@ -37,9 +37,9 @@ export const ENDPOINTS = {
   ],
   functions: [
     {
-      name: "Azure Functions",
+      name: "Cron Jobs Service",
       url: "https://functions.ibetoni.fi",
-      versionEndpoint: "https://functions.ibetoni.fi/api/httpTest",
+      versionEndpoint: "https://functions.ibetoni.fi/health",
       type: "functions",
       environment: "production",
     },
