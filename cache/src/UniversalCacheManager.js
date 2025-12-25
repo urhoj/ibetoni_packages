@@ -34,6 +34,7 @@ class UniversalCacheManager {
       tyomaa: 900, // 15 minutes - worksites, moderate changes
       person: 900, // 15 minutes - persons, moderate changes
       personpvm: 300, // 5 minutes - person schedules, change frequently
+      personpvmStatus: 43200, // 12 hours - person schedule status types (static reference data)
       betoni: 3600, // 1 hour - concrete specs, reference data
       betoniReference: 7200, // 2 hours - static reference data
       betoniLaatu: 1800, // 30 minutes - quality data scoped by supplier
