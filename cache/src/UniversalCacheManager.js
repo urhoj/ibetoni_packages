@@ -29,53 +29,53 @@ class UniversalCacheManager {
 
     // TTL configuration for all entity types (seconds)
     this.TTL = {
-      keikka: 300, // 5 minutes - delivery orders, change frequently
-      asiakas: 1800, // 30 minutes - customers, relatively stable
-      tyomaa: 900, // 15 minutes - worksites, moderate changes
-      person: 900, // 15 minutes - persons, moderate changes
-      personpvm: 300, // 5 minutes - person schedules, change frequently
+      keikka: 3600, // 1 hour - delivery orders, change frequently
+      asiakas: 7200, // 2 hours - customers, relatively stable
+      tyomaa: 7200, // 2 hours - worksites, moderate changes
+      person: 7200, // 2 hours - persons, moderate changes
+      personpvm: 7200, // 2 hours - person schedules, change frequently
       personpvmStatus: 43200, // 12 hours - person schedule status types (static reference data)
       betoni: 3600, // 1 hour - concrete specs, reference data
       betoniReference: 7200, // 2 hours - static reference data
-      betoniLaatu: 1800, // 30 minutes - quality data scoped by supplier
-      betoniShortcut: 1800, // 30 minutes - user-configured concrete shortcuts
+      betoniLaatu: 7200, // 2 hours - quality data scoped by supplier
+      betoniShortcut: 7200, // 2 hours - user-configured concrete shortcuts
       betoniList: 1800, // 30 minutes - betoni search/filter results
-      betoniAttr: 1800, // 30 minutes - betoni attributes (keikka-specific)
+      betoniAttr: 3600, // 1 hour - betoni attributes (keikka-specific)
       config: 43200, // 12 hours - static configuration
-      vehicle: 1800, // 30 minutes - vehicles, relatively stable
-      vehicleDate: 1800, // 30 minutes - vehicle dates, moderate changes
+      vehicle: 7200, // 2 hours - vehicles, relatively stable
+      vehicleDate: 7200, // 2 hours - vehicle dates, moderate changes
       vehicleDateType: 43200, // 12 hours - vehicle date types (reference data)
-      vehicleRequiredDateType: 1800, // 30 minutes - vehicle required date types
-      personDate: 1800, // 30 minutes - person dates, moderate changes
+      vehicleRequiredDateType: 7200, // 2 hours - vehicle required date types
+      personDate: 7200, // 2 hours - person dates, moderate changes
       personDateType: 43200, // 12 hours - person date types (reference data)
-      personRequiredDateType: 1800, // 30 minutes - person required date types
-      tyomaaDate: 1800, // 30 minutes - työmaa dates, moderate changes
+      personRequiredDateType: 43200, // 12 hours - person required date types
+      tyomaaDate: 7200, // 2 hours - työmaa dates, moderate changes
       tyomaaDateType: 43200, // 12 hours - työmaa date types (reference data)
-      asiakasDate: 1800, // 30 minutes - asiakas dates, moderate changes
+      asiakasDate: 7200, // 2 hours - asiakas dates, moderate changes
       asiakasDateType: 43200, // 12 hours - asiakas date types (reference data)
       complianceDashboard: 900, // 15 minutes - dashboard aggregations
-      sijainti: 3600, // 1 hour - locations, rarely changes
+      sijainti: 7200, // 2 hours - locations, rarely changes
       geocode: 3600, // 1 hour - geocoding & driving distances
       attachment: 600, // 10 minutes - attachment lists, moderate changes
       attachmentTypes: 43200, // 12 hours - attachment types (static reference data)
-      tuote: 1800, // 30 minutes - products, moderate changes
+      tuote: 7200, // 2 hours - products, moderate changes
       productReference: 43200, // 12 hours - product types and categories
       barColor: 43200, // 12 hours - grid bar colors (static UI configuration)
       invoiceStatus: 43200, // 12 hours - invoice status lookup table
-      tyomaaPerson: 600, // 10 minutes - worksite-person relationships
-      asiakasPerson: 900, // 15 minutes - customer-person relationships
-      keikkaPerson: 300, // 5 minutes - delivery-person assignments
-      keikkaBetoni: 300, // 5 minutes - delivery concrete assignments
-      dailyMessage: 300, // 5 minutes - daily messages, frequently updated
-      dailyConfirmation: 3600, // 1 hour - daily confirmations, stable once set
+      tyomaaPerson: 1800, // 30 minutes - worksite-person relationships
+      asiakasPerson: 1800, // 30 minutes - customer-person relationships
+      keikkaPerson: 1800, // 30 minutes - delivery-person assignments
+      keikkaBetoni: 3600, // 1 hour - delivery concrete assignments
+      dailyMessage: 7200, // 2 hours - daily messages, frequently updated
+      dailyConfirmation: 7200, // 2 hours - daily confirmations, stable once set
       stat: 7200, // 2 hours - statistics updated by cronjobs
-      stepLog: 300, // 5 minutes - activity logs, change frequently
-      grid: 300, // 5 minutes - grid keikka lists, frequently updated
+      stepLog: 900, // 15 minutes - keikka activity logs, change frequently
+      grid: 900, // 15 minutes - grid keikka lists, frequently updated
       help: 43200, // 12 hours - help content, changes very rarely
       legalDocument: 86400, // 24 hours - legal documents, changes rarely
       weather: 3600, // 1 hour - weather module status and forecasts
       ecofleet: 60, // 1 minute - external fleet tracking API (real-time vehicle locations and movement data)
-      default: 300, // 5 minutes fallback
+      default: 900, // 15 minutes fallback
     };
 
     // Production-safe batch limits
@@ -88,10 +88,10 @@ class UniversalCacheManager {
    */
   _createDefaultLogger() {
     return {
-      info: (...args) => console.log('[CACHE]', ...args),
-      warn: (...args) => console.warn('[CACHE]', ...args),
-      error: (...args) => console.error('[CACHE]', ...args),
-      debug: (...args) => console.log('[CACHE-DEBUG]', ...args),
+      info: (...args) => console.log("[CACHE]", ...args),
+      warn: (...args) => console.warn("[CACHE]", ...args),
+      error: (...args) => console.error("[CACHE]", ...args),
+      debug: (...args) => console.log("[CACHE-DEBUG]", ...args),
     };
   }
 
@@ -153,7 +153,8 @@ class UniversalCacheManager {
     // Check if Redis cache is disabled via environment variable
     if (
       process.env.REDIS_CACHE_ENABLED === "false" ||
-      (process.env.NODE_ENV === "production" && process.env.REDIS_CACHE_ENABLED !== "true")
+      (process.env.NODE_ENV === "production" &&
+        process.env.REDIS_CACHE_ENABLED !== "true")
     ) {
       this.logger.info("Redis cache disabled via environment configuration");
       return null;
@@ -176,7 +177,9 @@ class UniversalCacheManager {
       }
 
       if (!this.isConnected && this.client) {
-        const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 2000));
+        const timeoutPromise = new Promise((resolve) =>
+          setTimeout(() => resolve(null), 2000)
+        );
         const pingPromise = this.client
           .ping()
           .then(() => this.client)
@@ -188,7 +191,7 @@ class UniversalCacheManager {
     } catch (error) {
       this.logger.error("Client initialization failed", {
         error: error.message,
-        stack: error.stack
+        stack: error.stack,
       });
       this.connectionPromise = null;
       return null;
@@ -207,14 +210,14 @@ class UniversalCacheManager {
       this.isConnected = true;
       this.logger.info("Redis connected", {
         host: config.host,
-        port: config.port
+        port: config.port,
       });
     };
 
     const onError = (err) => {
       this.isConnected = false;
       this.logger.error("Redis error", {
-        error: err.message
+        error: err.message,
       });
       // Don't recreate client on every error to prevent connection storms
     };
@@ -256,7 +259,8 @@ class UniversalCacheManager {
    */
   _removeEventListeners(client) {
     if (client && client._universalCacheListeners) {
-      const { onReady, onError, onClose, onEnd } = client._universalCacheListeners;
+      const { onReady, onError, onClose, onEnd } =
+        client._universalCacheListeners;
       client.removeListener("ready", onReady);
       client.removeListener("error", onError);
       client.removeListener("close", onClose);
@@ -279,7 +283,9 @@ class UniversalCacheManager {
     try {
       const redis = await this.getClient();
       if (!redis) {
-        this.logger.debug("Redis unavailable, skipping operation", { operationType });
+        this.logger.debug("Redis unavailable, skipping operation", {
+          operationType,
+        });
         return fallback;
       }
 
@@ -293,9 +299,9 @@ class UniversalCacheManager {
     } catch (error) {
       this.logger.error("Operation failed", {
         operationType,
-        error: error.message
+        error: error.message,
       });
-      this.cacheMetrics.recordError(operationType, 'unknown', error);
+      this.cacheMetrics.recordError(operationType, "unknown", error);
       return fallback;
     }
   }
@@ -335,7 +341,11 @@ class UniversalCacheManager {
     }
 
     // Handle simple yyyymmdd format (20250827)
-    if (typeof dateInput === "number" && dateInput >= 20000101 && dateInput <= 99991231) {
+    if (
+      typeof dateInput === "number" &&
+      dateInput >= 20000101 &&
+      dateInput <= 99991231
+    ) {
       return String(dateInput * 1000000 + 120000);
     }
 
@@ -394,7 +404,7 @@ class UniversalCacheManager {
     } catch (error) {
       this.logger.error("Grid date parsing error", {
         error: error.message,
-        dateInput
+        dateInput,
       });
       return null;
     }
@@ -466,7 +476,13 @@ class UniversalCacheManager {
           }
 
           try {
-            const result = await redis.scan(cursor, "MATCH", pattern, "COUNT", scanCount);
+            const result = await redis.scan(
+              cursor,
+              "MATCH",
+              pattern,
+              "COUNT",
+              scanCount
+            );
             cursor = result[0];
             keys.push(...result[1]);
             iterations++;
@@ -475,7 +491,7 @@ class UniversalCacheManager {
             if (iterations > maxIterations) {
               this.logger.warn("Scan iteration limit reached", {
                 pattern,
-                maxIterations
+                maxIterations,
               });
               break;
             }
@@ -483,7 +499,7 @@ class UniversalCacheManager {
             this.logger.error("Scan error", {
               pattern,
               iteration: iterations,
-              error: scanError.message
+              error: scanError.message,
             });
             // Continue with partial results rather than failing completely
             break;
@@ -493,7 +509,7 @@ class UniversalCacheManager {
         this.logger.debug("Scan completed", {
           pattern,
           keysFound: keys.length,
-          iterations
+          iterations,
         });
         return keys;
       },
@@ -522,7 +538,7 @@ class UniversalCacheManager {
           } catch (deleteError) {
             this.logger.error("Batch delete error", {
               error: deleteError.message,
-              batchSize: batch.length
+              batchSize: batch.length,
             });
             // Continue with remaining batches rather than failing completely
             continue;
@@ -531,7 +547,7 @@ class UniversalCacheManager {
 
         this.logger.debug("Batch delete completed", {
           deletedCount,
-          batches: Math.ceil(keys.length / batchSize)
+          batches: Math.ceil(keys.length / batchSize),
         });
         return deletedCount;
       },
@@ -550,11 +566,11 @@ class UniversalCacheManager {
       const deletedCount = await this.batchDelete(keys);
       this.logger.info("Pattern invalidation completed", {
         pattern,
-        keysDeleted: deletedCount
+        keysDeleted: deletedCount,
       });
 
       // Record invalidation metric
-      const entityType = pattern.split(':')[0] || 'unknown';
+      const entityType = pattern.split(":")[0] || "unknown";
       this.cacheMetrics.recordInvalidation(entityType, pattern, deletedCount);
 
       return deletedCount;
@@ -577,11 +593,13 @@ class UniversalCacheManager {
     switch (entityType) {
       case "keikka": {
         const newDateValue = params.body?.newDate || params.newDate;
-        const pumppuAikaValue = params.body?.pumppuAika || params.pumppuAika || params.date;
+        const pumppuAikaValue =
+          params.body?.pumppuAika || params.pumppuAika || params.date;
         const targetDate = newDateValue || pumppuAikaValue;
         const personIdValue = params.body?.personId || params.personId;
         const yyyymmddValue = params.yyyymmdd;
-        const keikkaIdValue = params.body?.keikkaId || params.keikkaId || params.entityId;
+        const keikkaIdValue =
+          params.body?.keikkaId || params.keikkaId || params.entityId;
 
         // Individual keikka keys: if we have keikkaId, target it specifically
         let individualKeysPattern;
@@ -596,24 +614,24 @@ class UniversalCacheManager {
         if (yyyymmddValue) {
           return await Promise.all([
             this.invalidateByPattern(individualKeysPattern),
-            this.invalidateByPattern(`keikka:list:*:${yyyymmddValue}`)
-          ]).then(results => results.reduce((sum, count) => sum + count, 0));
+            this.invalidateByPattern(`keikka:list:*:${yyyymmddValue}`),
+          ]).then((results) => results.reduce((sum, count) => sum + count, 0));
         } else if (targetDate) {
-          const yyyymmdd = targetDate.substring(0, 10).replace(/-/g, '');
+          const yyyymmdd = targetDate.substring(0, 10).replace(/-/g, "");
           return await Promise.all([
             this.invalidateByPattern(individualKeysPattern),
-            this.invalidateByPattern(`keikka:list:*:${yyyymmdd}`)
-          ]).then(results => results.reduce((sum, count) => sum + count, 0));
+            this.invalidateByPattern(`keikka:list:*:${yyyymmdd}`),
+          ]).then((results) => results.reduce((sum, count) => sum + count, 0));
         } else if (personIdValue) {
           return await Promise.all([
             this.invalidateByPattern(individualKeysPattern),
-            this.invalidateByPattern(`keikka:list:${personIdValue}:*`)
-          ]).then(results => results.reduce((sum, count) => sum + count, 0));
+            this.invalidateByPattern(`keikka:list:${personIdValue}:*`),
+          ]).then((results) => results.reduce((sum, count) => sum + count, 0));
         } else {
           return await Promise.all([
             this.invalidateByPattern(individualKeysPattern),
-            this.invalidateByPattern(`keikka:list:*:*`)
-          ]).then(results => results.reduce((sum, count) => sum + count, 0));
+            this.invalidateByPattern(`keikka:list:*:*`),
+          ]).then((results) => results.reduce((sum, count) => sum + count, 0));
         }
       }
       case "asiakas":
@@ -650,32 +668,41 @@ class UniversalCacheManager {
         // Invalidate ALL attachment-related keys to ensure consistency
         // This includes bulk keikka attachment lists that don't have asiakasId in the key
         const patterns = [
-          `attachment:*:${asiakasId || "*"}:*`,        // 4-segment asiakasId-based keys (search)
+          `attachment:*:${asiakasId || "*"}:*`, // 4-segment asiakasId-based keys (search)
           `attachment:listMissing:${asiakasId || "*"}`, // 3-segment listMissing keys
-          `attachment:types:${asiakasId || "*"}`,       // 3-segment type keys
-          `attachment:bulk:*:*`,                        // bulk keikka attachment lists
-          `attachment:list:*:*`,                        // individual entity attachment lists
-          `attachment:get:*`,                           // individual attachment gets
+          `attachment:types:${asiakasId || "*"}`, // 3-segment type keys
+          `attachment:bulk:*:*`, // bulk keikka attachment lists
+          `attachment:list:*:*`, // individual entity attachment lists
+          `attachment:get:*`, // individual attachment gets
         ];
 
         return await Promise.all(
-          patterns.map(p => this.invalidateByPattern(p))
-        ).then(results => results.reduce((sum, count) => sum + count, 0));
+          patterns.map((p) => this.invalidateByPattern(p))
+        ).then((results) => results.reduce((sum, count) => sum + count, 0));
       }
       default:
         pattern = `${entityType}:*:${asiakasId || "*"}:*`;
     }
 
-    console.log("🔍 [DEBUG invalidate] Pattern:", pattern, "for entityType:", entityType);
+    console.log(
+      "🔍 [DEBUG invalidate] Pattern:",
+      pattern,
+      "for entityType:",
+      entityType
+    );
     const keys = await this.scanKeys(pattern);
-    console.log("🔍 [DEBUG invalidate] Keys found:", keys.length, keys.slice(0, 3));
+    console.log(
+      "🔍 [DEBUG invalidate] Keys found:",
+      keys.length,
+      keys.slice(0, 3)
+    );
 
     if (keys.length > 0) {
       const deletedCount = await this.batchDelete(keys);
       this.logger.info("Entity cache invalidated", {
         entityType,
         operation,
-        keysDeleted: deletedCount
+        keysDeleted: deletedCount,
       });
       return deletedCount;
     }
@@ -696,7 +723,7 @@ class UniversalCacheManager {
       pumppuAika,
       newDate,
       effectivePersonId,
-      asiakasId
+      asiakasId,
     });
 
     switch (operation) {
@@ -704,10 +731,13 @@ class UniversalCacheManager {
         let totalInvalidated = 0;
 
         if (newDate) {
-          this.logger.debug("Copy operation detected - invalidating ONLY target date", {
-            newDate,
-            asiakasId
-          });
+          this.logger.debug(
+            "Copy operation detected - invalidating ONLY target date",
+            {
+              newDate,
+              asiakasId,
+            }
+          );
           totalInvalidated += await this.invalidate(operation, "grid", {
             asiakasId,
             pumppuAika: newDate,
@@ -716,9 +746,14 @@ class UniversalCacheManager {
         }
 
         if (pumppuAika) {
-          totalInvalidated += await this.invalidate(operation, "grid", { asiakasId, pumppuAika });
+          totalInvalidated += await this.invalidate(operation, "grid", {
+            asiakasId,
+            pumppuAika,
+          });
         } else {
-          totalInvalidated += await this.invalidate(operation, "grid", { asiakasId });
+          totalInvalidated += await this.invalidate(operation, "grid", {
+            asiakasId,
+          });
         }
 
         return totalInvalidated;
@@ -728,12 +763,15 @@ class UniversalCacheManager {
         if (newDate) {
           this.logger.debug("KEIKKA_COPY - invalidating target date only", {
             newDate,
-            asiakasId
+            asiakasId,
           });
-          return await this.invalidate(operation, "grid", { asiakasId, pumppuAika: newDate });
+          return await this.invalidate(operation, "grid", {
+            asiakasId,
+            pumppuAika: newDate,
+          });
         } else {
           this.logger.warn("KEIKKA_COPY without newDate - no invalidation", {
-            operation
+            operation,
           });
           return 0;
         }
@@ -741,7 +779,7 @@ class UniversalCacheManager {
       default:
         this.logger.warn("Unknown grid operation, using broad invalidation", {
           operation,
-          asiakasId
+          asiakasId,
         });
         return await this.invalidate(operation, "grid", { asiakasId });
     }
@@ -759,24 +797,40 @@ class UniversalCacheManager {
       case "KEIKKA_DELETE":
       case "KEIKKA_CREATE":
         // Parallelize independent invalidations for better performance
-        const [keikkaCount, keikkaPersonCount, keikkaBetoniCount, stepLogCount, attachmentCount, gridCount] =
-          await Promise.all([
-            this.invalidate(operation, "keikka", params),
-            this.invalidate(operation, "keikkaPerson", params),
-            this.invalidate(operation, "keikkaBetoni", params),
-            this.invalidate(operation, "stepLog", params),
-            this.invalidate(operation, "attachment", params),
-            this.invalidateGridSmart(operation, params.body || {}, params)
-          ]);
-        totalInvalidated += keikkaCount + keikkaPersonCount + keikkaBetoniCount + stepLogCount + attachmentCount + gridCount;
+        const [
+          keikkaCount,
+          keikkaPersonCount,
+          keikkaBetoniCount,
+          stepLogCount,
+          attachmentCount,
+          gridCount,
+        ] = await Promise.all([
+          this.invalidate(operation, "keikka", params),
+          this.invalidate(operation, "keikkaPerson", params),
+          this.invalidate(operation, "keikkaBetoni", params),
+          this.invalidate(operation, "stepLog", params),
+          this.invalidate(operation, "attachment", params),
+          this.invalidateGridSmart(operation, params.body || {}, params),
+        ]);
+        totalInvalidated +=
+          keikkaCount +
+          keikkaPersonCount +
+          keikkaBetoniCount +
+          stepLogCount +
+          attachmentCount +
+          gridCount;
         break;
 
       case "KEIKKA_BULK_UPDATE":
         totalInvalidated += await this.invalidate(operation, "keikka", params);
-        totalInvalidated += await this.invalidateGridSmart(operation, params.body || {}, params);
+        totalInvalidated += await this.invalidateGridSmart(
+          operation,
+          params.body || {},
+          params
+        );
         totalInvalidated += await this.invalidate(operation, "asiakas", params);
         this.logger.debug("KEIKKA_BULK_UPDATE completed", {
-          keysInvalidated: totalInvalidated
+          keysInvalidated: totalInvalidated,
         });
         break;
 
@@ -785,29 +839,52 @@ class UniversalCacheManager {
       case "VEHICLE_DATE_UPDATE":
       case "VEHICLE_DATE_CREATE":
       case "VEHICLE_DATE_DELETE":
-        console.log("🔍 [DEBUG] VEHICLE_DATE operation START", { operation, params });
+        console.log("🔍 [DEBUG] VEHICLE_DATE operation START", {
+          operation,
+          params,
+        });
 
         // Show what keys exist in Redis before invalidation
         const allVehicleKeys = await this.scanKeys("vehicle:*");
-        const allVehicleReqKeys = await this.scanKeys("vehicleRequiredDateType:*");
-        console.log("🔍 [DEBUG] Existing vehicle keys sample:", allVehicleKeys.slice(0, 3));
-        console.log("🔍 [DEBUG] Existing vehicleRequiredDateType keys sample:", allVehicleReqKeys.slice(0, 3));
+        const allVehicleReqKeys = await this.scanKeys(
+          "vehicleRequiredDateType:*"
+        );
+        console.log(
+          "🔍 [DEBUG] Existing vehicle keys sample:",
+          allVehicleKeys.slice(0, 3)
+        );
+        console.log(
+          "🔍 [DEBUG] Existing vehicleRequiredDateType keys sample:",
+          allVehicleReqKeys.slice(0, 3)
+        );
 
         // Parallelize independent invalidations for better performance
-        const [vehicleDateCount, vehicleCount, vehicleReqCount, vehicleGridCount] = await Promise.all([
+        const [
+          vehicleDateCount,
+          vehicleCount,
+          vehicleReqCount,
+          vehicleGridCount,
+        ] = await Promise.all([
           this.invalidate(operation, "vehicleDate", params),
           this.invalidate(operation, "vehicle", params),
           this.invalidate(operation, "vehicleRequiredDateType", params),
-          this.invalidateGridSmart(operation, params.body || {}, params)
+          this.invalidateGridSmart(operation, params.body || {}, params),
         ]);
 
         console.log("🔍 [DEBUG] vehicleDate invalidated:", vehicleDateCount);
         console.log("🔍 [DEBUG] vehicle invalidated:", vehicleCount);
-        console.log("🔍 [DEBUG] vehicleRequiredDateType invalidated:", vehicleReqCount);
+        console.log(
+          "🔍 [DEBUG] vehicleRequiredDateType invalidated:",
+          vehicleReqCount
+        );
         console.log("🔍 [DEBUG] grid invalidated:", vehicleGridCount);
 
-        totalInvalidated += vehicleDateCount + vehicleCount + vehicleReqCount + vehicleGridCount;
-        console.log("🔍 [DEBUG] VEHICLE_DATE operation TOTAL:", totalInvalidated);
+        totalInvalidated +=
+          vehicleDateCount + vehicleCount + vehicleReqCount + vehicleGridCount;
+        console.log(
+          "🔍 [DEBUG] VEHICLE_DATE operation TOTAL:",
+          totalInvalidated
+        );
         break;
 
       case "PERSON_DATE_DISMISS":
@@ -815,23 +892,34 @@ class UniversalCacheManager {
       case "PERSON_DATE_UPDATE":
       case "PERSON_DATE_CREATE":
       case "PERSON_DATE_DELETE":
-        console.log("🔍 [DEBUG] PERSON_DATE operation START", { operation, params });
+        console.log("🔍 [DEBUG] PERSON_DATE operation START", {
+          operation,
+          params,
+        });
 
         // Parallelize independent invalidations for better performance
-        const [personDateCount, personCount, personReqCount, personGridCount] = await Promise.all([
-          this.invalidate(operation, "personDate", params),
-          this.invalidate(operation, "person", params),
-          this.invalidate(operation, "personRequiredDateType", params),
-          this.invalidateGridSmart(operation, params.body || {}, params)
-        ]);
+        const [personDateCount, personCount, personReqCount, personGridCount] =
+          await Promise.all([
+            this.invalidate(operation, "personDate", params),
+            this.invalidate(operation, "person", params),
+            this.invalidate(operation, "personRequiredDateType", params),
+            this.invalidateGridSmart(operation, params.body || {}, params),
+          ]);
 
         console.log("🔍 [DEBUG] personDate invalidated:", personDateCount);
         console.log("🔍 [DEBUG] person invalidated:", personCount);
-        console.log("🔍 [DEBUG] personRequiredDateType invalidated:", personReqCount);
+        console.log(
+          "🔍 [DEBUG] personRequiredDateType invalidated:",
+          personReqCount
+        );
         console.log("🔍 [DEBUG] grid invalidated:", personGridCount);
 
-        totalInvalidated += personDateCount + personCount + personReqCount + personGridCount;
-        console.log("🔍 [DEBUG] PERSON_DATE operation TOTAL:", totalInvalidated);
+        totalInvalidated +=
+          personDateCount + personCount + personReqCount + personGridCount;
+        console.log(
+          "🔍 [DEBUG] PERSON_DATE operation TOTAL:",
+          totalInvalidated
+        );
         break;
 
       case "TYOMAA_DATE_DISMISS":
@@ -839,23 +927,34 @@ class UniversalCacheManager {
       case "TYOMAA_DATE_UPDATE":
       case "TYOMAA_DATE_CREATE":
       case "TYOMAA_DATE_DELETE":
-        console.log("🔍 [DEBUG] TYOMAA_DATE operation START", { operation, params });
+        console.log("🔍 [DEBUG] TYOMAA_DATE operation START", {
+          operation,
+          params,
+        });
 
         // Parallelize independent invalidations for better performance
-        const [tyomaaDateCount, tyomaaCount, tyomaaReqCount, tyomaaGridCount] = await Promise.all([
-          this.invalidate(operation, "tyomaaDate", params),
-          this.invalidate(operation, "tyomaa", params),
-          this.invalidate(operation, "tyomaaRequiredDateType", params),
-          this.invalidateGridSmart(operation, params.body || {}, params)
-        ]);
+        const [tyomaaDateCount, tyomaaCount, tyomaaReqCount, tyomaaGridCount] =
+          await Promise.all([
+            this.invalidate(operation, "tyomaaDate", params),
+            this.invalidate(operation, "tyomaa", params),
+            this.invalidate(operation, "tyomaaRequiredDateType", params),
+            this.invalidateGridSmart(operation, params.body || {}, params),
+          ]);
 
         console.log("🔍 [DEBUG] tyomaaDate invalidated:", tyomaaDateCount);
         console.log("🔍 [DEBUG] tyomaa invalidated:", tyomaaCount);
-        console.log("🔍 [DEBUG] tyomaaRequiredDateType invalidated:", tyomaaReqCount);
+        console.log(
+          "🔍 [DEBUG] tyomaaRequiredDateType invalidated:",
+          tyomaaReqCount
+        );
         console.log("🔍 [DEBUG] grid invalidated:", tyomaaGridCount);
 
-        totalInvalidated += tyomaaDateCount + tyomaaCount + tyomaaReqCount + tyomaaGridCount;
-        console.log("🔍 [DEBUG] TYOMAA_DATE operation TOTAL:", totalInvalidated);
+        totalInvalidated +=
+          tyomaaDateCount + tyomaaCount + tyomaaReqCount + tyomaaGridCount;
+        console.log(
+          "🔍 [DEBUG] TYOMAA_DATE operation TOTAL:",
+          totalInvalidated
+        );
         break;
 
       case "ASIAKAS_DATE_DISMISS":
@@ -863,23 +962,38 @@ class UniversalCacheManager {
       case "ASIAKAS_DATE_UPDATE":
       case "ASIAKAS_DATE_CREATE":
       case "ASIAKAS_DATE_DELETE":
-        console.log("🔍 [DEBUG] ASIAKAS_DATE operation START", { operation, params });
+        console.log("🔍 [DEBUG] ASIAKAS_DATE operation START", {
+          operation,
+          params,
+        });
 
         // Parallelize independent invalidations for better performance
-        const [asiakasDateCount, asiakasCount, asiakasReqCount, asiakasGridCount] = await Promise.all([
+        const [
+          asiakasDateCount,
+          asiakasCount,
+          asiakasReqCount,
+          asiakasGridCount,
+        ] = await Promise.all([
           this.invalidate(operation, "asiakasDate", params),
           this.invalidate(operation, "asiakas", params),
           this.invalidate(operation, "asiakasRequiredDateType", params),
-          this.invalidateGridSmart(operation, params.body || {}, params)
+          this.invalidateGridSmart(operation, params.body || {}, params),
         ]);
 
         console.log("🔍 [DEBUG] asiakasDate invalidated:", asiakasDateCount);
         console.log("🔍 [DEBUG] asiakas invalidated:", asiakasCount);
-        console.log("🔍 [DEBUG] asiakasRequiredDateType invalidated:", asiakasReqCount);
+        console.log(
+          "🔍 [DEBUG] asiakasRequiredDateType invalidated:",
+          asiakasReqCount
+        );
         console.log("🔍 [DEBUG] grid invalidated:", asiakasGridCount);
 
-        totalInvalidated += asiakasDateCount + asiakasCount + asiakasReqCount + asiakasGridCount;
-        console.log("🔍 [DEBUG] ASIAKAS_DATE operation TOTAL:", totalInvalidated);
+        totalInvalidated +=
+          asiakasDateCount + asiakasCount + asiakasReqCount + asiakasGridCount;
+        console.log(
+          "🔍 [DEBUG] ASIAKAS_DATE operation TOTAL:",
+          totalInvalidated
+        );
         break;
 
       case "ATTACHMENT_UPDATE": {
@@ -906,7 +1020,7 @@ class UniversalCacheManager {
         }
 
         const counts = await Promise.all(
-          patterns.map(p => this.invalidateByPattern(p))
+          patterns.map((p) => this.invalidateByPattern(p))
         );
         totalInvalidated = counts.reduce((sum, count) => sum + count, 0);
 
@@ -914,14 +1028,18 @@ class UniversalCacheManager {
           entityType,
           entityId,
           asiakasId,
-          keysInvalidated: totalInvalidated
+          keysInvalidated: totalInvalidated,
         });
         break;
       }
 
       default: {
         const entityType = params.entityType || "default";
-        totalInvalidated += await this.invalidate(operation, entityType, params);
+        totalInvalidated += await this.invalidate(
+          operation,
+          entityType,
+          params
+        );
       }
     }
 
@@ -941,13 +1059,13 @@ class UniversalCacheManager {
         this.logger.info("Connection closed gracefully");
       } catch (error) {
         this.logger.warn("Close warning", {
-          error: error.message
+          error: error.message,
         });
         try {
           this.client.disconnect();
         } catch (disconnectError) {
           this.logger.warn("Force disconnect warning", {
-            error: disconnectError.message
+            error: disconnectError.message,
           });
         }
       } finally {
@@ -993,8 +1111,8 @@ class UniversalCacheManager {
       efficiency: {
         totalRequests: summary.totalRequests,
         hitRatio: parseFloat(summary.hitRate),
-        efficiencyPercent: parseFloat(summary.hitRate)
-      }
+        efficiencyPercent: parseFloat(summary.hitRate),
+      },
     };
   }
 
