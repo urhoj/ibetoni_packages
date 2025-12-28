@@ -616,26 +616,30 @@ class UniversalCacheManager {
           individualKeysPattern = `keikka:get:${asiakasId || "*"}:*`;
         }
 
+        // Key format: keikka:list:asiakasId:personId:startDate:endDate
+        // Match date at correct positions (5=startDate, 6=endDate)
         if (yyyymmddValue) {
           return await Promise.all([
             this.invalidateByPattern(individualKeysPattern),
-            this.invalidateByPattern(`keikka:list:*:${yyyymmddValue}`),
+            this.invalidateByPattern(`keikka:list:*:*:${yyyymmddValue}:*`),  // date as startDate
+            this.invalidateByPattern(`keikka:list:*:*:*:${yyyymmddValue}`),  // date as endDate
           ]).then((results) => results.reduce((sum, count) => sum + count, 0));
         } else if (targetDate) {
           const yyyymmdd = targetDate.substring(0, 10).replace(/-/g, "");
           return await Promise.all([
             this.invalidateByPattern(individualKeysPattern),
-            this.invalidateByPattern(`keikka:list:*:${yyyymmdd}`),
+            this.invalidateByPattern(`keikka:list:*:*:${yyyymmdd}:*`),
+            this.invalidateByPattern(`keikka:list:*:*:*:${yyyymmdd}`),
           ]).then((results) => results.reduce((sum, count) => sum + count, 0));
         } else if (personIdValue) {
           return await Promise.all([
             this.invalidateByPattern(individualKeysPattern),
-            this.invalidateByPattern(`keikka:list:${personIdValue}:*`),
+            this.invalidateByPattern(`keikka:list:*:${personIdValue}:*:*`),  // personId at position 4
           ]).then((results) => results.reduce((sum, count) => sum + count, 0));
         } else {
           return await Promise.all([
             this.invalidateByPattern(individualKeysPattern),
-            this.invalidateByPattern(`keikka:list:*:*`),
+            this.invalidateByPattern(`keikka:list:*`),  // fallback: all keikka lists
           ]).then((results) => results.reduce((sum, count) => sum + count, 0));
         }
       }
@@ -693,8 +697,14 @@ class UniversalCacheManager {
           patterns.map((p) => this.invalidateByPattern(p))
         ).then((results) => results.reduce((sum, count) => sum + count, 0));
       }
+      case "personpvm":
+        // PersonPVM keys: personpvm:list:asiakasId or personpvm:list:asiakasId:startDate:endDate
+        // Use trailing wildcard to match both 3-segment and 5-segment keys
+        pattern = `personpvm:*:${asiakasId || "*"}*`;
+        break;
       default:
-        pattern = `${entityType}:*:${asiakasId || "*"}:*`;
+        // Use trailing wildcard (no colon) to match 3+ segment keys like entity:list:asiakasId
+        pattern = `${entityType}:*:${asiakasId || "*"}*`;
     }
 
     console.log(
