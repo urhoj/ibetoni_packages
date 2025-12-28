@@ -649,6 +649,14 @@ class UniversalCacheManager {
         // These keys have 3 segments: entityType:operation:asiakasId (e.g., vehicleRequiredDateType:batchCompliance:8)
         pattern = `${entityType}:*:${asiakasId || "*"}`;
         break;
+      case "stat":
+        // Stat keys have varying segment counts (3-6 segments):
+        // - stat:stat4:{ownerAsiakasId} (3 segments)
+        // - stat:stat2:{pumppuAsiakasId}:{betoniAsiakasId} (4 segments)
+        // - stat:stat1:{year}:{month}:{ownerAsiakasId} (5 segments)
+        // - stat:count:{...4 params} (6 segments)
+        // Use simple prefix pattern to catch all stat keys
+        return await this.invalidateByPattern(`stat:*`);
       case "grid":
         if (personId && pumppuAika) {
           const dateKey = this.formatGridDate(pumppuAika);
@@ -839,6 +847,42 @@ class UniversalCacheManager {
         });
         break;
 
+      case "PALKKI_UPDATE":
+      case "PALKKI_DELETE":
+      case "PALKKI_CREATE": {
+        // Palkki operations only affect grid cache - no keikka/betoni invalidation needed
+        const palkkiGridCount = await this.invalidateGridSmart(
+          operation,
+          params.body || {},
+          params
+        );
+
+        // If vehicle changed, also invalidate vehicle cache
+        const palkkiVehicleCount =
+          params.vehicleId || params.body?.vehicleId
+            ? await this.invalidate(operation, "vehicle", params)
+            : 0;
+
+        totalInvalidated += palkkiGridCount + palkkiVehicleCount;
+        this.logger.debug("PALKKI operation completed", {
+          operation,
+          keysInvalidated: totalInvalidated,
+        });
+        break;
+      }
+
+      case "GRID_UPDATE":
+        // Simple grid-only invalidation for visibility changes
+        totalInvalidated += await this.invalidateGridSmart(
+          operation,
+          params.body || {},
+          params
+        );
+        this.logger.debug("GRID_UPDATE completed", {
+          keysInvalidated: totalInvalidated,
+        });
+        break;
+
       case "VEHICLE_DATE_DISMISS":
       case "VEHICLE_DATE_UNDISMISS":
       case "VEHICLE_DATE_UPDATE":
@@ -903,12 +947,14 @@ class UniversalCacheManager {
         });
 
         // Parallelize independent invalidations for better performance
-        const [personDateCount, personCount, personReqCount, personGridCount] =
+        // CRITICAL: keikka cache must be invalidated because order views show person compliance status
+        const [personDateCount, personCount, personReqCount, personGridCount, personKeikkaCount] =
           await Promise.all([
             this.invalidate(operation, "personDate", params),
             this.invalidate(operation, "person", params),
             this.invalidate(operation, "personRequiredDateType", params),
             this.invalidateGridSmart(operation, params.body || {}, params),
+            this.invalidate(operation, "keikka", params),
           ]);
 
         console.log("🔍 [DEBUG] personDate invalidated:", personDateCount);
@@ -918,9 +964,10 @@ class UniversalCacheManager {
           personReqCount
         );
         console.log("🔍 [DEBUG] grid invalidated:", personGridCount);
+        console.log("🔍 [DEBUG] keikka invalidated:", personKeikkaCount);
 
         totalInvalidated +=
-          personDateCount + personCount + personReqCount + personGridCount;
+          personDateCount + personCount + personReqCount + personGridCount + personKeikkaCount;
         console.log(
           "🔍 [DEBUG] PERSON_DATE operation TOTAL:",
           totalInvalidated
@@ -938,12 +985,14 @@ class UniversalCacheManager {
         });
 
         // Parallelize independent invalidations for better performance
-        const [tyomaaDateCount, tyomaaCount, tyomaaReqCount, tyomaaGridCount] =
+        // CRITICAL: keikka cache must be invalidated because order views show tyomaa compliance status
+        const [tyomaaDateCount, tyomaaCount, tyomaaReqCount, tyomaaGridCount, tyomaaKeikkaCount] =
           await Promise.all([
             this.invalidate(operation, "tyomaaDate", params),
             this.invalidate(operation, "tyomaa", params),
             this.invalidate(operation, "tyomaaRequiredDateType", params),
             this.invalidateGridSmart(operation, params.body || {}, params),
+            this.invalidate(operation, "keikka", params),
           ]);
 
         console.log("🔍 [DEBUG] tyomaaDate invalidated:", tyomaaDateCount);
@@ -953,9 +1002,10 @@ class UniversalCacheManager {
           tyomaaReqCount
         );
         console.log("🔍 [DEBUG] grid invalidated:", tyomaaGridCount);
+        console.log("🔍 [DEBUG] keikka invalidated:", tyomaaKeikkaCount);
 
         totalInvalidated +=
-          tyomaaDateCount + tyomaaCount + tyomaaReqCount + tyomaaGridCount;
+          tyomaaDateCount + tyomaaCount + tyomaaReqCount + tyomaaGridCount + tyomaaKeikkaCount;
         console.log(
           "🔍 [DEBUG] TYOMAA_DATE operation TOTAL:",
           totalInvalidated
@@ -1001,6 +1051,81 @@ class UniversalCacheManager {
         );
         break;
 
+      // Asiakas CRUD operations - invalidate asiakas and related entity caches
+      case "ASIAKAS_UPDATE":
+      case "ASIAKAS_CREATE":
+      case "ASIAKAS_DELETE": {
+        this.logger.debug("ASIAKAS operation starting", {
+          operation,
+          params,
+        });
+
+        // Basic asiakas cache invalidation
+        const asiakasOpCount = await this.invalidate(operation, "asiakas", params);
+        totalInvalidated += asiakasOpCount;
+
+        // If keikkaId is provided, also invalidate keikka cache
+        // This handles cases where keikkaAsiakas table is updated
+        if (params.keikkaId) {
+          const keikkaOpCount = await this.invalidate(operation, "keikka", params);
+          totalInvalidated += keikkaOpCount;
+        }
+
+        // If linkedAsiakasId is provided (for asiakasLinks), invalidate both customers
+        if (params.linkedAsiakasId) {
+          const linkedAsiakasCount = await this.invalidate(operation, "asiakas", {
+            ...params,
+            asiakasId: params.linkedAsiakasId,
+          });
+          totalInvalidated += linkedAsiakasCount;
+        }
+
+        this.logger.debug("ASIAKAS operation completed", {
+          operation,
+          keysInvalidated: totalInvalidated,
+        });
+        break;
+      }
+
+      case "PERSON_PVM_UPDATE":
+      case "PERSON_PVM_DELETE":
+      case "PERSON_PVM_CREATE":
+        console.log("🔍 [DEBUG] PERSON_PVM operation START", {
+          operation,
+          params,
+        });
+
+        // Parallelize independent invalidations for better performance
+        const [
+          personPvmCount,
+          personPvmGridCount,
+          personPvmPersonCount,
+          personPvmVehicleCount,
+        ] = await Promise.all([
+          this.invalidate(operation, "personpvm", params),
+          this.invalidateGridSmart(operation, params.body || {}, params),
+          this.invalidate(operation, "person", params),
+          params.vehicleId
+            ? this.invalidate(operation, "vehicle", params)
+            : Promise.resolve(0),
+        ]);
+
+        console.log("🔍 [DEBUG] personpvm invalidated:", personPvmCount);
+        console.log("🔍 [DEBUG] grid invalidated:", personPvmGridCount);
+        console.log("🔍 [DEBUG] person invalidated:", personPvmPersonCount);
+        console.log("🔍 [DEBUG] vehicle invalidated:", personPvmVehicleCount);
+
+        totalInvalidated +=
+          personPvmCount +
+          personPvmGridCount +
+          personPvmPersonCount +
+          personPvmVehicleCount;
+        console.log(
+          "🔍 [DEBUG] PERSON_PVM operation TOTAL:",
+          totalInvalidated
+        );
+        break;
+
       case "ATTACHMENT_UPDATE": {
         // Targeted attachment invalidation based on entityType and entityId
         const { entityType, entityId, asiakasId } = params;
@@ -1028,6 +1153,26 @@ class UniversalCacheManager {
           patterns.map((p) => this.invalidateByPattern(p))
         );
         totalInvalidated = counts.reduce((sum, count) => sum + count, 0);
+
+        // Cross-entity invalidations for grid display consistency
+        // Keikka attachments affect grid views (attachment indicators)
+        if (entityType === "keikka" && entityId) {
+          const gridCount = await this.invalidateGridSmart(
+            operation,
+            params.body || {},
+            params
+          );
+          totalInvalidated += gridCount;
+        }
+
+        // Vehicle attachments affect keikka and grid views (vehicle attachment status)
+        if (entityType === "vehicle" && entityId) {
+          const [keikkaCount, gridCount] = await Promise.all([
+            this.invalidate(operation, "keikka", params),
+            this.invalidateGridSmart(operation, params.body || {}, params),
+          ]);
+          totalInvalidated += keikkaCount + gridCount;
+        }
 
         this.logger.debug("Targeted attachment invalidation", {
           entityType,
@@ -1067,6 +1212,373 @@ class UniversalCacheManager {
           keysInvalidated: totalInvalidated,
         });
         break;
+
+      // Betoni operations - keys use 'betoni:' prefix, NOT 'betoniLaatu:'
+      case "BETONI_LAATU_UPDATE":
+      case "BETONI_LAATU_CREATE": {
+        // CRITICAL: Cache keys are generated as 'betoni:laatu:list:X' and 'betoni:laatu:filter:X'
+        // where X is betoniToimittajaAsiakasId (supplier ID), NOT ownerAsiakasId
+        // Default pattern would incorrectly use 'betoniLaatu:*' which never matches
+        const betoniToimittajaAsiakasId =
+          params.betoniToimittajaAsiakasId || params.asiakasId;
+        const [betoniLaatuListCount, betoniLaatuFilterCount, betoniListCount] =
+          await Promise.all([
+            this.invalidateByPattern(
+              `betoni:laatu:list:${betoniToimittajaAsiakasId || "*"}`
+            ),
+            this.invalidateByPattern(
+              `betoni:laatu:filter:${betoniToimittajaAsiakasId || "*"}`
+            ),
+            this.invalidateByPattern(`betoni:list:filter:*`), // Also invalidate search results
+          ]);
+        totalInvalidated +=
+          betoniLaatuListCount + betoniLaatuFilterCount + betoniListCount;
+        this.logger.info("BETONI_LAATU invalidation completed", {
+          operation,
+          betoniToimittajaAsiakasId,
+          keysInvalidated: totalInvalidated,
+        });
+        break;
+      }
+
+      case "BETONI_SHORTCUT_UPDATE": {
+        // Keys are 3 segments: 'betoniShortcut:list:asiakasId'
+        // Default pattern expects 4 segments which never matches
+        const shortcutAsiakasId = params.asiakasId;
+        const shortcutPattern = shortcutAsiakasId
+          ? `betoniShortcut:list:${shortcutAsiakasId}`
+          : `betoniShortcut:list:*`;
+        const shortcutCount = await this.invalidateByPattern(shortcutPattern);
+        totalInvalidated += shortcutCount;
+        this.logger.info("BETONI_SHORTCUT invalidation completed", {
+          pattern: shortcutPattern,
+          keysInvalidated: shortcutCount,
+        });
+        break;
+      }
+
+      // Person operations - cross-entity invalidation for person data changes
+      case "PERSON_MERGE": {
+        // Person merge affects 34 tables - comprehensive invalidation required
+        // SQL: person_combinator_merge.sql modifies keikkaPerson, personPvm,
+        // tyomaaPerson, vehicleDriverDays, asiakas, tyomaa, keikka, and 27 more
+        this.logger.info("PERSON_MERGE invalidation starting", {
+          params,
+        });
+
+        const [
+          personMergeCount,
+          keikkaMergeCount,
+          keikkaPersonMergeCount,
+          gridMergeCount,
+          asiakasMergeCount,
+          tyomaaMergeCount,
+          tyomaaPersonMergeCount,
+          vehicleMergeCount,
+          personpvmMergeCount,
+          attachmentMergeCount,
+          statMergeCount,
+          betoniMergeCount,
+          laskuMergeCount,
+          authMergeCount,
+        ] = await Promise.all([
+          this.invalidate(operation, "person", params),
+          this.invalidate(operation, "keikka", params),
+          this.invalidate(operation, "keikkaPerson", params),
+          this.invalidate(operation, "grid", params),
+          this.invalidate(operation, "asiakas", params),
+          this.invalidate(operation, "tyomaa", params),
+          this.invalidate(operation, "tyomaaPerson", params),
+          this.invalidate(operation, "vehicle", params),
+          this.invalidate(operation, "personpvm", params),
+          this.invalidate(operation, "attachment", params),
+          this.invalidate(operation, "stat", params),
+          this.invalidate(operation, "betoni", params),
+          this.invalidate(operation, "lasku", params),
+          this.invalidateByPattern("auth:*"),
+        ]);
+
+        totalInvalidated =
+          personMergeCount +
+          keikkaMergeCount +
+          keikkaPersonMergeCount +
+          gridMergeCount +
+          asiakasMergeCount +
+          tyomaaMergeCount +
+          tyomaaPersonMergeCount +
+          vehicleMergeCount +
+          personpvmMergeCount +
+          attachmentMergeCount +
+          statMergeCount +
+          betoniMergeCount +
+          laskuMergeCount +
+          authMergeCount;
+
+        this.logger.info("PERSON_MERGE invalidation completed", {
+          keysInvalidated: totalInvalidated,
+        });
+        break;
+      }
+
+      case "PERSON_UPDATE": {
+        // Person updates affect contact displays across modules
+        // SQL: person_save.sql modifies person table (name, phone, email, etc.)
+        this.logger.debug("PERSON_UPDATE invalidation starting", {
+          params,
+        });
+
+        const personEntityId = params.entityId || params.personId;
+        const [
+          personUpdateCount,
+          keikkaUpdateCount,
+          asiakasUpdateCount,
+          tyomaaUpdateCount,
+          gridUpdateCount,
+          authUpdateCount,
+        ] = await Promise.all([
+          this.invalidate(operation, "person", params),
+          this.invalidate(operation, "keikka", params),
+          this.invalidate(operation, "asiakas", params),
+          this.invalidate(operation, "tyomaa", params),
+          this.invalidate(operation, "grid", params),
+          personEntityId
+            ? this.invalidateByPattern(`auth:*:${personEntityId}*`)
+            : Promise.resolve(0),
+        ]);
+
+        totalInvalidated =
+          personUpdateCount +
+          keikkaUpdateCount +
+          asiakasUpdateCount +
+          tyomaaUpdateCount +
+          gridUpdateCount +
+          authUpdateCount;
+
+        this.logger.debug("PERSON_UPDATE invalidation completed", {
+          keysInvalidated: totalInvalidated,
+        });
+        break;
+      }
+
+      case "PERSON_DELETE": {
+        // Person deletion must remove from all listings and assignments
+        // SQL: person_save.sql sets deletedTime (soft delete)
+        this.logger.debug("PERSON_DELETE invalidation starting", {
+          params,
+        });
+
+        const deletedPersonId = params.entityId || params.personId;
+        const [
+          personDeleteCount,
+          keikkaDeleteCount,
+          asiakasDeleteCount,
+          tyomaaDeleteCount,
+          gridDeleteCount,
+          authDeleteCount,
+        ] = await Promise.all([
+          this.invalidate(operation, "person", params),
+          this.invalidate(operation, "keikka", params),
+          this.invalidate(operation, "asiakas", params),
+          this.invalidate(operation, "tyomaa", params),
+          this.invalidate(operation, "grid", params),
+          deletedPersonId
+            ? this.invalidateByPattern(`auth:*:${deletedPersonId}*`)
+            : Promise.resolve(0),
+        ]);
+
+        totalInvalidated =
+          personDeleteCount +
+          keikkaDeleteCount +
+          asiakasDeleteCount +
+          tyomaaDeleteCount +
+          gridDeleteCount +
+          authDeleteCount;
+
+        this.logger.debug("PERSON_DELETE invalidation completed", {
+          keysInvalidated: totalInvalidated,
+        });
+        break;
+      }
+
+      // Sijainti operations - cross-entity invalidation
+      // Sijainti (location) changes affect tyomaa lookups, keikka deliveries, and grid displays
+      case "SIJAINTI_UPDATE":
+      case "SIJAINTI_CREATE":
+      case "SIJAINTI_DELETE": {
+        this.logger.debug("SIJAINTI operation invalidation starting", {
+          operation,
+          params,
+        });
+
+        const [
+          sijaintiGeocodeCount,
+          sijaintiTyomaaCount,
+          sijaintiKeikkaCount,
+          sijaintiGridCount,
+        ] = await Promise.all([
+          this.invalidate(operation, "geocode", params),
+          this.invalidate(operation, "tyomaa", params),
+          this.invalidate(operation, "keikka", params),
+          this.invalidateGridSmart("TYOMAA_UPDATE", params.body || {}, params),
+        ]);
+
+        totalInvalidated +=
+          sijaintiGeocodeCount +
+          sijaintiTyomaaCount +
+          sijaintiKeikkaCount +
+          sijaintiGridCount;
+
+        this.logger.info("SIJAINTI operation invalidation completed", {
+          operation,
+          keysInvalidated: totalInvalidated,
+        });
+        break;
+      }
+
+      // Tyomaa operations - cross-entity invalidation
+      case "TYOMAA_UPDATE":
+      case "TYOMAA_CREATE":
+      case "TYOMAA_DELETE": {
+        // Tyomaa changes affect: tyomaa, keikka (keikkaTyomaa), tyomaaPerson, person, grid
+        const [
+          tyomaaEntityCount,
+          keikkaEntityCount,
+          tyomaaPersonEntityCount,
+          personEntityCount,
+          gridEntityCount,
+        ] = await Promise.all([
+          this.invalidate(operation, "tyomaa", params),
+          this.invalidate(operation, "keikka", params),
+          this.invalidate(operation, "tyomaaPerson", params),
+          this.invalidate(operation, "person", params),
+          this.invalidateGridSmart(operation, params.body || {}, params),
+        ]);
+
+        totalInvalidated +=
+          tyomaaEntityCount +
+          keikkaEntityCount +
+          tyomaaPersonEntityCount +
+          personEntityCount +
+          gridEntityCount;
+
+        this.logger.info("TYOMAA operation invalidation completed", {
+          operation,
+          keysInvalidated: totalInvalidated,
+        });
+        break;
+      }
+
+      // Vehicle operations - cross-entity invalidation
+      // Vehicle changes affect: vehicle lists, keikka (vehicle display), grid (vehicle columns), person (assigned drivers)
+      case "VEHICLE_UPDATE":
+      case "VEHICLE_CREATE":
+      case "VEHICLE_DELETE": {
+        this.logger.debug("VEHICLE operation invalidation starting", {
+          operation,
+          params,
+        });
+
+        const [
+          vehicleEntityCount,
+          keikkaVehicleCount,
+          gridVehicleCount,
+          personVehicleCount,
+        ] = await Promise.all([
+          this.invalidate(operation, "vehicle", params),
+          this.invalidate(operation, "keikka", params),
+          this.invalidateGridSmart(operation, params.body || {}, params),
+          this.invalidate(operation, "person", params),
+        ]);
+
+        totalInvalidated +=
+          vehicleEntityCount +
+          keikkaVehicleCount +
+          gridVehicleCount +
+          personVehicleCount;
+
+        this.logger.info("VEHICLE operation invalidation completed", {
+          operation,
+          keysInvalidated: totalInvalidated,
+        });
+        break;
+      }
+
+      // Vehicle visibility operations - cross-tenant visibility grants
+      // Modifies vehicleAsiakasVisibility table, affects vehicle lists for both owner and target companies
+      case "VEHICLE_VISIBILITY_TOGGLE":
+      case "VEHICLE_VISIBILITY_APPLY_DEFAULTS":
+      case "VEHICLE_VISIBILITY_CLEAR": {
+        this.logger.debug("VEHICLE_VISIBILITY operation invalidation starting", {
+          operation,
+          params,
+        });
+
+        // Extract asiakasIds from params - visibility affects both owner and target companies
+        const ownerAsiakasId = params.ownerAsiakasId || params.asiakasId;
+        const targetAsiakasId = params.targetAsiakasId;
+        const yyyymmdd = params.yyyymmdd;
+
+        // Invalidate vehicle cache for owner company
+        const ownerVehicleCount = await this.invalidate(operation, "vehicle", {
+          ...params,
+          asiakasId: ownerAsiakasId,
+        });
+
+        // Invalidate vehicle cache for target company if specified
+        const targetVehicleCount = targetAsiakasId
+          ? await this.invalidate(operation, "vehicle", {
+              ...params,
+              asiakasId: targetAsiakasId,
+            })
+          : 0;
+
+        // Invalidate grid cache for the affected date
+        const gridVisibilityCount = yyyymmdd
+          ? await this.invalidate(operation, "grid", {
+              ...params,
+              pumppuAika: yyyymmdd,
+            })
+          : await this.invalidate(operation, "grid", params);
+
+        totalInvalidated +=
+          ownerVehicleCount + targetVehicleCount + gridVisibilityCount;
+
+        this.logger.info("VEHICLE_VISIBILITY operation invalidation completed", {
+          operation,
+          ownerAsiakasId,
+          targetAsiakasId,
+          yyyymmdd,
+          keysInvalidated: totalInvalidated,
+        });
+        break;
+      }
+
+      // Tuote (Product) operations - cross-entity invalidation
+      // CRITICAL: tuotteet_delete SQL procedure modifies keikkaLaskuRivit (invoice line items)
+      // Product changes affect: tuote lists, lasku (invoices with product names/prices), keikka (embedded pricing)
+      case "TUOTE_UPDATE":
+      case "TUOTE_CREATE":
+      case "TUOTE_DELETE": {
+        this.logger.debug("TUOTE operation invalidation starting", {
+          operation,
+          params,
+        });
+
+        // Parallelize independent invalidations for better performance
+        const [tuoteCount, laskuCount, keikkaCount] = await Promise.all([
+          this.invalidate(operation, "tuote", params),
+          this.invalidate(operation, "lasku", params), // CRITICAL: Invoice cache - products affect invoice line items
+          this.invalidate(operation, "keikka", params), // Keikka may embed pricing data
+        ]);
+
+        totalInvalidated += tuoteCount + laskuCount + keikkaCount;
+
+        this.logger.info("TUOTE operation invalidation completed", {
+          operation,
+          keysInvalidated: totalInvalidated,
+        });
+        break;
+      }
 
       default: {
         const entityType = params.entityType || "default";

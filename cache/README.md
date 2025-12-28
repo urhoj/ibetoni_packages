@@ -185,9 +185,24 @@ Invalidate cache for complex cross-entity operations.
 - `KEIKKA_UPDATE` - Single delivery order update
 - `KEIKKA_CREATE` - New delivery order creation
 - `KEIKKA_DELETE` - Delivery order deletion
+- `PALKKI_UPDATE` - Grid bar update (targeted, ~95% fewer cache keys than KEIKKA_UPDATE)
+- `PALKKI_DELETE` - Grid bar deletion
+- `PALKKI_CREATE` - Grid bar creation
+- `GRID_UPDATE` - Grid-only cache invalidation (for visibility changes)
 - `PERSON_UPDATE` - Person/user updates
 - `VEHICLE_UPDATE` - Vehicle updates
-- `ASIAKAS_UPDATE` - Customer updates
+- `VEHICLE_CREATE` - Vehicle creation
+- `VEHICLE_DELETE` - Vehicle deletion
+- `VEHICLE_VISIBILITY_*` - Vehicle visibility operations (cross-tenant)
+- `ASIAKAS_UPDATE` - Customer updates (with cross-entity: keikka if keikkaId, linked customer if linkedAsiakasId)
+- `ASIAKAS_CREATE` - Customer creation
+- `ASIAKAS_DELETE` - Customer deletion
+- `TYOMAA_UPDATE` - Worksite updates
+- `TYOMAA_CREATE` - Worksite creation
+- `TYOMAA_DELETE` - Worksite deletion
+- `TUOTE_UPDATE` - Product updates (with cross-entity: lasku, keikka - products affect invoice line items)
+- `TUOTE_CREATE` - Product creation
+- `TUOTE_DELETE` - Product deletion (also clears keikkaLaskuRivit references)
 - And many more...
 
 ### `cacheManager.invalidate(operation, entityType, params)`
