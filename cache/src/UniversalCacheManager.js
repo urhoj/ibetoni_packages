@@ -33,7 +33,7 @@ class UniversalCacheManager {
       asiakas: 7200, // 2 hours - customers, relatively stable
       tyomaa: 7200, // 2 hours - worksites, moderate changes
       person: 7200, // 2 hours - persons, moderate changes
-      personpvm: 7200, // 2 hours - person schedules, change frequently
+      personpvm: 3600, // 1 hour - person schedules, change frequently (reduced from 2h per cache audit)
       personpvmStatus: 43200, // 12 hours - person schedule status types (static reference data)
       betoni: 3600, // 1 hour - concrete specs, reference data
       betoniReference: 7200, // 2 hours - static reference data
@@ -75,6 +75,8 @@ class UniversalCacheManager {
       legalDocument: 86400, // 24 hours - legal documents, changes rarely
       weather: 3600, // 1 hour - weather module status and forecasts
       ecofleet: 60, // 1 minute - external fleet tracking API (real-time vehicle locations and movement data)
+      lasku: 1800, // 30 minutes - invoice data, moderate changes
+      holiday: 86400, // 24 hours - national holidays, changes rarely (weekly sync)
       default: 900, // 15 minutes fallback
     };
 
@@ -416,9 +418,12 @@ class UniversalCacheManager {
   async cache(key, data, entityType = "default") {
     return await this.withRedis(
       async (redis) => {
-        const ttl = this.TTL[entityType] || this.TTL.default;
+        const baseTtl = this.TTL[entityType] || this.TTL.default;
+        // Add ±5% jitter to prevent synchronized cache expiration (cache stampede prevention)
+        const jitter = Math.floor(baseTtl * 0.05 * (Math.random() * 2 - 1));
+        const ttl = baseTtl + jitter;
         await redis.setex(key, ttl, JSON.stringify(data));
-        this.logger.debug("Cache set successful", { entityType, key, ttl });
+        this.logger.debug("Cache set successful", { entityType, key, baseTtl, ttl });
 
         // Record cache set metric
         this.cacheMetrics.recordSet(entityType, key);
@@ -1032,6 +1037,36 @@ class UniversalCacheManager {
         });
         break;
       }
+
+      // Azure Functions background job operations
+      case "LASKU_SYNC":
+        // Fennoa invoice sync - invalidate invoice-related caches
+        totalInvalidated += await this.invalidate(operation, "keikka", params);
+        totalInvalidated += await this.invalidate(operation, "lasku", params);
+        totalInvalidated += await this.invalidate(operation, "stat", params);
+        this.logger.info("LASKU_SYNC invalidation completed", {
+          keysInvalidated: totalInvalidated,
+        });
+        break;
+
+      case "HOLIDAY_SYNC":
+        // National holiday sync - invalidate holiday and schedule caches
+        totalInvalidated += await this.invalidate(operation, "holiday", params);
+        totalInvalidated += await this.invalidate(operation, "personpvm", params);
+        totalInvalidated += await this.invalidate(operation, "grid", params);
+        this.logger.info("HOLIDAY_SYNC invalidation completed", {
+          keysInvalidated: totalInvalidated,
+        });
+        break;
+
+      case "CLEANUP_ALL":
+        // SQL cleanup job - invalidate stat and log caches
+        totalInvalidated += await this.invalidate(operation, "stat", params);
+        totalInvalidated += await this.invalidate(operation, "stepLog", params);
+        this.logger.info("CLEANUP_ALL invalidation completed", {
+          keysInvalidated: totalInvalidated,
+        });
+        break;
 
       default: {
         const entityType = params.entityType || "default";
