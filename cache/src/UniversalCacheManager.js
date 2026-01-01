@@ -616,25 +616,23 @@ class UniversalCacheManager {
           individualKeysPattern = `keikka:get:${asiakasId || "*"}:*`;
         }
 
-        // Key format: keikka:list:asiakasId:personId:startDate:endDate
-        // Match date at correct positions (5=startDate, 6=endDate)
+        // Key format: keikka:list:asiakasId:personId:yyyymmdd[:deleted]
+        // Match yyyymmdd at position 5 (trailing wildcard for optional :deleted suffix)
         if (yyyymmddValue) {
           return await Promise.all([
             this.invalidateByPattern(individualKeysPattern),
-            this.invalidateByPattern(`keikka:list:*:*:${yyyymmddValue}:*`),  // date as startDate
-            this.invalidateByPattern(`keikka:list:*:*:*:${yyyymmddValue}`),  // date as endDate
+            this.invalidateByPattern(`keikka:list:*:*:${yyyymmddValue}*`),  // yyyymmdd at position 5
           ]).then((results) => results.reduce((sum, count) => sum + count, 0));
         } else if (targetDate) {
           const yyyymmdd = targetDate.substring(0, 10).replace(/-/g, "");
           return await Promise.all([
             this.invalidateByPattern(individualKeysPattern),
-            this.invalidateByPattern(`keikka:list:*:*:${yyyymmdd}:*`),
-            this.invalidateByPattern(`keikka:list:*:*:*:${yyyymmdd}`),
+            this.invalidateByPattern(`keikka:list:*:*:${yyyymmdd}*`),  // yyyymmdd at position 5
           ]).then((results) => results.reduce((sum, count) => sum + count, 0));
         } else if (personIdValue) {
           return await Promise.all([
             this.invalidateByPattern(individualKeysPattern),
-            this.invalidateByPattern(`keikka:list:*:${personIdValue}:*:*`),  // personId at position 4
+            this.invalidateByPattern(`keikka:list:*:${personIdValue}:*`),  // personId at position 4
           ]).then((results) => results.reduce((sum, count) => sum + count, 0));
         } else {
           return await Promise.all([
