@@ -72,7 +72,7 @@ class UniversalCacheManager {
       betoniReference: 7200, // 2 hours - static reference data
       betoniLaatu: 7200, // 2 hours - quality data scoped by supplier
       betoniShortcut: 7200, // 2 hours - user-configured concrete shortcuts
-      betoniList: 1800, // 30 minutes - betoni search/filter results
+      betoniList: 3600, // 1 hour - betoni search/filter results
       betoniAttr: 3600, // 1 hour - betoni attributes (keikka-specific)
       config: 43200, // 12 hours - static configuration
       vehicle: 7200, // 2 hours - vehicles, relatively stable
@@ -102,15 +102,15 @@ class UniversalCacheManager {
       dailyMessage: 7200, // 2 hours - daily messages, frequently updated
       dailyConfirmation: 7200, // 2 hours - daily confirmations, stable once set
       stat: 7200, // 2 hours - statistics updated by cronjobs
-      stepLog: 900, // 15 minutes - keikka activity logs, change frequently
-      grid: 900, // 15 minutes - grid keikka lists, frequently updated
+      stepLog: 3600, // 1 hour - keikka activity logs (same as keikka)
+      grid: 3600, // 1 hour - grid keikka lists (same as keikka)
       help: 43200, // 12 hours - help content, changes very rarely
       legalDocument: 86400, // 24 hours - legal documents, changes rarely
       weather: 3600, // 1 hour - weather module status and forecasts
       ecofleet: 60, // 1 minute - external fleet tracking API (real-time, excluded from multiplier)
-      lasku: 1800, // 30 minutes - invoice data, moderate changes
+      lasku: 3600, // 1 hour - invoice data
       holiday: 86400, // 24 hours - national holidays, changes rarely (weekly sync)
-      default: 900, // 15 minutes fallback
+      default: 3600, // 1 hour fallback (same as keikka tier)
     };
 
     // Apply TTL multiplier to generate effective TTLs
