@@ -10,30 +10,63 @@
 const crypto = require("crypto");
 const Redis = require("ioredis");
 
+/**
+ * TTL Multiplier - Global scaling factor for all cache TTL values
+ *
+ * Adjusts all TTL values proportionally. With 4% Redis memory usage,
+ * higher multipliers improve cache hit rates without memory concerns.
+ *
+ * Recommended values:
+ * - 1.0: Original TTLs (conservative, for high-write scenarios)
+ * - 2.0: Double TTLs (balanced)
+ * - 4.0: 4x TTLs (recommended for low memory usage)
+ * - 5.0: 5x TTLs (aggressive, maximizes cache hits)
+ *
+ * Can be overridden via environment variable: CACHE_TTL_MULTIPLIER
+ */
+const TTL_MULTIPLIER = parseFloat(process.env.CACHE_TTL_MULTIPLIER) || 4.0;
+
+/**
+ * Entity types excluded from TTL multiplier (require real-time or near-real-time data)
+ * These maintain their base TTL regardless of the multiplier setting.
+ */
+const TTL_MULTIPLIER_EXCLUDED = new Set([
+  "ecofleet", // Real-time vehicle GPS positions - must stay at 1 minute
+]);
+
+/**
+ * Maximum TTL cap in seconds (7 days) to prevent excessively long cache times
+ * Even with high multipliers, TTLs won't exceed this value.
+ */
+const MAX_TTL_SECONDS = 604800; // 7 days
+
 class UniversalCacheManager {
   /**
    * @param {Object} options - Configuration options
    * @param {Object} options.logger - Winston logger instance with categories.CACHE
    * @param {Object} options.cacheMetrics - Optional cache metrics instance
    * @param {Object} options.redisConfig - Optional Redis configuration override
+   * @param {number} options.ttlMultiplier - Override TTL multiplier (default: env or 4.0)
    */
   constructor(options = {}) {
     this.logger = options.logger || this._createDefaultLogger();
     this.cacheMetrics = options.cacheMetrics || this._createDefaultMetrics();
     this.redisConfigOverride = options.redisConfig;
+    this.ttlMultiplier = options.ttlMultiplier || TTL_MULTIPLIER;
 
     this.client = null;
     this.isConnected = false;
     this.isShuttingDown = false;
     this.connectionPromise = null; // Prevent multiple connection attempts
 
-    // TTL configuration for all entity types (seconds)
-    this.TTL = {
+    // Base TTL configuration for all entity types (seconds)
+    // These are the foundation values before multiplier is applied
+    this.BASE_TTL = {
       keikka: 3600, // 1 hour - delivery orders, change frequently
       asiakas: 7200, // 2 hours - customers, relatively stable
       tyomaa: 7200, // 2 hours - worksites, moderate changes
       person: 7200, // 2 hours - persons, moderate changes
-      personpvm: 3600, // 1 hour - person schedules, change frequently (reduced from 2h per cache audit)
+      personpvm: 3600, // 1 hour - person schedules, change frequently
       personpvmStatus: 43200, // 12 hours - person schedule status types (static reference data)
       betoni: 3600, // 1 hour - concrete specs, reference data
       betoniReference: 7200, // 2 hours - static reference data
@@ -74,11 +107,25 @@ class UniversalCacheManager {
       help: 43200, // 12 hours - help content, changes very rarely
       legalDocument: 86400, // 24 hours - legal documents, changes rarely
       weather: 3600, // 1 hour - weather module status and forecasts
-      ecofleet: 60, // 1 minute - external fleet tracking API (real-time vehicle locations and movement data)
+      ecofleet: 60, // 1 minute - external fleet tracking API (real-time, excluded from multiplier)
       lasku: 1800, // 30 minutes - invoice data, moderate changes
       holiday: 86400, // 24 hours - national holidays, changes rarely (weekly sync)
       default: 900, // 15 minutes fallback
     };
+
+    // Apply TTL multiplier to generate effective TTLs
+    this.TTL = this._applyTtlMultiplier(this.BASE_TTL);
+
+    this.logger.info("TTL multiplier applied", {
+      multiplier: this.ttlMultiplier,
+      excluded: Array.from(TTL_MULTIPLIER_EXCLUDED),
+      maxTtl: MAX_TTL_SECONDS,
+      sampleTtls: {
+        keikka: this.TTL.keikka,
+        grid: this.TTL.grid,
+        ecofleet: this.TTL.ecofleet,
+      },
+    });
 
     // Production-safe batch limits
     this.BATCH_SIZE = 2000;
@@ -108,6 +155,55 @@ class UniversalCacheManager {
       recordInvalidation: () => {},
       recordOperation: () => {},
       recordError: () => {},
+    };
+  }
+
+  /**
+   * Apply TTL multiplier to base TTL values
+   *
+   * - Multiplies all TTLs by the configured multiplier
+   * - Excludes real-time entities (ecofleet) from multiplication
+   * - Caps maximum TTL at MAX_TTL_SECONDS (7 days)
+   *
+   * @param {Object} baseTtl - Base TTL configuration object
+   * @returns {Object} Computed TTL values with multiplier applied
+   */
+  _applyTtlMultiplier(baseTtl) {
+    const result = {};
+
+    for (const [entityType, baseValue] of Object.entries(baseTtl)) {
+      if (TTL_MULTIPLIER_EXCLUDED.has(entityType)) {
+        // Real-time entities keep their base TTL
+        result[entityType] = baseValue;
+      } else {
+        // Apply multiplier with max cap
+        const multiplied = Math.floor(baseValue * this.ttlMultiplier);
+        result[entityType] = Math.min(multiplied, MAX_TTL_SECONDS);
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Get current TTL multiplier value
+   * @returns {number} The active TTL multiplier
+   */
+  getTtlMultiplier() {
+    return this.ttlMultiplier;
+  }
+
+  /**
+   * Get TTL configuration summary for monitoring/debugging
+   * @returns {Object} TTL configuration including multiplier and effective values
+   */
+  getTtlConfig() {
+    return {
+      multiplier: this.ttlMultiplier,
+      maxTtl: MAX_TTL_SECONDS,
+      excluded: Array.from(TTL_MULTIPLIER_EXCLUDED),
+      effectiveTtls: { ...this.TTL },
+      baseTtls: { ...this.BASE_TTL },
     };
   }
 
