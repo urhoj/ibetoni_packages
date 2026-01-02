@@ -86,18 +86,18 @@ class UniversalCacheManager {
       tyomaaDateType: 43200, // 12 hours - työmaa date types (reference data)
       asiakasDate: 7200, // 2 hours - asiakas dates, moderate changes
       asiakasDateType: 43200, // 12 hours - asiakas date types (reference data)
-      complianceDashboard: 900, // 15 minutes - dashboard aggregations
+      complianceDashboard: 7200, // 2 hours - dashboard aggregations (matches date entities)
       sijainti: 7200, // 2 hours - locations, rarely changes
       geocode: 3600, // 1 hour - geocoding & driving distances
-      attachment: 600, // 10 minutes - attachment lists, moderate changes
+      attachment: 3600, // 1 hour - attachment lists (matches relationship entities)
       attachmentTypes: 43200, // 12 hours - attachment types (static reference data)
       tuote: 7200, // 2 hours - products, moderate changes
       productReference: 43200, // 12 hours - product types and categories
       barColor: 43200, // 12 hours - grid bar colors (static UI configuration)
       invoiceStatus: 43200, // 12 hours - invoice status lookup table
-      tyomaaPerson: 1800, // 30 minutes - worksite-person relationships
-      asiakasPerson: 1800, // 30 minutes - customer-person relationships
-      keikkaPerson: 1800, // 30 minutes - delivery-person assignments
+      tyomaaPerson: 3600, // 1 hour - worksite-person relationships
+      asiakasPerson: 3600, // 1 hour - customer-person relationships
+      keikkaPerson: 3600, // 1 hour - delivery-person assignments
       keikkaBetoni: 3600, // 1 hour - delivery concrete assignments
       dailyMessage: 7200, // 2 hours - daily messages, frequently updated
       dailyConfirmation: 7200, // 2 hours - daily confirmations, stable once set

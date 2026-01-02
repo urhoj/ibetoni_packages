@@ -357,19 +357,62 @@ router.put('/api/keikka/:keikkaId', async (req, res) => {
 
 ## TTL Configuration
 
-Default TTL values (in seconds):
+### TTL Multiplier
 
-| Entity Type | TTL | Description |
-|-------------|-----|-------------|
-| keikka | 300s (5min) | Delivery orders (change frequently) |
-| asiakas | 1800s (30min) | Customers (relatively stable) |
-| person | 900s (15min) | Users/persons (moderate changes) |
-| vehicle | 1800s (30min) | Vehicles (relatively stable) |
-| betoni | 3600s (1hr) | Concrete specifications |
-| grid | 300s (5min) | Grid/list views |
-| stat | 7200s (2hrs) | Statistics (updated by cron) |
-| config | 43200s (12hrs) | Configuration data |
-| default | 300s (5min) | Fallback for unknown types |
+All TTL values are scaled by a global **TTL multiplier** (default: `4.0`). This allows easy optimization of cache duration without modifying individual values.
+
+**Configure via environment variable:**
+```bash
+CACHE_TTL_MULTIPLIER=4.0    # 4× all TTLs (default)
+CACHE_TTL_MULTIPLIER=5.0    # 5× all TTLs (aggressive caching)
+CACHE_TTL_MULTIPLIER=1.0    # Original TTLs (conservative)
+```
+
+**Or programmatically:**
+```javascript
+const cacheManager = new UniversalCacheManager({
+  logger: myLogger,
+  ttlMultiplier: 5.0  // Override default multiplier
+});
+```
+
+**Query current configuration:**
+```javascript
+const config = cacheManager.getTtlConfig();
+// Returns: { multiplier, maxTtl, excluded, effectiveTtls, baseTtls }
+```
+
+### Multiplier Exclusions
+
+Some entity types are excluded from the multiplier (require real-time data):
+- `ecofleet` - Real-time vehicle GPS positions (always 1 minute)
+
+### Maximum TTL Cap
+
+TTLs are capped at **7 days** (604,800 seconds) regardless of multiplier to prevent excessively long cache times.
+
+### Base TTL Values (Before Multiplier)
+
+| Entity Type | Base TTL | With 4× Multiplier | Description |
+|-------------|----------|-------------------|-------------|
+| keikka | 1hr | **4hr** | Delivery orders |
+| asiakas | 2hr | **8hr** | Customers |
+| person | 2hr | **8hr** | Users/persons |
+| vehicle | 2hr | **8hr** | Vehicles |
+| betoni | 1hr | **4hr** | Concrete specifications |
+| grid | 15min | **1hr** | Grid/list views |
+| stepLog | 15min | **1hr** | Activity logs |
+| stat | 2hr | **8hr** | Statistics (updated by cron) |
+| config | 12hr | **48hr** | Configuration data |
+| help | 12hr | **48hr** | Help content |
+| legalDocument | 24hr | **96hr** | Legal documents |
+| holiday | 24hr | **96hr** | National holidays |
+| ecofleet | 1min | **1min** | Real-time GPS (excluded) |
+| default | 15min | **1hr** | Fallback for unknown types |
+
+### TTL Jitter
+
+All TTLs include ±5% random jitter to prevent cache stampedes (synchronized expiration).
 
 ## Development
 

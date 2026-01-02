@@ -1,40 +1,49 @@
 /**
  * Cache TTL Constants
  *
- * Default Time-To-Live (TTL) values for cached entities across all applications.
+ * Base Time-To-Live (TTL) values for cached entities across all applications.
  * All values are in seconds.
+ *
+ * IMPORTANT: These are BASE TTL values. The actual TTL is calculated as:
+ *   effective_ttl = base_ttl × TTL_MULTIPLIER (default: 4.0)
+ *
+ * The TTL multiplier is configured via CACHE_TTL_MULTIPLIER environment variable.
+ * See UniversalCacheManager in @ibetoni/cache for the authoritative TTL configuration.
  *
  * @module @ibetoni/constants/cache
  */
 
 /**
- * Default TTL values for entity caching
+ * Base TTL values for entity caching (before multiplier is applied)
+ *
+ * These values are multiplied by CACHE_TTL_MULTIPLIER (default: 4.0) in UniversalCacheManager.
  *
  * Usage:
  * ```javascript
  * const { CACHE_TTL } = require('@ibetoni/constants');
  *
+ * // Note: These are base values. Actual TTL = base × multiplier
  * await setCachedData('keikka', customerId, data, CACHE_TTL.KEIKKA);
  * ```
  *
  * @constant {Object} CACHE_TTL
- * @property {number} KEIKKA - Keikka/Order cache TTL (10 minutes)
- * @property {number} TYOMAA - Tyomaa/Worksite cache TTL (20 minutes)
- * @property {number} PERSON - Person/User cache TTL (30 minutes)
- * @property {number} VEHICLE - Vehicle/Equipment cache TTL (30 minutes)
- * @property {number} WEATHER - Weather data cache TTL (15 minutes)
+ * @property {number} KEIKKA - Keikka/Order cache base TTL (1 hour → 4 hours with 4× multiplier)
+ * @property {number} TYOMAA - Tyomaa/Worksite cache base TTL (2 hours → 8 hours)
+ * @property {number} PERSON - Person/User cache base TTL (2 hours → 8 hours)
+ * @property {number} VEHICLE - Vehicle/Equipment cache base TTL (2 hours → 8 hours)
+ * @property {number} WEATHER - Weather data cache base TTL (1 hour → 4 hours)
  */
 const CACHE_TTL = {
-  KEIKKA: 600,    // 10 minutes - Orders change frequently
-  TYOMAA: 1200,   // 20 minutes - Worksites change moderately
-  PERSON: 1800,   // 30 minutes - Person data relatively stable
-  VEHICLE: 1800,  // 30 minutes - Vehicle data relatively stable
-  WEATHER: 900,   // 15 minutes - Weather data changes frequently
+  KEIKKA: 3600,   // 1 hour base - Orders, invalidated on changes
+  TYOMAA: 7200,   // 2 hours base - Worksites, moderate changes
+  PERSON: 7200,   // 2 hours base - Person data relatively stable
+  VEHICLE: 7200,  // 2 hours base - Vehicle data relatively stable
+  WEATHER: 3600,  // 1 hour base - Weather data from FMI
 };
 
 /**
  * Legacy constant names for backward compatibility
- * @deprecated Use CACHE_TTL object instead
+ * @deprecated Use CACHE_TTL object instead. Note: Values updated to match UniversalCacheManager BASE_TTL.
  */
 const DEFAULT_KEIKKA_TTL = CACHE_TTL.KEIKKA;
 const DEFAULT_TYOMAA_TTL = CACHE_TTL.TYOMAA;
