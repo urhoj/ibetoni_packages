@@ -954,8 +954,7 @@ class UniversalCacheManager {
       case "PALKKI_UPDATE":
       case "PALKKI_DELETE":
       case "PALKKI_CREATE": {
-        // Palkki operations affect both grid cache AND keikka list cache
-        // (grid keikka data is cached under keikka:* keys)
+        // Palkki operations affect grid cache, keikka list cache, AND palkki list cache
         const palkkiGridCount = await this.invalidateGridSmart(
           operation,
           params.body || {},
@@ -968,16 +967,24 @@ class UniversalCacheManager {
           pumppuAika: params.pumppuAika || params.body?.pumppuAika,
         });
 
+        // Invalidate palkki list cache (grid:palkki:list:*)
+        // This is company-based so we invalidate all dates for the company
+        const asiakasId = params.asiakasId;
+        const palkkiListCount = asiakasId
+          ? await this.invalidateByPattern(`grid:palkki:list:${asiakasId}:*`)
+          : 0;
+
         // If vehicle changed, also invalidate vehicle cache
         const palkkiVehicleCount =
           params.vehicleId || params.body?.vehicleId
             ? await this.invalidate(operation, "vehicle", params)
             : 0;
 
-        totalInvalidated += palkkiGridCount + keikkaListCount + palkkiVehicleCount;
+        totalInvalidated += palkkiGridCount + keikkaListCount + palkkiListCount + palkkiVehicleCount;
         this.logger.debug("PALKKI operation completed", {
           operation,
           keysInvalidated: totalInvalidated,
+          palkkiListCount,
         });
         break;
       }
