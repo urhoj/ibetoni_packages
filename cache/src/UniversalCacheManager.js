@@ -967,12 +967,37 @@ class UniversalCacheManager {
           pumppuAika: params.pumppuAika || params.body?.pumppuAika,
         });
 
-        // Invalidate palkki list cache (grid:palkki:list:*)
-        // This is company-based so we invalidate all dates for the company
-        const asiakasId = params.asiakasId;
-        const palkkiListCount = asiakasId
-          ? await this.invalidateByPattern(`grid:palkki:list:${asiakasId}:*`)
-          : 0;
+        // Invalidate palkki list cache - DATE-SPECIFIC when frontend provides data
+        const cacheInvalidation = params.cacheInvalidation;
+        let palkkiListCount = 0;
+
+        if (cacheInvalidation?.dateKeys?.length && cacheInvalidation?.visibleAsiakasIds?.length) {
+          // Precise invalidation: specific dates for each visible customer
+          const customersToInvalidate = new Set(cacheInvalidation.visibleAsiakasIds);
+          // Ensure owner is always included (may not be in visibility list)
+          if (params.asiakasId) {
+            customersToInvalidate.add(params.asiakasId);
+          }
+
+          for (const customerId of customersToInvalidate) {
+            for (const dateKey of cacheInvalidation.dateKeys) {
+              palkkiListCount += await this.invalidateByPattern(
+                `grid:palkki:list:${customerId}:${dateKey}:*`
+              );
+            }
+          }
+          this.logger.debug("PALKKI date-specific invalidation", {
+            dateKeys: cacheInvalidation.dateKeys,
+            customerCount: customersToInvalidate.size,
+            keysInvalidated: palkkiListCount
+          });
+        } else {
+          // Fallback: broad invalidation if no invalidation data provided
+          const asiakasId = params.asiakasId;
+          palkkiListCount = asiakasId
+            ? await this.invalidateByPattern(`grid:palkki:list:${asiakasId}:*`)
+            : 0;
+        }
 
         // If vehicle changed, also invalidate vehicle cache
         const palkkiVehicleCount =
