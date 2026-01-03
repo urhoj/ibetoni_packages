@@ -203,6 +203,11 @@ Invalidate cache for complex cross-entity operations.
 - `TUOTE_UPDATE` - Product updates (with cross-entity: lasku, keikka - products affect invoice line items)
 - `TUOTE_CREATE` - Product creation
 - `TUOTE_DELETE` - Product deletion (also clears keikkaLaskuRivit references)
+- `NOTIFICATION_CREATE` - New notification sent
+- `NOTIFICATION_UPDATE` - Notification acknowledged
+- `NOTIFICATION_READ` - Notification marked as read
+- `NOTIFICATION_BROADCAST` - Group notification (invalidates all caches for asiakasId)
+- `ASIAKAS_PERSON_SETTING_*` - Role/permission changes (invalidates auth cache)
 - And many more...
 
 ### `cacheManager.invalidate(operation, entityType, params)`
@@ -399,16 +404,18 @@ TTLs are capped at **7 days** (604,800 seconds) regardless of multiplier to prev
 | asiakas | 2hr | **8hr** | Customers |
 | person | 2hr | **8hr** | Users/persons |
 | vehicle | 2hr | **8hr** | Vehicles |
+| tyomaa | 2hr | **8hr** | Worksites |
 | betoni | 1hr | **4hr** | Concrete specifications |
-| grid | 15min | **1hr** | Grid/list views |
-| stepLog | 15min | **1hr** | Activity logs |
+| grid | 1hr | **4hr** | Grid keikka lists |
+| stepLog | 1hr | **4hr** | Keikka activity logs |
 | stat | 2hr | **8hr** | Statistics (updated by cron) |
 | config | 12hr | **48hr** | Configuration data |
 | help | 12hr | **48hr** | Help content |
 | legalDocument | 24hr | **96hr** | Legal documents |
 | holiday | 24hr | **96hr** | National holidays |
-| ecofleet | 1min | **1min** | Real-time GPS (excluded) |
-| default | 15min | **1hr** | Fallback for unknown types |
+| notifications | 2min | **8min** | Push notifications (time-sensitive) |
+| ecofleet | 1min | **1min** | Real-time GPS (excluded from multiplier) |
+| default | 1hr | **4hr** | Fallback for unknown types |
 
 ### TTL Jitter
 
