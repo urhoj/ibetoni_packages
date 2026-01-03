@@ -110,6 +110,7 @@ class UniversalCacheManager {
       ecofleet: 60, // 1 minute - external fleet tracking API (real-time, excluded from multiplier)
       lasku: 3600, // 1 hour - invoice data
       holiday: 86400, // 24 hours - national holidays, changes rarely (weekly sync)
+      notifications: 120, // 2 minutes - time-sensitive push notifications
       default: 3600, // 1 hour fallback (same as keikka tier)
     };
 
@@ -1718,6 +1719,74 @@ class UniversalCacheManager {
 
         this.logger.info("TUOTE operation invalidation completed", {
           operation,
+          keysInvalidated: totalInvalidated,
+        });
+        break;
+      }
+
+      // Notification operations - invalidate notification history cache
+      case "NOTIFICATION_UPDATE":
+      case "NOTIFICATION_CREATE":
+      case "NOTIFICATION_READ": {
+        const { asiakasId, personId } = params;
+        if (asiakasId && personId) {
+          // Invalidate specific person's notification cache
+          totalInvalidated += await this.invalidateByPattern(
+            `notifications:history:${asiakasId}:${personId}:*`
+          );
+        }
+        this.logger.debug("NOTIFICATION operation completed", {
+          operation,
+          asiakasId,
+          personId,
+          keysInvalidated: totalInvalidated,
+        });
+        break;
+      }
+
+      // Notification broadcast - invalidate all notification caches for asiakasId
+      case "NOTIFICATION_BROADCAST": {
+        const { asiakasId } = params;
+        if (asiakasId) {
+          totalInvalidated += await this.invalidateByPattern(
+            `notifications:history:${asiakasId}:*`
+          );
+        }
+        this.logger.debug("NOTIFICATION_BROADCAST completed", {
+          operation,
+          asiakasId,
+          keysInvalidated: totalInvalidated,
+        });
+        break;
+      }
+
+      // Auth cache invalidation for role/permission changes
+      case "ASIAKAS_PERSON_SETTING_CREATE":
+      case "ASIAKAS_PERSON_SETTING_UPDATE":
+      case "ASIAKAS_PERSON_SETTING_DELETE": {
+        const personId = params.personId;
+
+        // Invalidate asiakasPersonSetting cache
+        totalInvalidated += await this.invalidate(
+          operation,
+          "asiakasPersonSetting",
+          params
+        );
+
+        // Invalidate auth cache for this person (login cache)
+        if (personId) {
+          totalInvalidated += await this.invalidateByPattern(
+            `auth:permissions:${personId}:*`
+          );
+          this.logger.debug("Auth cache invalidated for role change", {
+            operation,
+            personId,
+          });
+        }
+
+        this.logger.debug("ASIAKAS_PERSON_SETTING invalidation completed", {
+          operation,
+          personId,
           keysInvalidated: totalInvalidated,
         });
         break;
