@@ -971,7 +971,7 @@ class UniversalCacheManager {
         const cacheInvalidation = params.cacheInvalidation;
         let palkkiListCount = 0;
 
-        if (cacheInvalidation?.dateKeys?.length && cacheInvalidation?.visibleAsiakasIds?.length) {
+        if (cacheInvalidation?.yyyymmdd?.length && cacheInvalidation?.visibleAsiakasIds?.length) {
           // Precise invalidation: specific dates for each visible customer
           const customersToInvalidate = new Set(cacheInvalidation.visibleAsiakasIds);
           // Ensure owner is always included (may not be in visibility list)
@@ -980,14 +980,14 @@ class UniversalCacheManager {
           }
 
           for (const customerId of customersToInvalidate) {
-            for (const dateKey of cacheInvalidation.dateKeys) {
+            for (const yyyymmdd of cacheInvalidation.yyyymmdd) {
               palkkiListCount += await this.invalidateByPattern(
-                `grid:palkki:list:${customerId}:${dateKey}:*`
+                `grid:palkki:list:${customerId}:${yyyymmdd}:*`
               );
             }
           }
           this.logger.debug("PALKKI date-specific invalidation", {
-            dateKeys: cacheInvalidation.dateKeys,
+            yyyymmdd: cacheInvalidation.yyyymmdd,
             customerCount: customersToInvalidate.size,
             keysInvalidated: palkkiListCount
           });
