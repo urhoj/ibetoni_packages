@@ -59,6 +59,10 @@ class UniversalCacheManager {
     this.isShuttingDown = false;
     this.connectionPromise = null; // Prevent multiple connection attempts
 
+    // Track current Redis database (3 = production, 4 = development)
+    const isProduction = process.env.NODE_ENV === "production";
+    this.currentDb = isProduction ? 3 : 4;
+
     // Base TTL configuration for all entity types (seconds)
     // These are the foundation values before multiplier is applied
     this.BASE_TTL = {
@@ -1837,12 +1841,42 @@ class UniversalCacheManager {
   }
 
   /**
+   * Switch Redis database at runtime
+   * @param {number} dbNumber - Database number (3 = production, 4 = development)
+   * @returns {Promise<number>} The new database number
+   */
+  async selectDatabase(dbNumber) {
+    if (![3, 4].includes(dbNumber)) {
+      throw new Error("Invalid database number. Must be 3 (production) or 4 (development)");
+    }
+
+    const redis = await this.getClient();
+    if (!redis) {
+      throw new Error("Redis client not available");
+    }
+
+    await redis.select(dbNumber);
+    this.currentDb = dbNumber;
+    this.logger.info("Redis database switched", { db: dbNumber });
+    return dbNumber;
+  }
+
+  /**
+   * Get current Redis database number
+   * @returns {number} Current database (3 = production, 4 = development)
+   */
+  getCurrentDb() {
+    return this.currentDb;
+  }
+
+  /**
    * Get cache statistics
    */
   getStatus() {
     return {
       connected: this.isConnected,
       client: this.client ? "initialized" : "not initialized",
+      currentDb: this.currentDb,
     };
   }
 
