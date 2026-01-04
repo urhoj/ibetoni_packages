@@ -4,6 +4,17 @@
  * Single unified cache system replacing all specialized cache strategies.
  * Handles all entity types with consistent patterns and minimal code duplication.
  *
+ * **Database Allocation**:
+ * - DB 1: Socket.io sessions (managed by redisSessionClient.js)
+ * - DB 3: API cache (production)
+ * - DB 4: API cache (development)
+ *
+ * **Runtime Database Switching** (January 2026):
+ * - `currentDb` property tracks current database (3 or 4)
+ * - `selectDatabase(db)` switches at runtime via Redis SELECT command
+ * - `getCurrentDb()` returns current database number
+ * - Default: DB 3 for production (`NODE_ENV=production`), DB 4 otherwise
+ *
  * Shared package version - logger and metrics are injectable.
  */
 
