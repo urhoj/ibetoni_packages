@@ -938,6 +938,7 @@ class UniversalCacheManager {
           attachmentCount,
           gridCount,
           v6roleCount,
+          listByAsiakasesCount,
         ] = await Promise.all([
           this.invalidate(operation, "keikka", params),
           this.invalidate(operation, "keikkaPerson", params),
@@ -946,6 +947,7 @@ class UniversalCacheManager {
           this.invalidate(operation, "attachment", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
           this.invalidateByPattern("grid:v6role:*"),
+          this.invalidateByPattern("keikka:listByAsiakases:*"),
         ]);
         totalInvalidated +=
           keikkaCount +
@@ -954,7 +956,8 @@ class UniversalCacheManager {
           stepLogCount +
           attachmentCount +
           gridCount +
-          v6roleCount;
+          v6roleCount +
+          listByAsiakasesCount;
         break;
 
       case "KEIKKA_BULK_UPDATE":
