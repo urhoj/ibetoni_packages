@@ -525,6 +525,37 @@ class UniversalCacheManager {
   }
 
   /**
+   * Extract yyyymmdd from params for v6role invalidation
+   * Returns "*" if no date available (fallback to full invalidation)
+   *
+   * @param {Object} params - Invalidation parameters
+   * @returns {string} yyyymmdd format date or "*" for wildcard
+   */
+  _extractYYYYMMDD(params) {
+    const date =
+      params.yyyymmdd ||
+      params.body?.yyyymmdd ||
+      params.body?.pumppuAika ||
+      params.body?.newDate ||
+      params.body?.pvm ||
+      params.date;
+
+    if (!date) return "*";
+
+    // Handle yyyymmdd format (already correct)
+    if (typeof date === "string" && /^\d{8}$/.test(date)) {
+      return date;
+    }
+
+    // Handle ISO date format (2025-01-05 or 2025-01-05T12:00:00)
+    if (typeof date === "string" && date.length >= 10) {
+      return date.substring(0, 10).replace(/-/g, "");
+    }
+
+    return "*";
+  }
+
+  /**
    * Cache data with appropriate TTL
    */
   async cache(key, data, entityType = "default") {
@@ -944,7 +975,7 @@ class UniversalCacheManager {
     switch (operation) {
       case "KEIKKA_UPDATE":
       case "KEIKKA_DELETE":
-      case "KEIKKA_CREATE":
+      case "KEIKKA_CREATE": {
         // Parallelize independent invalidations for better performance
         const [
           keikkaCount,
@@ -962,7 +993,7 @@ class UniversalCacheManager {
           this.invalidate(operation, "stepLog", params),
           this.invalidate(operation, "attachment", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
-          this.invalidateByPattern("grid:v6role:*"),
+          this.invalidateByPattern(`grid:v6role:*:${this._extractYYYYMMDD(params)}`),
           this.invalidateByPattern("keikka:listByAsiakases:*"),
         ]);
         totalInvalidated +=
@@ -975,6 +1006,7 @@ class UniversalCacheManager {
           v6roleCount +
           listByAsiakasesCount;
         break;
+      }
 
       case "KEIKKA_BULK_UPDATE":
         totalInvalidated += await this.invalidate(operation, "keikka", params);
@@ -1068,7 +1100,7 @@ class UniversalCacheManager {
       case "VEHICLE_DATE_UNDISMISS":
       case "VEHICLE_DATE_UPDATE":
       case "VEHICLE_DATE_CREATE":
-      case "VEHICLE_DATE_DELETE":
+      case "VEHICLE_DATE_DELETE": {
         console.log("🔍 [DEBUG] VEHICLE_DATE operation START", {
           operation,
           params,
@@ -1116,12 +1148,13 @@ class UniversalCacheManager {
           totalInvalidated
         );
         break;
+      }
 
       case "PERSON_DATE_DISMISS":
       case "PERSON_DATE_UNDISMISS":
       case "PERSON_DATE_UPDATE":
       case "PERSON_DATE_CREATE":
-      case "PERSON_DATE_DELETE":
+      case "PERSON_DATE_DELETE": {
         console.log("🔍 [DEBUG] PERSON_DATE operation START", {
           operation,
           params,
@@ -1154,12 +1187,13 @@ class UniversalCacheManager {
           totalInvalidated
         );
         break;
+      }
 
       case "TYOMAA_DATE_DISMISS":
       case "TYOMAA_DATE_UNDISMISS":
       case "TYOMAA_DATE_UPDATE":
       case "TYOMAA_DATE_CREATE":
-      case "TYOMAA_DATE_DELETE":
+      case "TYOMAA_DATE_DELETE": {
         console.log("🔍 [DEBUG] TYOMAA_DATE operation START", {
           operation,
           params,
@@ -1192,6 +1226,7 @@ class UniversalCacheManager {
           totalInvalidated
         );
         break;
+      }
 
       case "ASIAKAS_DATE_DISMISS":
       case "ASIAKAS_DATE_UNDISMISS":
@@ -1290,7 +1325,7 @@ class UniversalCacheManager {
           params.vehicleId
             ? this.invalidate(operation, "vehicle", params)
             : Promise.resolve(0),
-          this.invalidateByPattern("grid:v6role:*"),
+          this.invalidateByPattern(`grid:v6role:*:${this._extractYYYYMMDD(params)}`),
         ]);
 
         console.log("🔍 [DEBUG] personpvm invalidated:", personPvmCount);
@@ -1680,7 +1715,7 @@ class UniversalCacheManager {
           this.invalidate(operation, "keikka", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
           this.invalidate(operation, "person", params),
-          this.invalidateByPattern("grid:v6role:*"),
+          this.invalidateByPattern(`grid:v6role:*:${this._extractYYYYMMDD(params)}`),
         ]);
 
         totalInvalidated +=
@@ -1736,7 +1771,7 @@ class UniversalCacheManager {
 
         // Invalidate v6role cache - visibility changes affect which vehicles companies can see
         const v6roleVisibilityCount = await this.invalidateByPattern(
-          "grid:v6role:*"
+          `grid:v6role:*:${yyyymmdd || "*"}`
         );
 
         totalInvalidated +=
