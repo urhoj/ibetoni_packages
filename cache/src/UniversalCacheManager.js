@@ -1563,6 +1563,7 @@ class UniversalCacheManager {
           tyomaaDeleteCount,
           gridDeleteCount,
           authDeleteCount,
+          v6roleDeleteCount,
         ] = await Promise.all([
           this.invalidate(operation, "person", params),
           this.invalidate(operation, "keikka", params),
@@ -1572,6 +1573,7 @@ class UniversalCacheManager {
           deletedPersonId
             ? this.invalidateByPattern(`auth:*:${deletedPersonId}*`)
             : Promise.resolve(0),
+          this.invalidateByPattern("grid:v6role:*"),
         ]);
 
         totalInvalidated =
@@ -1580,7 +1582,8 @@ class UniversalCacheManager {
           asiakasDeleteCount +
           tyomaaDeleteCount +
           gridDeleteCount +
-          authDeleteCount;
+          authDeleteCount +
+          v6roleDeleteCount;
 
         this.logger.debug("PERSON_DELETE invalidation completed", {
           keysInvalidated: totalInvalidated,
@@ -1671,18 +1674,21 @@ class UniversalCacheManager {
           keikkaVehicleCount,
           gridVehicleCount,
           personVehicleCount,
+          v6roleVehicleCount,
         ] = await Promise.all([
           this.invalidate(operation, "vehicle", params),
           this.invalidate(operation, "keikka", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
           this.invalidate(operation, "person", params),
+          this.invalidateByPattern("grid:v6role:*"),
         ]);
 
         totalInvalidated +=
           vehicleEntityCount +
           keikkaVehicleCount +
           gridVehicleCount +
-          personVehicleCount;
+          personVehicleCount +
+          v6roleVehicleCount;
 
         this.logger.info("VEHICLE operation invalidation completed", {
           operation,
@@ -1728,8 +1734,16 @@ class UniversalCacheManager {
             })
           : await this.invalidate(operation, "grid", params);
 
+        // Invalidate v6role cache - visibility changes affect which vehicles companies can see
+        const v6roleVisibilityCount = await this.invalidateByPattern(
+          "grid:v6role:*"
+        );
+
         totalInvalidated +=
-          ownerVehicleCount + targetVehicleCount + gridVisibilityCount;
+          ownerVehicleCount +
+          targetVehicleCount +
+          gridVisibilityCount +
+          v6roleVisibilityCount;
 
         this.logger.info("VEHICLE_VISIBILITY operation invalidation completed", {
           operation,
