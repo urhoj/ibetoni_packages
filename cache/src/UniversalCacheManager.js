@@ -993,7 +993,7 @@ class UniversalCacheManager {
           this.invalidate(operation, "stepLog", params),
           this.invalidate(operation, "attachment", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
-          this.invalidateByPattern(`grid:v6role:*:${this._extractYYYYMMDD(params)}`),
+          this.invalidateByPattern(`grid:v6role:${this._extractYYYYMMDD(params)}:*`),
           this.invalidateByPattern("keikka:listByAsiakases:*"),
         ]);
         totalInvalidated +=
@@ -1326,7 +1326,7 @@ class UniversalCacheManager {
           params.vehicleId
             ? this.invalidate(operation, "vehicle", params)
             : Promise.resolve(0),
-          this.invalidateByPattern(`grid:v6role:*:${this._extractYYYYMMDD(params)}`),
+          this.invalidateByPattern(`grid:v6role:${this._extractYYYYMMDD(params)}:*`),
         ]);
 
         console.log("🔍 [DEBUG] personpvm invalidated:", personPvmCount);
@@ -1717,7 +1717,7 @@ class UniversalCacheManager {
           this.invalidate(operation, "keikka", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
           this.invalidate(operation, "person", params),
-          this.invalidateByPattern(`grid:v6role:*:${this._extractYYYYMMDD(params)}`),
+          this.invalidateByPattern(`grid:v6role:${this._extractYYYYMMDD(params)}:*`),
         ]);
 
         totalInvalidated +=
@@ -1773,7 +1773,7 @@ class UniversalCacheManager {
 
         // Invalidate v6role cache - visibility changes affect which vehicles companies can see
         const v6roleVisibilityCount = await this.invalidateByPattern(
-          `grid:v6role:*:${yyyymmdd || "*"}`
+          `grid:v6role:${yyyymmdd || "*"}:*`
         );
 
         totalInvalidated +=
