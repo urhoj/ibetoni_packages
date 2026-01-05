@@ -909,6 +909,22 @@ class UniversalCacheManager {
           return 0;
         }
 
+      case "PERSON_PVM_UPDATE":
+      case "PERSON_PVM_DELETE":
+      case "PERSON_PVM_CREATE": {
+        // PersonPvm affects grid display - invalidate by date if available
+        let totalInvalidated = 0;
+
+        if (pumppuAika) {
+          totalInvalidated += await this.invalidate(operation, "grid", {
+            asiakasId,
+            pumppuAika,
+          });
+        }
+
+        return totalInvalidated;
+      }
+
       default:
         this.logger.warn("Unknown grid operation, using broad invalidation", {
           operation,
@@ -1266,6 +1282,7 @@ class UniversalCacheManager {
           personPvmGridCount,
           personPvmPersonCount,
           personPvmVehicleCount,
+          personPvmV6roleCount,
         ] = await Promise.all([
           this.invalidate(operation, "personpvm", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
@@ -1273,18 +1290,21 @@ class UniversalCacheManager {
           params.vehicleId
             ? this.invalidate(operation, "vehicle", params)
             : Promise.resolve(0),
+          this.invalidateByPattern("grid:v6role:*"),
         ]);
 
         console.log("🔍 [DEBUG] personpvm invalidated:", personPvmCount);
         console.log("🔍 [DEBUG] grid invalidated:", personPvmGridCount);
         console.log("🔍 [DEBUG] person invalidated:", personPvmPersonCount);
         console.log("🔍 [DEBUG] vehicle invalidated:", personPvmVehicleCount);
+        console.log("🔍 [DEBUG] v6role invalidated:", personPvmV6roleCount);
 
         totalInvalidated +=
           personPvmCount +
           personPvmGridCount +
           personPvmPersonCount +
-          personPvmVehicleCount;
+          personPvmVehicleCount +
+          personPvmV6roleCount;
         console.log(
           "🔍 [DEBUG] PERSON_PVM operation TOTAL:",
           totalInvalidated
@@ -1500,6 +1520,7 @@ class UniversalCacheManager {
           tyomaaUpdateCount,
           gridUpdateCount,
           authUpdateCount,
+          v6roleCount,
         ] = await Promise.all([
           this.invalidate(operation, "person", params),
           this.invalidate(operation, "keikka", params),
@@ -1509,6 +1530,7 @@ class UniversalCacheManager {
           personEntityId
             ? this.invalidateByPattern(`auth:*:${personEntityId}*`)
             : Promise.resolve(0),
+          this.invalidateByPattern("grid:v6role:*"),
         ]);
 
         totalInvalidated =
@@ -1517,7 +1539,8 @@ class UniversalCacheManager {
           asiakasUpdateCount +
           tyomaaUpdateCount +
           gridUpdateCount +
-          authUpdateCount;
+          authUpdateCount +
+          v6roleCount;
 
         this.logger.debug("PERSON_UPDATE invalidation completed", {
           keysInvalidated: totalInvalidated,
