@@ -1232,7 +1232,7 @@ class UniversalCacheManager {
       case "ASIAKAS_DATE_UNDISMISS":
       case "ASIAKAS_DATE_UPDATE":
       case "ASIAKAS_DATE_CREATE":
-      case "ASIAKAS_DATE_DELETE":
+      case "ASIAKAS_DATE_DELETE": {
         console.log("🔍 [DEBUG] ASIAKAS_DATE operation START", {
           operation,
           params,
@@ -1266,6 +1266,7 @@ class UniversalCacheManager {
           totalInvalidated
         );
         break;
+      }
 
       // Asiakas CRUD operations - invalidate asiakas and related entity caches
       case "ASIAKAS_UPDATE":
@@ -1305,7 +1306,7 @@ class UniversalCacheManager {
 
       case "PERSON_PVM_UPDATE":
       case "PERSON_PVM_DELETE":
-      case "PERSON_PVM_CREATE":
+      case "PERSON_PVM_CREATE": {
         console.log("🔍 [DEBUG] PERSON_PVM operation START", {
           operation,
           params,
@@ -1345,6 +1346,7 @@ class UniversalCacheManager {
           totalInvalidated
         );
         break;
+      }
 
       case "ATTACHMENT_UPDATE": {
         // Targeted attachment invalidation based on entityType and entityId
