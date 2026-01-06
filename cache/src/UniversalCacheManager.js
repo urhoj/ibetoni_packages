@@ -975,6 +975,34 @@ class UniversalCacheManager {
         return 0;
       }
 
+      case "PALKKI_UPDATE":
+      case "PALKKI_DELETE":
+      case "PALKKI_CREATE": {
+        // Palkki uses timeStart for date, params extractor maps it to pumppuAika
+        const palkkiDate = pumppuAika || body?.timeStart || body?.pumppuAika;
+
+        if (palkkiDate) {
+          const dateKey = this.formatGridDate(palkkiDate);
+          this.logger.debug("PALKKI operation - date-specific grid invalidation", {
+            operation,
+            palkkiDate,
+            dateKey,
+            asiakasId,
+          });
+          return await this.invalidate(operation, "grid", {
+            asiakasId,
+            pumppuAika: dateKey,
+          });
+        }
+
+        // Fallback: no date available
+        this.logger.warn("PALKKI operation without date - broad invalidation", {
+          operation,
+          asiakasId,
+        });
+        return await this.invalidate(operation, "grid", { asiakasId });
+      }
+
       default:
         this.logger.warn("Unknown grid operation, using broad invalidation", {
           operation,
