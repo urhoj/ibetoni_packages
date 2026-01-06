@@ -89,6 +89,7 @@ class UniversalCacheManager {
       betoniShortcut: 7200, // 2 hours - user-configured concrete shortcuts
       betoniList: 3600, // 1 hour - betoni search/filter results
       betoniAttr: 3600, // 1 hour - betoni attributes (keikka-specific)
+      betoniPrices: 300, // 5 minutes - betoni price lookups (SP-heavy, short TTL for price freshness)
       config: 43200, // 12 hours - static configuration
       vehicle: 7200, // 2 hours - vehicles, relatively stable
       vehicleDate: 7200, // 2 hours - vehicle dates, moderate changes
