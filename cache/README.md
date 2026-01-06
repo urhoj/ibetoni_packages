@@ -203,6 +203,13 @@ Invalidate cache for complex cross-entity operations.
 - `TUOTE_UPDATE` - Product updates (with cross-entity: lasku, keikka - products affect invoice line items)
 - `TUOTE_CREATE` - Product creation
 - `TUOTE_DELETE` - Product deletion (also clears keikkaLaskuRivit references)
+- `LASKU_UPDATE` - Invoice header/row updates (invalidates: lasku, stat)
+- `LASKU_CREATE` - Invoice creation (invalidates: lasku, stat)
+- `LASKU_DELETE` - Invoice deletion (invalidates: lasku, stat)
+- `LASKUPOHJA_UPDATE` - Invoice template updates
+- `LASKUPOHJA_CREATE` - Invoice template creation
+- `LASKUPOHJA_DELETE` - Invoice template deletion
+- `LASKUPOHJA_RIVI_DELETE` - Invoice template row deletion
 - `NOTIFICATION_CREATE` - New notification sent
 - `NOTIFICATION_UPDATE` - Notification acknowledged
 - `NOTIFICATION_READ` - Notification marked as read

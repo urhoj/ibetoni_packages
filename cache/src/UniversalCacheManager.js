@@ -1961,6 +1961,23 @@ class UniversalCacheManager {
         break;
       }
 
+      // Lasku (invoice) operations - invoice header and row modifications
+      case "LASKU_UPDATE":
+      case "LASKU_CREATE":
+      case "LASKU_DELETE": {
+        const [laskuCount, statCount] = await Promise.all([
+          this.invalidate(operation, "lasku", params),
+          this.invalidate(operation, "stat", params),
+        ]);
+        totalInvalidated = laskuCount + statCount;
+
+        this.logger.info("LASKU operation invalidation completed", {
+          operation,
+          keysInvalidated: totalInvalidated,
+        });
+        break;
+      }
+
       default: {
         const entityType = params.entityType || "default";
         totalInvalidated += await this.invalidate(
