@@ -875,7 +875,18 @@ class UniversalCacheManager {
   }
 
   /**
-   * Smart grid invalidation based on operation type and request body
+   * Smart grid invalidation based on operation type and request body.
+   *
+   * Date extraction priority for different operations:
+   * - KEIKKA_UPDATE/COPY: Uses `pumppuAika` or `newDate` from body (ISO datetime format)
+   * - PERSON_PVM_*: Uses `pvm` or `yyyymmdd` from body/params (YYYYMMDD format)
+   *
+   * The `formatGridDate` method handles both YYYYMMDD and ISO datetime formats.
+   *
+   * @param {string} operation - Operation type (KEIKKA_UPDATE, KEIKKA_COPY, PERSON_PVM_*)
+   * @param {Object} body - Request body containing date fields
+   * @param {Object} params - Additional parameters including asiakasId
+   * @returns {Promise<number>} Number of cache keys invalidated
    */
   async invalidateGridSmart(operation, body = {}, params = {}) {
     const { pumppuAika, personId, creatorPersonId, newDate } = body;
@@ -944,16 +955,22 @@ class UniversalCacheManager {
       case "PERSON_PVM_DELETE":
       case "PERSON_PVM_CREATE": {
         // PersonPvm affects grid display - invalidate by date if available
-        let totalInvalidated = 0;
+        // PersonPvm uses 'pvm' (YYYYMMDD format), not 'pumppuAika' - check both
+        const dateValue =
+          pumppuAika ||
+          body?.pvm ||
+          body?.yyyymmdd ||
+          params?.pvm ||
+          params?.yyyymmdd;
 
-        if (pumppuAika) {
-          totalInvalidated += await this.invalidate(operation, "grid", {
+        if (dateValue) {
+          return await this.invalidate(operation, "grid", {
             asiakasId,
-            pumppuAika,
+            pumppuAika: dateValue, // formatGridDate handles both YYYYMMDD and ISO formats
           });
         }
 
-        return totalInvalidated;
+        return 0;
       }
 
       default:
