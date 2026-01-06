@@ -882,10 +882,11 @@ class UniversalCacheManager {
    * Date extraction priority for different operations:
    * - KEIKKA_UPDATE/COPY: Uses `pumppuAika` or `newDate` from body (ISO datetime format)
    * - PERSON_PVM_*: Uses `pvm` or `yyyymmdd` from body/params (YYYYMMDD format)
+   * - PALKKI_*: Uses `pumppuAika`, `timeStart`, or `body.pumppuAika` (ISO datetime format)
    *
    * The `formatGridDate` method handles both YYYYMMDD and ISO datetime formats.
    *
-   * @param {string} operation - Operation type (KEIKKA_UPDATE, KEIKKA_COPY, PERSON_PVM_*)
+   * @param {string} operation - Operation type (KEIKKA_UPDATE, KEIKKA_COPY, PERSON_PVM_*, PALKKI_*)
    * @param {Object} body - Request body containing date fields
    * @param {Object} params - Additional parameters including asiakasId
    * @returns {Promise<number>} Number of cache keys invalidated
