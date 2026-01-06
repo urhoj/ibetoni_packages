@@ -536,6 +536,7 @@ class UniversalCacheManager {
       params.yyyymmdd ||
       params.body?.yyyymmdd ||
       params.body?.pumppuAika ||
+      params.body?.timeStart || // For palkki operations
       params.body?.newDate ||
       params.body?.pvm ||
       params.date;
@@ -1041,7 +1042,7 @@ class UniversalCacheManager {
       case "PALKKI_UPDATE":
       case "PALKKI_DELETE":
       case "PALKKI_CREATE": {
-        // Palkki operations affect grid cache, keikka list cache, AND palkki list cache
+        // Palkki operations affect grid cache, keikka list cache, v6role cache, AND palkki list cache
         const palkkiGridCount = await this.invalidateGridSmart(
           operation,
           params.body || {},
@@ -1053,6 +1054,11 @@ class UniversalCacheManager {
           asiakasId: params.asiakasId,
           pumppuAika: params.pumppuAika || params.body?.pumppuAika,
         });
+
+        // Invalidate v6role cache (date-scoped) - palkki changes affect grid visibility
+        const v6roleCount = await this.invalidateByPattern(
+          `grid:v6role:${this._extractYYYYMMDD(params)}:*`
+        );
 
         // Invalidate palkki list cache - DATE-SPECIFIC when frontend provides data
         const cacheInvalidation = params.cacheInvalidation;
@@ -1092,11 +1098,12 @@ class UniversalCacheManager {
             ? await this.invalidate(operation, "vehicle", params)
             : 0;
 
-        totalInvalidated += palkkiGridCount + keikkaListCount + palkkiListCount + palkkiVehicleCount;
+        totalInvalidated += palkkiGridCount + keikkaListCount + v6roleCount + palkkiListCount + palkkiVehicleCount;
         this.logger.debug("PALKKI operation completed", {
           operation,
           keysInvalidated: totalInvalidated,
           palkkiListCount,
+          v6roleCount,
         });
         break;
       }
