@@ -1911,6 +1911,55 @@ class UniversalCacheManager {
         break;
       }
 
+      // Laskupohja (invoice template) operations - pricing template modifications
+      // Cache keys: laskupohja:get:{id}, laskupohjaRivi:get:{id}
+      case "LASKUPOHJA_UPDATE":
+      case "LASKUPOHJA_CREATE":
+      case "LASKUPOHJA_DELETE":
+      case "LASKUPOHJA_RIVI_UPDATE":
+      case "LASKUPOHJA_RIVI_CREATE":
+      case "LASKUPOHJA_RIVI_DELETE":
+      case "LASKUPOHJA_COPY": {
+        const { laskupohjaId, laskupohjaRiviId, targetLaskupohjaId, sourceLaskupohjaId } = params;
+        const patterns = [];
+
+        // Targeted invalidation when we have specific IDs
+        if (laskupohjaId) {
+          patterns.push(`laskupohja:get:${laskupohjaId}`);
+          patterns.push(`laskupohjaRivi:get:*`); // Rows for this template
+        }
+        if (laskupohjaRiviId) {
+          patterns.push(`laskupohjaRivi:get:${laskupohjaRiviId}`);
+        }
+
+        // For copy operations, invalidate both source and target
+        if (targetLaskupohjaId) {
+          patterns.push(`laskupohja:get:${targetLaskupohjaId}`);
+        }
+        if (sourceLaskupohjaId) {
+          patterns.push(`laskupohja:get:${sourceLaskupohjaId}`);
+        }
+
+        // Fallback: if no specific IDs, invalidate all
+        if (patterns.length === 0) {
+          patterns.push(`laskupohja:get:*`);
+          patterns.push(`laskupohjaRivi:get:*`);
+        }
+
+        const counts = await Promise.all(
+          patterns.map((p) => this.invalidateByPattern(p))
+        );
+        totalInvalidated = counts.reduce((sum, count) => sum + count, 0);
+
+        this.logger.info("LASKUPOHJA operation invalidation completed", {
+          operation,
+          laskupohjaId,
+          laskupohjaRiviId,
+          keysInvalidated: totalInvalidated,
+        });
+        break;
+      }
+
       default: {
         const entityType = params.entityType || "default";
         totalInvalidated += await this.invalidate(
