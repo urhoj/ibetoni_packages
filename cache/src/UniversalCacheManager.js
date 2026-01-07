@@ -752,13 +752,14 @@ class UniversalCacheManager {
           params.body?.keikkaId || params.keikkaId || params.entityId;
 
         // Individual keikka keys: if we have keikkaId, target it specifically
+        // Key format: keikka:get:{keikkaId}:{personId} (see keikkaQueryRunner.js:45)
         let individualKeysPattern;
         if (keikkaIdValue) {
-          // Targeted: Only clear this specific keikka's cache (100x reduction)
-          individualKeysPattern = `keikka:get:${asiakasId || "*"}:${keikkaIdValue}`;
+          // Targeted: Only clear this specific keikka's cache (matches any personId)
+          individualKeysPattern = `keikka:get:${keikkaIdValue}:*`;
         } else {
-          // Fallback: Clear all if we don't know which keikka
-          individualKeysPattern = `keikka:get:${asiakasId || "*"}:*`;
+          // Fallback: Clear all keikka caches
+          individualKeysPattern = `keikka:get:*`;
         }
 
         // Key format: keikka:list:asiakasId:personId:yyyymmdd[:deleted]
