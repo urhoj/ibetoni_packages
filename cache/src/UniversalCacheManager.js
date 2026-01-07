@@ -846,6 +846,10 @@ class UniversalCacheManager {
         // Use trailing wildcard to match both 3-segment and 5-segment keys
         pattern = `personpvm:*:${asiakasId || "*"}*`;
         break;
+      case "keikkaBetoni":
+        // keikkaBetoni keys: keikkaBetoni:list:asiakasId:keikkaId, keikkaBetoni:get:asiakasId:keikkaBetoniId
+        pattern = `keikkaBetoni:*:${asiakasId || "*"}:*`;
+        break;
       default:
         // Use trailing wildcard (no colon) to match 3+ segment keys like entity:list:asiakasId
         pattern = `${entityType}:*:${asiakasId || "*"}*`;
