@@ -1009,6 +1009,26 @@ class UniversalCacheManager {
         return await this.invalidate(operation, "grid", { asiakasId });
       }
 
+      case "TYOMAA_UPDATE":
+      case "TYOMAA_CREATE":
+      case "TYOMAA_DELETE": {
+        // Tyomaa changes affect grid display - invalidate by date if available
+        const tyomaaDate =
+          body?.yyyymmdd ||
+          body?.pumppuAika ||
+          params?.yyyymmdd ||
+          params?.pumppuAika;
+
+        if (tyomaaDate) {
+          return await this.invalidate(operation, "grid", {
+            asiakasId,
+            pumppuAika: tyomaaDate,
+          });
+        }
+        // No date available - return 0, caller handles broad invalidation
+        return 0;
+      }
+
       default:
         this.logger.warn("Unknown grid operation, using broad invalidation", {
           operation,
