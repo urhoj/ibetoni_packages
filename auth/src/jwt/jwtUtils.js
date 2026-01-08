@@ -29,6 +29,75 @@ const getJwtKey = async (options = {}) => {
 };
 
 /**
+ * Derive companyRoles from asiakasesWithTypes for current ownerAsiakasId
+ * This provides backward compatibility - companyRoles is no longer stored in JWT
+ * but derived from asiakasesWithTypes + ownerAsiakasId
+ *
+ * @param {Array} asiakasesWithTypes - Array of {asiakasId, companyType, roles}
+ * @param {number} ownerAsiakasId - Current company ID
+ * @returns {object} companyRoles object with boolean flags
+ */
+const deriveCompanyRoles = (asiakasesWithTypes, ownerAsiakasId) => {
+  // Map role name strings to companyRoles object keys
+  // Must match frontend jwtUtils.js roleNameToKeyMap
+  const roleNameToKeyMap = {
+    laskupohjaAdmin: "isLaskupohjaAdmin",
+    asiakasAdmin: "isAsiakasAdmin",
+    laskuAdmin: "isLaskuAdmin",
+    asiakasEditor: "isAsiakasEditor",
+    pumppari: "isPumppari",
+    typisSuhteessa: "isTyösuhteessa",
+    attachmentHandler: "isAttachmentHandler",
+    keikkaHandler: "isKeikkaHandler",
+    sijaintiHandler: "isSijaintiHandler",
+    vehicleHandler: "isVehicleHandler",
+    tuoteHandler: "isTuoteHandler",
+    lomaseurannassa: "isLomaseurannassa",
+    assignee: "isAssignee",
+    keikkaViewer: "isKeikkaViewer",
+    asiakasOwner: "isAsiakasOwner",
+  };
+
+  const companyRoles = {
+    ownerAsiakasId: ownerAsiakasId,
+    isAsiakasAdmin: false,
+    isKeikkaHandler: false,
+    isKeikkaViewer: false,
+    isLaskupohjaAdmin: false,
+    isPumppari: false,
+    isAsiakasEditor: false,
+    isLaskuAdmin: false,
+    isAttachmentHandler: false,
+    isAssignee: false,
+    isTyösuhteessa: false,
+    isSijaintiHandler: false,
+    isVehicleHandler: false,
+    isTuoteHandler: false,
+    isLomaseurannassa: false,
+    isAsiakasOwner: false,
+  };
+
+  if (!asiakasesWithTypes || !ownerAsiakasId) {
+    return companyRoles;
+  }
+
+  // Find the current company in asiakasesWithTypes
+  const currentAsiakas = asiakasesWithTypes.find((a) => a.asiakasId === ownerAsiakasId);
+
+  if (currentAsiakas?.roles) {
+    // Convert role name strings to boolean flags
+    for (const roleName of currentAsiakas.roles) {
+      const roleKey = roleNameToKeyMap[roleName];
+      if (roleKey && roleKey in companyRoles) {
+        companyRoles[roleKey] = true;
+      }
+    }
+  }
+
+  return companyRoles;
+};
+
+/**
  * Create Express middleware to verify JWT tokens
  * @param {object} options - Middleware options
  * @param {object} options.logger - Optional logger instance
@@ -103,6 +172,12 @@ const createVerifyTokenMiddleware = (options = {}) => {
           message: "Invalid Token",
           error: "INVALID_TOKEN_CLAIMS",
         });
+      }
+
+      // Derive companyRoles from asiakasesWithTypes if not already present
+      // This provides backward compatibility - JWT no longer stores companyRoles directly
+      if (!decoded.companyRoles && decoded.asiakasesWithTypes && decoded.ownerAsiakasId) {
+        decoded.companyRoles = deriveCompanyRoles(decoded.asiakasesWithTypes, decoded.ownerAsiakasId);
       }
 
       // Attach user data to request
@@ -276,4 +351,5 @@ module.exports = {
   comparePassword,
   isTokenExpiringSoon,
   refreshToken,
+  deriveCompanyRoles, // Export for use in other modules if needed
 };

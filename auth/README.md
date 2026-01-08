@@ -51,10 +51,16 @@ const verifyToken = createVerifyTokenMiddleware({
 ```javascript
 const { createToken } = require('@ibetoni/auth');
 
-// Simple usage
+// Simple usage with new JWT structure
+// Note: companyRoles is NOT stored in JWT - it's derived on frontend from asiakasesWithTypes
 const token = await createToken('user@example.com', 123, {
-  globalRoles: { isSystemAdmin: true },
-  companyRoles: { /* ... */ }
+  ownerAsiakasId: 456,
+  tenantAsiakasId: 456,
+  globalRoles: { isSystemAdmin: false, isDeveloper: false, /* ... */ },
+  asiakasesWithTypes: [
+    { asiakasId: 456, companyType: "owner", roles: ["asiakasAdmin", "keikkaHandler"] },
+    { asiakasId: 789, companyType: "pumppu", roles: ["pumppari"] }
+  ]
 });
 
 // With logger and async config
