@@ -729,8 +729,23 @@ class UniversalCacheManager {
   }
 
   /**
-   * Universal cache invalidation for all entity types
-   * This is a shortened version - full implementation continues below...
+   * Universal cache invalidation for all entity types.
+   *
+   * Entity-specific behaviors:
+   * - keikka: Targets individual keikka + list caches by date/personId
+   * - asiakas: Pattern-based by asiakasId
+   * - grid: Invalidates BOTH v6role format (grid:v6role:{dateKey}:*) AND
+   *         legacy format (grid:personId:*:pumppuAika:{dateKey})
+   * - stat: Clears all stat caches (varying segment counts)
+   * - attachment: Multiple patterns for different attachment key formats
+   *
+   * @param {string} operation - Operation type (KEIKKA_UPDATE, PALKKI_UPDATE, etc.)
+   * @param {string} entityType - Entity type (keikka, grid, asiakas, etc.)
+   * @param {Object} params - Parameters for invalidation
+   * @param {string} [params.asiakasId] - Customer ID for scoping
+   * @param {string} [params.personId] - Person ID
+   * @param {string} [params.pumppuAika] - Date for date-scoped invalidation (ISO format)
+   * @returns {Promise<number>} Number of cache keys invalidated
    */
   async invalidate(operation, entityType, params = {}) {
     // Safely extract parameters
@@ -805,19 +820,65 @@ class UniversalCacheManager {
         // - stat:count:{...4 params} (6 segments)
         // Use simple prefix pattern to catch all stat keys
         return await this.invalidateByPattern(`stat:*`);
-      case "grid":
-        if (personId && pumppuAika) {
-          const dateKey = this.formatGridDate(pumppuAika);
-          pattern = `grid:personId:${personId}:pumppuAika:${dateKey}`;
-        } else if (pumppuAika) {
-          const dateKey = this.formatGridDate(pumppuAika);
-          pattern = `grid:personId:*:pumppuAika:${dateKey}`;
-        } else if (personId) {
-          pattern = `grid:personId:${personId}:pumppuAika:*`;
+      case "grid": {
+        // Grid has multiple key formats that need invalidation:
+        // 1. v6role format: grid:v6role:{dateKey}:{sortedCompanies} (used by list_v6role)
+        // 2. Legacy format: grid:personId:{personId}:pumppuAika:{dateKey}
+        const dateKey = pumppuAika ? this.formatGridDate(pumppuAika) : null;
+
+        const patterns = [];
+
+        // v6role format - primary format used by list_v6role endpoint
+        if (dateKey) {
+          patterns.push(`grid:v6role:${dateKey}:*`);
         } else {
-          pattern = `grid:personId:*:pumppuAika:*`;
+          patterns.push(`grid:v6role:*`);
         }
-        break;
+
+        // Legacy format for backwards compatibility
+        if (personId && dateKey) {
+          patterns.push(`grid:personId:${personId}:pumppuAika:${dateKey}`);
+        } else if (dateKey) {
+          patterns.push(`grid:personId:*:pumppuAika:${dateKey}`);
+        } else if (personId) {
+          patterns.push(`grid:personId:${personId}:pumppuAika:*`);
+        } else {
+          patterns.push(`grid:personId:*:pumppuAika:*`);
+        }
+
+        // Invalidate all patterns and return combined count
+        const results = await Promise.all(
+          patterns.map(async (p) => {
+            console.log(
+              "🔍 [DEBUG invalidate] Pattern:",
+              p,
+              "for entityType:",
+              entityType
+            );
+            const keys = await this.scanKeys(p);
+            console.log(
+              "🔍 [DEBUG invalidate] Keys found:",
+              keys.length,
+              keys.slice(0, 3)
+            );
+            if (keys.length > 0) {
+              return await this.batchDelete(keys);
+            }
+            return 0;
+          })
+        );
+
+        const totalDeleted = results.reduce((sum, count) => sum + count, 0);
+        if (totalDeleted > 0) {
+          this.logger.info("Grid cache invalidated", {
+            entityType,
+            operation,
+            keysDeleted: totalDeleted,
+            patterns,
+          });
+        }
+        return totalDeleted;
+      }
       case "attachment": {
         // Attachments have multiple key formats:
         // 1. Individual/list keys: attachment:list:keikka:123, attachment:list:vehicle:456, attachment:get:789
