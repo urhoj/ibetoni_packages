@@ -809,8 +809,11 @@ class UniversalCacheManager {
       case "personRequiredDateType":
       case "tyomaaRequiredDateType":
       case "asiakasRequiredDateType":
-        // These keys have 3 segments: entityType:operation:asiakasId (e.g., vehicleRequiredDateType:batchCompliance:8)
-        pattern = `${entityType}:*:${asiakasId || "*"}`;
+        // These keys have variable segments:
+        // - 3 segments: entityType:operation:asiakasId (e.g., vehicleRequiredDateType:compliance:8)
+        // - 5 segments: entityType:operation:asiakasId:ids:date (e.g., vehicleRequiredDateType:batchCompliance:8:1,51,52:20260109)
+        // Trailing * matches both formats
+        pattern = `${entityType}:*:${asiakasId || "*"}*`;
         break;
       case "stat":
         // Stat keys have varying segment counts (3-6 segments):
