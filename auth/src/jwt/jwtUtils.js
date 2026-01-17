@@ -231,7 +231,7 @@ const createToken = async (email, personId, additionalClaims = {}, options = {})
   let expiresIn = "7d";
 
   // Temporary access tokens for specific use cases expire quickly
-  if (email === "tempAccessToken@betoni.online" && personId === null) {
+  if (email === "tempAccessToken@ibetoni.fi" && personId === null) {
     expiresIn = "3m";
   }
 
