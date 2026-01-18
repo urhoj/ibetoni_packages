@@ -12,7 +12,7 @@
 
 const UniversalCacheManager = require('./UniversalCacheManager');
 const CacheMetrics = require('./CacheMetrics');
-const { DistributedLockManager, DistributedLock } = require('./DistributedLockManager');
+const { DistributedLockManager, DistributedLock, releaseAllLocks } = require('./DistributedLockManager');
 
 /**
  * Create a configured cache manager instance
@@ -65,7 +65,5 @@ module.exports = {
   // Distributed locking exports
   DistributedLockManager,
   DistributedLock,
-
-  // Direct class export for advanced use cases
-  UniversalCacheManager: UniversalCacheManager,
+  releaseAllLocks,
 };

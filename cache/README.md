@@ -12,6 +12,7 @@ This package provides unified cache management and invalidation logic shared bet
 
 - ✅ **Universal Cache Invalidation** - Consistent invalidation across all services
 - ✅ **Cross-Entity Relationships** - Smart invalidation for related entities
+- ✅ **Distributed Locking** - Redis-based locks with graceful shutdown
 - ✅ **Logger Injection** - Use your own logger implementation
 - ✅ **Metrics Tracking** - Optional performance monitoring
 - ✅ **Azure Redis Support** - Works with Azure Redis Cache
@@ -286,6 +287,22 @@ Release a previously acquired lock.
 **Example:**
 ```javascript
 await lockManager.releaseLock(lock);
+```
+
+### Graceful Shutdown
+
+The lock manager automatically releases all active locks when the process receives SIGTERM or SIGINT signals. This prevents locks from being held until TTL expires after process restarts.
+
+**Automatic behavior:**
+- On SIGTERM/SIGINT: All active locks are released before exit
+- Useful for: nodemon restarts, container stops, deployments
+
+**Manual cleanup (if needed):**
+```javascript
+const { releaseAllLocks } = require('@ibetoni/cache');
+
+// Release all active locks manually
+await releaseAllLocks();
 ```
 
 ## Environment Variables

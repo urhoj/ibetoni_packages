@@ -13,7 +13,8 @@
  * - Atomic lock acquisition using Redis SET NX
  * - TTL-based auto-expiration (no deadlocks)
  * - Safe lock release using Lua scripts
- * - Handles process crashes gracefully
+ * - Graceful shutdown: releases all locks on SIGTERM/SIGINT
+ * - Handles process crashes gracefully (TTL expiration)
  * - Metrics integration for monitoring
  *
  * Example:
@@ -39,6 +40,44 @@
  *
  * Manages acquisition and coordination of distributed locks across Redis.
  */
+/**
+ * Track all active locks across all DistributedLockManager instances
+ * for graceful shutdown
+ * @type {Set<DistributedLock>}
+ */
+const activeLocks = new Set();
+
+/**
+ * Release all active locks (call during graceful shutdown)
+ * @returns {Promise<void>}
+ */
+async function releaseAllLocks() {
+  if (activeLocks.size === 0) {
+    return;
+  }
+
+  console.log(`[LOCK] Releasing ${activeLocks.size} active lock(s) on shutdown...`);
+
+  const releasePromises = [];
+  for (const lock of activeLocks) {
+    releasePromises.push(lock.release());
+  }
+
+  await Promise.allSettled(releasePromises);
+  activeLocks.clear();
+}
+
+// Register shutdown handlers
+process.on("SIGTERM", async () => {
+  console.log("\n[SHUTDOWN] Received SIGTERM, releasing locks...");
+  await releaseAllLocks();
+});
+
+process.on("SIGINT", async () => {
+  console.log("\n[SHUTDOWN] Received SIGINT, releasing locks...");
+  await releaseAllLocks();
+});
+
 class DistributedLockManager {
   /**
    * Create a new DistributedLockManager
@@ -97,16 +136,18 @@ class DistributedLockManager {
           durationMs: duration,
         });
 
-        return new DistributedLock(this.redis, lockKey, lockValue, this.logger, this.metrics);
-      } else {
-        this.logger.info("Lock acquisition failed - already held by another process", {
-          resource,
-          lockKey,
-          durationMs: duration,
-        });
-
-        return null;
+        const lock = new DistributedLock(this.redis, lockKey, lockValue, this.logger, this.metrics);
+        activeLocks.add(lock);
+        return lock;
       }
+
+      this.logger.info("Lock acquisition failed - already held by another process", {
+        resource,
+        lockKey,
+        durationMs: duration,
+      });
+
+      return null;
     } catch (error) {
       const duration = Date.now() - startTime;
 
@@ -216,6 +257,9 @@ class DistributedLock {
       const wasOwner = result === 1;
       this.released = true;
 
+      // Remove from active locks tracking
+      activeLocks.delete(this);
+
       // Record metrics
       if (this.metrics) {
         this.metrics.recordLockRelease(this.lockKey, wasOwner, holdDuration);
@@ -277,4 +321,5 @@ class DistributedLock {
 module.exports = {
   DistributedLockManager,
   DistributedLock,
+  releaseAllLocks,
 };
