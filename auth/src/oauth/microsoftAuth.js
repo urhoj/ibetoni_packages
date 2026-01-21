@@ -16,30 +16,9 @@ const jwksClient = require("jwks-rsa");
  */
 const getMicrosoftClientId = async (getEnvVar) => {
   if (getEnvVar) {
-    // Async retrieval (Key Vault)
     return await getEnvVar("MICROSOFT_CLIENT_ID");
   }
-  // Sync retrieval (process.env)
-  const clientId = process.env.MICROSOFT_CLIENT_ID;
-  if (!clientId) {
-    // Fallback for development if not set (though it should be)
-    if (process.env.NODE_ENV === "development") {
-      console.warn("MICROSOFT_CLIENT_ID is not set in environment");
-    }
-  }
-  return clientId;
-};
-
-/**
- * Get Microsoft Tenant ID from environment
- * @param {function} getEnvVar - Optional async function to get env var
- * @returns {Promise<string>|string} Microsoft Tenant ID
- */
-const getMicrosoftTenantId = async (getEnvVar) => {
-  if (getEnvVar) {
-    return await getEnvVar("MICROSOFT_TENANT_ID");
-  }
-  return process.env.MICROSOFT_TENANT_ID || "common";
+  return process.env.MICROSOFT_CLIENT_ID;
 };
 
 class MicrosoftAuth {
