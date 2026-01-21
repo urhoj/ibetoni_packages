@@ -37,4 +37,8 @@ module.exports = {
   // Google OAuth
   GoogleAuth,
   createGoogleAuth,
+
+  // Microsoft OAuth
+  MicrosoftAuth: require("./oauth/microsoftAuth").MicrosoftAuth,
+  createMicrosoftAuth: require("./oauth/microsoftAuth").createMicrosoftAuth,
 };
