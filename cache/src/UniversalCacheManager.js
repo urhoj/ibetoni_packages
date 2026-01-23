@@ -268,8 +268,7 @@ class UniversalCacheManager {
     // Check if Redis cache is disabled via environment variable
     if (
       process.env.REDIS_CACHE_ENABLED === "false" ||
-      (process.env.NODE_ENV === "production" &&
-        process.env.REDIS_CACHE_ENABLED !== "true")
+      (process.env.NODE_ENV === "production" && process.env.REDIS_CACHE_ENABLED !== "true")
     ) {
       this.logger.info("Redis cache disabled via environment configuration");
       return null;
@@ -292,9 +291,7 @@ class UniversalCacheManager {
       }
 
       if (!this.isConnected && this.client) {
-        const timeoutPromise = new Promise((resolve) =>
-          setTimeout(() => resolve(null), 2000)
-        );
+        const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 2000));
         const pingPromise = this.client
           .ping()
           .then(() => this.client)
@@ -374,8 +371,7 @@ class UniversalCacheManager {
    */
   _removeEventListeners(client) {
     if (client && client._universalCacheListeners) {
-      const { onReady, onError, onClose, onEnd } =
-        client._universalCacheListeners;
+      const { onReady, onError, onClose, onEnd } = client._universalCacheListeners;
       client.removeListener("ready", onReady);
       client.removeListener("error", onError);
       client.removeListener("close", onClose);
@@ -456,11 +452,7 @@ class UniversalCacheManager {
     }
 
     // Handle simple yyyymmdd format (20250827)
-    if (
-      typeof dateInput === "number" &&
-      dateInput >= 20000101 &&
-      dateInput <= 99991231
-    ) {
+    if (typeof dateInput === "number" && dateInput >= 20000101 && dateInput <= 99991231) {
       return String(dateInput * 1000000 + 120000);
     }
 
@@ -568,7 +560,12 @@ class UniversalCacheManager {
         const jitter = Math.floor(baseTtl * 0.05 * (Math.random() * 2 - 1));
         const ttl = baseTtl + jitter;
         await redis.setex(key, ttl, JSON.stringify(data));
-        this.logger.debug("Cache set successful", { entityType, key, baseTtl, ttl });
+        this.logger.debug("Cache set successful", {
+          entityType,
+          key,
+          baseTtl,
+          ttl,
+        });
 
         // Record cache set metric
         this.cacheMetrics.recordSet(entityType, key);
@@ -626,13 +623,7 @@ class UniversalCacheManager {
           }
 
           try {
-            const result = await redis.scan(
-              cursor,
-              "MATCH",
-              pattern,
-              "COUNT",
-              scanCount
-            );
+            const result = await redis.scan(cursor, "MATCH", pattern, "COUNT", scanCount);
             cursor = result[0];
             keys.push(...result[1]);
             iterations++;
@@ -758,13 +749,11 @@ class UniversalCacheManager {
     switch (entityType) {
       case "keikka": {
         const newDateValue = params.body?.newDate || params.newDate;
-        const pumppuAikaValue =
-          params.body?.pumppuAika || params.pumppuAika || params.date;
+        const pumppuAikaValue = params.body?.pumppuAika || params.pumppuAika || params.date;
         const targetDate = newDateValue || pumppuAikaValue;
         const personIdValue = params.body?.personId || params.personId;
         const yyyymmddValue = params.yyyymmdd;
-        const keikkaIdValue =
-          params.body?.keikkaId || params.keikkaId || params.entityId;
+        const keikkaIdValue = params.body?.keikkaId || params.keikkaId || params.entityId;
 
         // Individual keikka keys: if we have keikkaId, target it specifically
         // Key format: keikka:get:{keikkaId}:{personId} (see keikkaQueryRunner.js:45)
@@ -782,23 +771,23 @@ class UniversalCacheManager {
         if (yyyymmddValue) {
           return await Promise.all([
             this.invalidateByPattern(individualKeysPattern),
-            this.invalidateByPattern(`keikka:list:*:*:${yyyymmddValue}*`),  // yyyymmdd at position 5
+            this.invalidateByPattern(`keikka:list:*:*:${yyyymmddValue}*`), // yyyymmdd at position 5
           ]).then((results) => results.reduce((sum, count) => sum + count, 0));
         } else if (targetDate) {
           const yyyymmdd = targetDate.substring(0, 10).replace(/-/g, "");
           return await Promise.all([
             this.invalidateByPattern(individualKeysPattern),
-            this.invalidateByPattern(`keikka:list:*:*:${yyyymmdd}*`),  // yyyymmdd at position 5
+            this.invalidateByPattern(`keikka:list:*:*:${yyyymmdd}*`), // yyyymmdd at position 5
           ]).then((results) => results.reduce((sum, count) => sum + count, 0));
         } else if (personIdValue) {
           return await Promise.all([
             this.invalidateByPattern(individualKeysPattern),
-            this.invalidateByPattern(`keikka:list:*:${personIdValue}:*`),  // personId at position 4
+            this.invalidateByPattern(`keikka:list:*:${personIdValue}:*`), // personId at position 4
           ]).then((results) => results.reduce((sum, count) => sum + count, 0));
         } else {
           return await Promise.all([
             this.invalidateByPattern(individualKeysPattern),
-            this.invalidateByPattern(`keikka:list:*`),  // fallback: all keikka lists
+            this.invalidateByPattern(`keikka:list:*`), // fallback: all keikka lists
           ]).then((results) => results.reduce((sum, count) => sum + count, 0));
         }
       }
@@ -852,18 +841,9 @@ class UniversalCacheManager {
         // Invalidate all patterns and return combined count
         const results = await Promise.all(
           patterns.map(async (p) => {
-            console.log(
-              "🔍 [DEBUG invalidate] Pattern:",
-              p,
-              "for entityType:",
-              entityType
-            );
+            console.log("🔍 [DEBUG invalidate] Pattern:", p, "for entityType:", entityType);
             const keys = await this.scanKeys(p);
-            console.log(
-              "🔍 [DEBUG invalidate] Keys found:",
-              keys.length,
-              keys.slice(0, 3)
-            );
+            console.log("🔍 [DEBUG invalidate] Keys found:", keys.length, keys.slice(0, 3));
             if (keys.length > 0) {
               return await this.batchDelete(keys);
             }
@@ -901,9 +881,9 @@ class UniversalCacheManager {
           `attachment:get:*`, // individual attachment gets
         ];
 
-        return await Promise.all(
-          patterns.map((p) => this.invalidateByPattern(p))
-        ).then((results) => results.reduce((sum, count) => sum + count, 0));
+        return await Promise.all(patterns.map((p) => this.invalidateByPattern(p))).then((results) =>
+          results.reduce((sum, count) => sum + count, 0)
+        );
       }
       case "personpvm":
         // PersonPVM keys: personpvm:list:asiakasId or personpvm:list:asiakasId:startDate:endDate
@@ -919,18 +899,9 @@ class UniversalCacheManager {
         pattern = `${entityType}:*:${asiakasId || "*"}*`;
     }
 
-    console.log(
-      "🔍 [DEBUG invalidate] Pattern:",
-      pattern,
-      "for entityType:",
-      entityType
-    );
+    console.log("🔍 [DEBUG invalidate] Pattern:", pattern, "for entityType:", entityType);
     const keys = await this.scanKeys(pattern);
-    console.log(
-      "🔍 [DEBUG invalidate] Keys found:",
-      keys.length,
-      keys.slice(0, 3)
-    );
+    console.log("🔍 [DEBUG invalidate] Keys found:", keys.length, keys.slice(0, 3));
 
     if (keys.length > 0) {
       const deletedCount = await this.batchDelete(keys);
@@ -978,13 +949,10 @@ class UniversalCacheManager {
         let totalInvalidated = 0;
 
         if (newDate) {
-          this.logger.debug(
-            "Copy operation detected - invalidating ONLY target date",
-            {
-              newDate,
-              asiakasId,
-            }
-          );
+          this.logger.debug("Copy operation detected - invalidating ONLY target date", {
+            newDate,
+            asiakasId,
+          });
           totalInvalidated += await this.invalidate(operation, "grid", {
             asiakasId,
             pumppuAika: newDate,
@@ -1029,11 +997,7 @@ class UniversalCacheManager {
         // PersonPvm affects grid display - invalidate by date if available
         // PersonPvm uses 'pvm' (YYYYMMDD format), not 'pumppuAika' - check both
         const dateValue =
-          pumppuAika ||
-          body?.pvm ||
-          body?.yyyymmdd ||
-          params?.pvm ||
-          params?.yyyymmdd;
+          pumppuAika || body?.pvm || body?.yyyymmdd || params?.pvm || params?.yyyymmdd;
 
         if (dateValue) {
           return await this.invalidate(operation, "grid", {
@@ -1078,10 +1042,7 @@ class UniversalCacheManager {
       case "TYOMAA_DELETE": {
         // Tyomaa changes affect grid display - invalidate by date if available
         const tyomaaDate =
-          body?.yyyymmdd ||
-          body?.pumppuAika ||
-          params?.yyyymmdd ||
-          params?.pumppuAika;
+          body?.yyyymmdd || body?.pumppuAika || params?.yyyymmdd || params?.pumppuAika;
 
         if (tyomaaDate) {
           return await this.invalidate(operation, "grid", {
@@ -1122,6 +1083,7 @@ class UniversalCacheManager {
           attachmentCount,
           gridCount,
           v6roleCount,
+          v7tenantCount,
           listByAsiakasesCount,
         ] = await Promise.all([
           this.invalidate(operation, "keikka", params),
@@ -1131,6 +1093,7 @@ class UniversalCacheManager {
           this.invalidate(operation, "attachment", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
           this.invalidateByPattern(`grid:v6role:${this._extractYYYYMMDD(params)}:*`),
+          this.invalidateByPattern(`grid:v7tenant:${this._extractYYYYMMDD(params)}:*`),
           this.invalidateByPattern("keikka:listByAsiakases:*"),
         ]);
         totalInvalidated +=
@@ -1141,17 +1104,14 @@ class UniversalCacheManager {
           attachmentCount +
           gridCount +
           v6roleCount +
+          v7tenantCount +
           listByAsiakasesCount;
         break;
       }
 
       case "KEIKKA_BULK_UPDATE":
         totalInvalidated += await this.invalidate(operation, "keikka", params);
-        totalInvalidated += await this.invalidateGridSmart(
-          operation,
-          params.body || {},
-          params
-        );
+        totalInvalidated += await this.invalidateGridSmart(operation, params.body || {}, params);
         totalInvalidated += await this.invalidate(operation, "asiakas", params);
         this.logger.debug("KEIKKA_BULK_UPDATE completed", {
           keysInvalidated: totalInvalidated,
@@ -1201,7 +1161,7 @@ class UniversalCacheManager {
           this.logger.debug("PALKKI date-specific invalidation", {
             yyyymmdd: cacheInvalidation.yyyymmdd,
             customerCount: customersToInvalidate.size,
-            keysInvalidated: palkkiListCount
+            keysInvalidated: palkkiListCount,
           });
         } else {
           // Fallback: broad invalidation if no invalidation data provided
@@ -1217,7 +1177,8 @@ class UniversalCacheManager {
             ? await this.invalidate(operation, "vehicle", params)
             : 0;
 
-        totalInvalidated += palkkiGridCount + keikkaListCount + v6roleCount + palkkiListCount + palkkiVehicleCount;
+        totalInvalidated +=
+          palkkiGridCount + keikkaListCount + v6roleCount + palkkiListCount + palkkiVehicleCount;
         this.logger.debug("PALKKI operation completed", {
           operation,
           keysInvalidated: totalInvalidated,
@@ -1229,11 +1190,7 @@ class UniversalCacheManager {
 
       case "GRID_UPDATE":
         // Simple grid-only invalidation for visibility changes
-        totalInvalidated += await this.invalidateGridSmart(
-          operation,
-          params.body || {},
-          params
-        );
+        totalInvalidated += await this.invalidateGridSmart(operation, params.body || {}, params);
         this.logger.debug("GRID_UPDATE completed", {
           keysInvalidated: totalInvalidated,
         });
@@ -1251,45 +1208,29 @@ class UniversalCacheManager {
 
         // Show what keys exist in Redis before invalidation
         const allVehicleKeys = await this.scanKeys("vehicle:*");
-        const allVehicleReqKeys = await this.scanKeys(
-          "vehicleRequiredDateType:*"
-        );
-        console.log(
-          "🔍 [DEBUG] Existing vehicle keys sample:",
-          allVehicleKeys.slice(0, 3)
-        );
+        const allVehicleReqKeys = await this.scanKeys("vehicleRequiredDateType:*");
+        console.log("🔍 [DEBUG] Existing vehicle keys sample:", allVehicleKeys.slice(0, 3));
         console.log(
           "🔍 [DEBUG] Existing vehicleRequiredDateType keys sample:",
           allVehicleReqKeys.slice(0, 3)
         );
 
         // Parallelize independent invalidations for better performance
-        const [
-          vehicleDateCount,
-          vehicleCount,
-          vehicleReqCount,
-          vehicleGridCount,
-        ] = await Promise.all([
-          this.invalidate(operation, "vehicleDate", params),
-          this.invalidate(operation, "vehicle", params),
-          this.invalidate(operation, "vehicleRequiredDateType", params),
-          this.invalidateGridSmart(operation, params.body || {}, params),
-        ]);
+        const [vehicleDateCount, vehicleCount, vehicleReqCount, vehicleGridCount] =
+          await Promise.all([
+            this.invalidate(operation, "vehicleDate", params),
+            this.invalidate(operation, "vehicle", params),
+            this.invalidate(operation, "vehicleRequiredDateType", params),
+            this.invalidateGridSmart(operation, params.body || {}, params),
+          ]);
 
         console.log("🔍 [DEBUG] vehicleDate invalidated:", vehicleDateCount);
         console.log("🔍 [DEBUG] vehicle invalidated:", vehicleCount);
-        console.log(
-          "🔍 [DEBUG] vehicleRequiredDateType invalidated:",
-          vehicleReqCount
-        );
+        console.log("🔍 [DEBUG] vehicleRequiredDateType invalidated:", vehicleReqCount);
         console.log("🔍 [DEBUG] grid invalidated:", vehicleGridCount);
 
-        totalInvalidated +=
-          vehicleDateCount + vehicleCount + vehicleReqCount + vehicleGridCount;
-        console.log(
-          "🔍 [DEBUG] VEHICLE_DATE operation TOTAL:",
-          totalInvalidated
-        );
+        totalInvalidated += vehicleDateCount + vehicleCount + vehicleReqCount + vehicleGridCount;
+        console.log("🔍 [DEBUG] VEHICLE_DATE operation TOTAL:", totalInvalidated);
         break;
       }
 
@@ -1316,19 +1257,13 @@ class UniversalCacheManager {
 
         console.log("🔍 [DEBUG] personDate invalidated:", personDateCount);
         console.log("🔍 [DEBUG] person invalidated:", personCount);
-        console.log(
-          "🔍 [DEBUG] personRequiredDateType invalidated:",
-          personReqCount
-        );
+        console.log("🔍 [DEBUG] personRequiredDateType invalidated:", personReqCount);
         console.log("🔍 [DEBUG] grid invalidated:", personGridCount);
         console.log("🔍 [DEBUG] keikka invalidated:", personKeikkaCount);
 
         totalInvalidated +=
           personDateCount + personCount + personReqCount + personGridCount + personKeikkaCount;
-        console.log(
-          "🔍 [DEBUG] PERSON_DATE operation TOTAL:",
-          totalInvalidated
-        );
+        console.log("🔍 [DEBUG] PERSON_DATE operation TOTAL:", totalInvalidated);
         break;
       }
 
@@ -1355,19 +1290,13 @@ class UniversalCacheManager {
 
         console.log("🔍 [DEBUG] tyomaaDate invalidated:", tyomaaDateCount);
         console.log("🔍 [DEBUG] tyomaa invalidated:", tyomaaCount);
-        console.log(
-          "🔍 [DEBUG] tyomaaRequiredDateType invalidated:",
-          tyomaaReqCount
-        );
+        console.log("🔍 [DEBUG] tyomaaRequiredDateType invalidated:", tyomaaReqCount);
         console.log("🔍 [DEBUG] grid invalidated:", tyomaaGridCount);
         console.log("🔍 [DEBUG] keikka invalidated:", tyomaaKeikkaCount);
 
         totalInvalidated +=
           tyomaaDateCount + tyomaaCount + tyomaaReqCount + tyomaaGridCount + tyomaaKeikkaCount;
-        console.log(
-          "🔍 [DEBUG] TYOMAA_DATE operation TOTAL:",
-          totalInvalidated
-        );
+        console.log("🔍 [DEBUG] TYOMAA_DATE operation TOTAL:", totalInvalidated);
         break;
       }
 
@@ -1382,32 +1311,21 @@ class UniversalCacheManager {
         });
 
         // Parallelize independent invalidations for better performance
-        const [
-          asiakasDateCount,
-          asiakasCount,
-          asiakasReqCount,
-          asiakasGridCount,
-        ] = await Promise.all([
-          this.invalidate(operation, "asiakasDate", params),
-          this.invalidate(operation, "asiakas", params),
-          this.invalidate(operation, "asiakasRequiredDateType", params),
-          this.invalidateGridSmart(operation, params.body || {}, params),
-        ]);
+        const [asiakasDateCount, asiakasCount, asiakasReqCount, asiakasGridCount] =
+          await Promise.all([
+            this.invalidate(operation, "asiakasDate", params),
+            this.invalidate(operation, "asiakas", params),
+            this.invalidate(operation, "asiakasRequiredDateType", params),
+            this.invalidateGridSmart(operation, params.body || {}, params),
+          ]);
 
         console.log("🔍 [DEBUG] asiakasDate invalidated:", asiakasDateCount);
         console.log("🔍 [DEBUG] asiakas invalidated:", asiakasCount);
-        console.log(
-          "🔍 [DEBUG] asiakasRequiredDateType invalidated:",
-          asiakasReqCount
-        );
+        console.log("🔍 [DEBUG] asiakasRequiredDateType invalidated:", asiakasReqCount);
         console.log("🔍 [DEBUG] grid invalidated:", asiakasGridCount);
 
-        totalInvalidated +=
-          asiakasDateCount + asiakasCount + asiakasReqCount + asiakasGridCount;
-        console.log(
-          "🔍 [DEBUG] ASIAKAS_DATE operation TOTAL:",
-          totalInvalidated
-        );
+        totalInvalidated += asiakasDateCount + asiakasCount + asiakasReqCount + asiakasGridCount;
+        console.log("🔍 [DEBUG] ASIAKAS_DATE operation TOTAL:", totalInvalidated);
         break;
       }
 
@@ -1466,9 +1384,7 @@ class UniversalCacheManager {
           this.invalidate(operation, "personpvm", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
           this.invalidate(operation, "person", params),
-          params.vehicleId
-            ? this.invalidate(operation, "vehicle", params)
-            : Promise.resolve(0),
+          params.vehicleId ? this.invalidate(operation, "vehicle", params) : Promise.resolve(0),
           this.invalidateByPattern(`grid:v6role:${this._extractYYYYMMDD(params)}:*`),
         ]);
 
@@ -1484,10 +1400,7 @@ class UniversalCacheManager {
           personPvmPersonCount +
           personPvmVehicleCount +
           personPvmV6roleCount;
-        console.log(
-          "🔍 [DEBUG] PERSON_PVM operation TOTAL:",
-          totalInvalidated
-        );
+        console.log("🔍 [DEBUG] PERSON_PVM operation TOTAL:", totalInvalidated);
         break;
       }
 
@@ -1514,19 +1427,13 @@ class UniversalCacheManager {
           patterns.push(`attachment:bulk:keikka:*`);
         }
 
-        const counts = await Promise.all(
-          patterns.map((p) => this.invalidateByPattern(p))
-        );
+        const counts = await Promise.all(patterns.map((p) => this.invalidateByPattern(p)));
         totalInvalidated = counts.reduce((sum, count) => sum + count, 0);
 
         // Cross-entity invalidations for grid display consistency
         // Keikka attachments affect grid views (attachment indicators)
         if (entityType === "keikka" && entityId) {
-          const gridCount = await this.invalidateGridSmart(
-            operation,
-            params.body || {},
-            params
-          );
+          const gridCount = await this.invalidateGridSmart(operation, params.body || {}, params);
           totalInvalidated += gridCount;
         }
 
@@ -1584,20 +1491,13 @@ class UniversalCacheManager {
         // CRITICAL: Cache keys are generated as 'betoni:laatu:list:X' and 'betoni:laatu:filter:X'
         // where X is betoniToimittajaAsiakasId (supplier ID), NOT ownerAsiakasId
         // Default pattern would incorrectly use 'betoniLaatu:*' which never matches
-        const betoniToimittajaAsiakasId =
-          params.betoniToimittajaAsiakasId || params.asiakasId;
-        const [betoniLaatuListCount, betoniLaatuFilterCount, betoniListCount] =
-          await Promise.all([
-            this.invalidateByPattern(
-              `betoni:laatu:list:${betoniToimittajaAsiakasId || "*"}`
-            ),
-            this.invalidateByPattern(
-              `betoni:laatu:filter:${betoniToimittajaAsiakasId || "*"}`
-            ),
-            this.invalidateByPattern(`betoni:list:filter:*`), // Also invalidate search results
-          ]);
-        totalInvalidated +=
-          betoniLaatuListCount + betoniLaatuFilterCount + betoniListCount;
+        const betoniToimittajaAsiakasId = params.betoniToimittajaAsiakasId || params.asiakasId;
+        const [betoniLaatuListCount, betoniLaatuFilterCount, betoniListCount] = await Promise.all([
+          this.invalidateByPattern(`betoni:laatu:list:${betoniToimittajaAsiakasId || "*"}`),
+          this.invalidateByPattern(`betoni:laatu:filter:${betoniToimittajaAsiakasId || "*"}`),
+          this.invalidateByPattern(`betoni:list:filter:*`), // Also invalidate search results
+        ]);
+        totalInvalidated += betoniLaatuListCount + betoniLaatuFilterCount + betoniListCount;
         this.logger.info("BETONI_LAATU invalidation completed", {
           operation,
           betoniToimittajaAsiakasId,
@@ -1685,6 +1585,16 @@ class UniversalCacheManager {
         break;
       }
 
+      case "PERSON_TENANT_UPDATE": {
+        // Lightweight person update (e.g. tenant selection change)
+        // Does not affect grid, keikkas, or other entities
+        this.logger.debug("PERSON_TENANT_UPDATE - lightweight invalidation", {
+          params,
+        });
+        totalInvalidated += await this.invalidate(operation, "person", params);
+        break;
+      }
+
       case "PERSON_UPDATE": {
         // Person updates affect contact displays across modules
         // SQL: person_save.sql modifies person table (name, phone, email, etc.)
@@ -1701,6 +1611,7 @@ class UniversalCacheManager {
           gridUpdateCount,
           authUpdateCount,
           v6roleCount,
+          v7tenantCount,
         ] = await Promise.all([
           this.invalidate(operation, "person", params),
           this.invalidate(operation, "keikka", params),
@@ -1711,6 +1622,7 @@ class UniversalCacheManager {
             ? this.invalidateByPattern(`auth:*:${personEntityId}*`)
             : Promise.resolve(0),
           this.invalidateByPattern("grid:v6role:*"),
+          this.invalidateByPattern("grid:v7tenant:*"),
         ]);
 
         totalInvalidated =
@@ -1720,7 +1632,8 @@ class UniversalCacheManager {
           tyomaaUpdateCount +
           gridUpdateCount +
           authUpdateCount +
-          v6roleCount;
+          v6roleCount +
+          v7tenantCount;
 
         this.logger.debug("PERSON_UPDATE invalidation completed", {
           keysInvalidated: totalInvalidated,
@@ -1781,23 +1694,16 @@ class UniversalCacheManager {
           params,
         });
 
-        const [
-          sijaintiGeocodeCount,
-          sijaintiTyomaaCount,
-          sijaintiKeikkaCount,
-          sijaintiGridCount,
-        ] = await Promise.all([
-          this.invalidate(operation, "geocode", params),
-          this.invalidate(operation, "tyomaa", params),
-          this.invalidate(operation, "keikka", params),
-          this.invalidateGridSmart("TYOMAA_UPDATE", params.body || {}, params),
-        ]);
+        const [sijaintiGeocodeCount, sijaintiTyomaaCount, sijaintiKeikkaCount, sijaintiGridCount] =
+          await Promise.all([
+            this.invalidate(operation, "geocode", params),
+            this.invalidate(operation, "tyomaa", params),
+            this.invalidate(operation, "keikka", params),
+            this.invalidateGridSmart("TYOMAA_UPDATE", params.body || {}, params),
+          ]);
 
         totalInvalidated +=
-          sijaintiGeocodeCount +
-          sijaintiTyomaaCount +
-          sijaintiKeikkaCount +
-          sijaintiGridCount;
+          sijaintiGeocodeCount + sijaintiTyomaaCount + sijaintiKeikkaCount + sijaintiGridCount;
 
         this.logger.info("SIJAINTI operation invalidation completed", {
           operation,
@@ -1920,10 +1826,7 @@ class UniversalCacheManager {
         );
 
         totalInvalidated +=
-          ownerVehicleCount +
-          targetVehicleCount +
-          gridVisibilityCount +
-          v6roleVisibilityCount;
+          ownerVehicleCount + targetVehicleCount + gridVisibilityCount + v6roleVisibilityCount;
 
         this.logger.info("VEHICLE_VISIBILITY operation invalidation completed", {
           operation,
@@ -2005,17 +1908,11 @@ class UniversalCacheManager {
         const personId = params.personId;
 
         // Invalidate asiakasPersonSetting cache
-        totalInvalidated += await this.invalidate(
-          operation,
-          "asiakasPersonSetting",
-          params
-        );
+        totalInvalidated += await this.invalidate(operation, "asiakasPersonSetting", params);
 
         // Invalidate auth cache for this person (login cache)
         if (personId) {
-          totalInvalidated += await this.invalidateByPattern(
-            `auth:permissions:${personId}:*`
-          );
+          totalInvalidated += await this.invalidateByPattern(`auth:permissions:${personId}:*`);
           this.logger.debug("Auth cache invalidated for role change", {
             operation,
             personId,
@@ -2065,9 +1962,7 @@ class UniversalCacheManager {
           patterns.push(`laskupohjaRivi:get:*`);
         }
 
-        const counts = await Promise.all(
-          patterns.map((p) => this.invalidateByPattern(p))
-        );
+        const counts = await Promise.all(patterns.map((p) => this.invalidateByPattern(p)));
         totalInvalidated = counts.reduce((sum, count) => sum + count, 0);
 
         this.logger.info("LASKUPOHJA operation invalidation completed", {
@@ -2098,11 +1993,7 @@ class UniversalCacheManager {
 
       default: {
         const entityType = params.entityType || "default";
-        totalInvalidated += await this.invalidate(
-          operation,
-          entityType,
-          params
-        );
+        totalInvalidated += await this.invalidate(operation, entityType, params);
       }
     }
 
