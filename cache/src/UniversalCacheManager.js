@@ -815,7 +815,8 @@ class UniversalCacheManager {
       case "grid": {
         // Grid has multiple key formats that need invalidation:
         // 1. v6role format: grid:v6role:{dateKey}:{sortedCompanies} (used by list_v6role)
-        // 2. Legacy format: grid:personId:{personId}:pumppuAika:{dateKey}
+        // 2. v7tenant format: grid:v7tenant:{dateKey}:{sortedAsiakasIds}:{outputMode} (used by list_v7tenant)
+        // 3. Legacy format: grid:personId:{personId}:pumppuAika:{dateKey}
         const dateKey = pumppuAika ? this.formatGridDate(pumppuAika) : null;
 
         const patterns = [];
@@ -825,6 +826,13 @@ class UniversalCacheManager {
           patterns.push(`grid:v6role:${dateKey}:*`);
         } else {
           patterns.push(`grid:v6role:*`);
+        }
+
+        // v7tenant format - used by list_v7tenant endpoint
+        if (dateKey) {
+          patterns.push(`grid:v7tenant:${dateKey}:*`);
+        } else {
+          patterns.push(`grid:v7tenant:*`);
         }
 
         // Legacy format for backwards compatibility
@@ -1121,7 +1129,7 @@ class UniversalCacheManager {
       case "PALKKI_UPDATE":
       case "PALKKI_DELETE":
       case "PALKKI_CREATE": {
-        // Palkki operations affect grid cache, keikka list cache, v6role cache, AND palkki list cache
+        // Palkki operations affect grid cache, keikka list cache, v6role cache, v7tenant cache, AND palkki list cache
         const palkkiGridCount = await this.invalidateGridSmart(
           operation,
           params.body || {},
@@ -1137,6 +1145,11 @@ class UniversalCacheManager {
         // Invalidate v6role cache (date-scoped) - palkki changes affect grid visibility
         const v6roleCount = await this.invalidateByPattern(
           `grid:v6role:${this._extractYYYYMMDD(params)}:*`
+        );
+
+        // Invalidate v7tenant cache (date-scoped) - palkki changes affect grid visibility
+        const v7tenantCount = await this.invalidateByPattern(
+          `grid:v7tenant:${this._extractYYYYMMDD(params)}:*`
         );
 
         // Invalidate palkki list cache - DATE-SPECIFIC when frontend provides data
@@ -1178,12 +1191,13 @@ class UniversalCacheManager {
             : 0;
 
         totalInvalidated +=
-          palkkiGridCount + keikkaListCount + v6roleCount + palkkiListCount + palkkiVehicleCount;
+          palkkiGridCount + keikkaListCount + v6roleCount + v7tenantCount + palkkiListCount + palkkiVehicleCount;
         this.logger.debug("PALKKI operation completed", {
           operation,
           keysInvalidated: totalInvalidated,
           palkkiListCount,
           v6roleCount,
+          v7tenantCount,
         });
         break;
       }

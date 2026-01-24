@@ -16,7 +16,7 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
-    "ioredis": "^5.8.2"
+    "ioredis": "^5.9.2"
   },
   "peerDependencies": {
     "winston": "^3.x.x"
