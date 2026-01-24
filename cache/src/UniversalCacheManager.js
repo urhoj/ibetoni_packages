@@ -725,8 +725,10 @@ class UniversalCacheManager {
    * Entity-specific behaviors:
    * - keikka: Targets individual keikka + list caches by date/personId
    * - asiakas: Pattern-based by asiakasId
-   * - grid: Invalidates BOTH v6role format (grid:v6role:{dateKey}:*) AND
-   *         legacy format (grid:personId:*:pumppuAika:{dateKey})
+   * - grid: Invalidates all three formats:
+   *         1. v6role: grid:v6role:{dateKey}:* (list_v6role endpoint)
+   *         2. v7tenant: grid:v7tenant:{dateKey}:* (list_v7tenant endpoint)
+   *         3. legacy: grid:personId:*:pumppuAika:{dateKey}
    * - stat: Clears all stat caches (varying segment counts)
    * - attachment: Multiple patterns for different attachment key formats
    *
