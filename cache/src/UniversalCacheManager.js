@@ -330,6 +330,7 @@ class UniversalCacheManager {
       this.isConnected = false;
       this.logger.error("Redis error", {
         error: err.message,
+        stack: err.stack,
       });
       // Don't recreate client on every error to prevent connection storms
     };
