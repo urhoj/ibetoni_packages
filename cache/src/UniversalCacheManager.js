@@ -419,6 +419,13 @@ class UniversalCacheManager {
   }
 
   /**
+   * Sum array of numbers (utility for Promise.all results)
+   */
+  _sumResults(results) {
+    return results.reduce((sum, count) => sum + count, 0);
+  }
+
+  /**
    * Generate consistent cache keys for any entity type
    */
   generateKey(entityType, operation, ...params) {
@@ -758,41 +765,27 @@ class UniversalCacheManager {
         const yyyymmddValue = params.yyyymmdd;
         const keikkaIdValue = params.body?.keikkaId || params.keikkaId || params.entityId;
 
-        // Individual keikka keys: if we have keikkaId, target it specifically
-        // Key format: keikka:get:{keikkaId}:{personId} (see keikkaQueryRunner.js:45)
-        let individualKeysPattern;
-        if (keikkaIdValue) {
-          // Targeted: Only clear this specific keikka's cache (matches any personId)
-          individualKeysPattern = `keikka:get:${keikkaIdValue}:*`;
-        } else {
-          // Fallback: Clear all keikka caches
-          individualKeysPattern = `keikka:get:*`;
-        }
+        // Individual keikka keys: keikka:get:{keikkaId}:{personId}
+        const individualPattern = keikkaIdValue ? `keikka:get:${keikkaIdValue}:*` : `keikka:get:*`;
 
-        // Key format: keikka:list:asiakasId:personId:yyyymmdd[:deleted]
-        // Match yyyymmdd at position 5 (trailing wildcard for optional :deleted suffix)
+        // List pattern: keikka:list:asiakasId:personId:yyyymmdd[:deleted]
+        let listPattern;
         if (yyyymmddValue) {
-          return await Promise.all([
-            this.invalidateByPattern(individualKeysPattern),
-            this.invalidateByPattern(`keikka:list:*:*:${yyyymmddValue}*`), // yyyymmdd at position 5
-          ]).then((results) => results.reduce((sum, count) => sum + count, 0));
+          listPattern = `keikka:list:*:*:${yyyymmddValue}*`;
         } else if (targetDate) {
           const yyyymmdd = targetDate.substring(0, 10).replace(/-/g, "");
-          return await Promise.all([
-            this.invalidateByPattern(individualKeysPattern),
-            this.invalidateByPattern(`keikka:list:*:*:${yyyymmdd}*`), // yyyymmdd at position 5
-          ]).then((results) => results.reduce((sum, count) => sum + count, 0));
+          listPattern = `keikka:list:*:*:${yyyymmdd}*`;
         } else if (personIdValue) {
-          return await Promise.all([
-            this.invalidateByPattern(individualKeysPattern),
-            this.invalidateByPattern(`keikka:list:*:${personIdValue}:*`), // personId at position 4
-          ]).then((results) => results.reduce((sum, count) => sum + count, 0));
+          listPattern = `keikka:list:*:${personIdValue}:*`;
         } else {
-          return await Promise.all([
-            this.invalidateByPattern(individualKeysPattern),
-            this.invalidateByPattern(`keikka:list:*`), // fallback: all keikka lists
-          ]).then((results) => results.reduce((sum, count) => sum + count, 0));
+          listPattern = `keikka:list:*`;
         }
+
+        const results = await Promise.all([
+          this.invalidateByPattern(individualPattern),
+          this.invalidateByPattern(listPattern),
+        ]);
+        return this._sumResults(results);
       }
       case "asiakas":
         pattern = `asiakas:*:${asiakasId || "*"}*`;
@@ -842,7 +835,7 @@ class UniversalCacheManager {
 
         // Invalidate all patterns and return combined count
         const results = await Promise.all(patterns.map((p) => this.invalidateByPattern(p)));
-        const totalDeleted = results.reduce((sum, count) => sum + count, 0);
+        const totalDeleted = this._sumResults(results);
 
         if (totalDeleted > 0) {
           this.logger.info("Grid cache invalidated", {
@@ -873,9 +866,8 @@ class UniversalCacheManager {
           `attachment:get:*`, // individual attachment gets
         ];
 
-        return await Promise.all(patterns.map((p) => this.invalidateByPattern(p))).then((results) =>
-          results.reduce((sum, count) => sum + count, 0)
-        );
+        const results = await Promise.all(patterns.map((p) => this.invalidateByPattern(p)));
+        return this._sumResults(results);
       }
       case "personpvm":
         // PersonPVM keys: personpvm:list:asiakasId or personpvm:list:asiakasId:startDate:endDate
