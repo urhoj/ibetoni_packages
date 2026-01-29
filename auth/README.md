@@ -17,9 +17,11 @@ Centralized authentication logic used across multiple services, eliminating dupl
 
 - **JWT Token Management**: Create, verify, and refresh JWT tokens
 - **Google OAuth**: Verify Google ID tokens
+- **Microsoft Azure AD OAuth**: Secure Microsoft ID token verification with comprehensive security validations
 - **Password Hashing**: bcrypt password utilities
 - **Flexible Configuration**: Supports both sync (process.env) and async (Key Vault) config
 - **Optional Logging**: Works with any logger or console
+- **Security Audit Logging**: Comprehensive logging for authentication events
 
 ## Usage
 
@@ -89,6 +91,42 @@ try {
   console.log('Profile picture:', payload.picture);
 } catch (error) {
   console.error('Google auth failed:', error);
+}
+```
+
+### Microsoft OAuth Verification
+
+```javascript
+const { createMicrosoftAuth } = require('@ibetoni/auth');
+
+// Create instance with logger and Key Vault integration
+const microsoftAuth = createMicrosoftAuth({
+  logger: logger.categories.AUTH,
+  getEnvVar: environmentHelper.getEnvVar // for MICROSOFT_CLIENT_ID from Key Vault
+});
+
+// Verify Microsoft ID token from frontend (MSAL.js)
+try {
+  const payload = await microsoftAuth.verifyIdToken(microsoftIdToken);
+
+  // Extract user information
+  const user = microsoftAuth.extractUser(payload);
+  console.log('User email:', user.email);
+  console.log('User name:', user.name);
+  console.log('Microsoft ID:', user.microsoftId);
+
+  // Security claims
+  console.log('Tenant ID:', payload.tid);
+  console.log('Issuer:', payload.iss);
+  console.log('Has MFA:', payload.amr?.includes('mfa'));
+  console.log('Nonce:', payload.nonce);
+} catch (error) {
+  console.error('Microsoft auth failed:', error.message);
+  // Error scenarios:
+  // - Invalid signature
+  // - Expired token
+  // - Unauthorized issuer
+  // - Token too old (>1 hour)
 }
 ```
 
@@ -179,12 +217,40 @@ if (status.isExpiringSoon) {
 - Verifies Google ID token
 - Returns: Promise<object> Google payload with user info
 
+### Microsoft OAuth (Azure AD)
+
+**`createMicrosoftAuth(options)`**
+- Creates MicrosoftAuth instance with comprehensive security validations
+- Options:
+  - `logger`: Optional logger instance for security audit logs
+  - `getEnvVar`: Optional async function for Key Vault integration
+- Returns: MicrosoftAuth instance
+
+**`microsoftAuth.verifyIdToken(token)`**
+- Verifies Microsoft ID token with security checks:
+  - RSA256 signature validation using Microsoft's public keys (JWKS)
+  - Issuer validation (Azure AD multi-tenant pattern)
+  - Audience validation (matches MICROSOFT_CLIENT_ID)
+  - Token expiration with 60-second clock skew tolerance
+  - Maximum token age validation (1 hour)
+  - Nonce validation (warns if missing)
+  - Tenant ID logging for audit trail
+- Returns: Promise<object> Microsoft token payload with user info and security claims
+- Throws: Error if token invalid, expired, or from unauthorized issuer
+
+**`microsoftAuth.extractUser(payload)`**
+- Extracts standardized user object from Microsoft token payload
+- Parameters:
+  - `payload`: Decoded Microsoft ID token
+- Returns: Object with microsoftId, email, name, firstName, lastName
+
 ## Configuration
 
 ### Environment Variables Required
 
 - `JWT_KEY`: Secret key for signing JWT tokens
 - `GOOGLE_CLIENT_ID`: Google OAuth client ID
+- `MICROSOFT_CLIENT_ID`: Microsoft Azure AD application (client) ID
 
 ### Sync vs Async Configuration
 
@@ -209,6 +275,15 @@ const token = await createToken(email, personId, additionalClaims, {
 - Passwords are hashed with bcrypt (10 rounds)
 - All token verification requires valid `personId` or `email` claims
 - Google OAuth tokens are verified against configured `GOOGLE_CLIENT_ID`
+- **Microsoft OAuth Security** (Updated 2026-01-29):
+  - ID tokens verified using Microsoft's public keys (JWKS) with RS256 algorithm
+  - Multi-tenant issuer validation: `https://login.microsoftonline.com/{tenant-guid}/v2.0`
+  - Clock skew tolerance: 60 seconds
+  - Maximum token age: 1 hour
+  - Nonce validation for replay attack prevention
+  - MFA (Multi-Factor Authentication) claim support via `amr` array
+  - Comprehensive security audit logging (tenant ID, issuer, email)
+  - JWKS key caching: 24 hours (max 5 keys)
 
 ## Used By
 
