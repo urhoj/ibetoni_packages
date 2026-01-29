@@ -30,6 +30,7 @@ import {
   RATE_LIMIT_WINDOW,
   MAX_REQUESTS_PER_WINDOW,
 } from "./security.js";
+import { COMPANY_ROLE_TO_TYPE_ID, TYPE_ID_TO_ROLE_NAME } from "./roles.js";
 
 export {
   // Domain constants
@@ -55,4 +56,8 @@ export {
   LOCKOUT_DURATION,
   RATE_LIMIT_WINDOW,
   MAX_REQUESTS_PER_WINDOW,
+
+  // Role mapping constants
+  COMPANY_ROLE_TO_TYPE_ID,
+  TYPE_ID_TO_ROLE_NAME,
 };

@@ -28,6 +28,10 @@
     "./domains": {
       "import": "./src/domains.js",
       "require": "./src/domains.cjs"
+    },
+    "./roles": {
+      "import": "./src/roles.js",
+      "require": "./src/roles.cjs"
     }
   },
   "keywords": [
