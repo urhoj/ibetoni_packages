@@ -264,6 +264,7 @@ class UniversalCacheManager {
 
   /**
    * Initialize and get Redis client with proper connection management
+   * @returns {Promise<import('ioredis').Redis | null>}
    */
   async getClient() {
     // Check if Redis cache is disabled via environment variable
