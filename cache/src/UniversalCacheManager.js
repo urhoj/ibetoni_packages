@@ -125,6 +125,8 @@ class UniversalCacheManager {
       weather: 3600, // 1 hour - weather module status and forecasts
       ecofleet: 60, // 1 minute - external fleet tracking API (real-time, excluded from multiplier)
       lasku: 3600, // 1 hour - invoice data
+      laskupohja: 7200, // 2 hours - invoice templates (more stable than invoices)
+      laskuStatusType: 43200, // 12 hours - invoice status types (static reference data)
       holiday: 86400, // 24 hours - national holidays, changes rarely (weekly sync)
       notifications: 120, // 2 minutes - time-sensitive push notifications
       reminder: 7200, // 2 hours - reminder rules, infrequently changed
