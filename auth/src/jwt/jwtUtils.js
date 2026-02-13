@@ -221,14 +221,15 @@ const createVerifyTokenMiddleware = (options = {}) => {
  * @param {object} options - Token creation options
  * @param {function} options.getEnvVar - Optional async function to get env vars
  * @param {object} options.logger - Optional logger instance
+ * @param {string} options.expiresIn - Optional token expiry (e.g. '60d'), defaults to '7d'
  * @returns {Promise<string>} JWT token
  */
 const createToken = async (email, personId, additionalClaims = {}, options = {}) => {
   const jwtKey = await getJwtKey(options);
   const logger = options.logger;
 
-  // Default token expiration: 7 days (consistent with both apps)
-  let expiresIn = "7d";
+  // Default token expiration: 7 days; callers can override via options.expiresIn
+  let expiresIn = options.expiresIn || "7d";
 
   // Temporary access tokens for specific use cases expire quickly
   if (email === "tempAccessToken@ibetoni.fi" && personId === null) {
