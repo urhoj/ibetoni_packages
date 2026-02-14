@@ -5,7 +5,7 @@
  * to betoni.online backend services. Used by CORS middleware in both
  * puminet5api (main backend) and puminet7-functions-app (cron jobs).
  *
- * Last Updated: 2025-11-10
+ * Last Updated: 2026-02-14
  *
  * Maintenance:
  * - When adding new environment, add all domain variants
@@ -61,6 +61,10 @@ const allowedOrigins = [
   "https://api-latest.ibetoni.fi",
   "https://api-staging.betoni.online",
   "https://api-staging.ibetoni.fi",
+
+  // game (BSG2)
+  "https://peli.betoni.online",
+  "https://peli.ibetoni.fi",
 
   // localhost for development
   "http://localhost:3000",
