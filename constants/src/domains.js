@@ -66,9 +66,14 @@ const allowedOrigins = [
   "https://peli.betoni.online",
   "https://peli.ibetoni.fi",
 
+  // kalleurho.fi company website
+  "https://kalleurho.fi",
+  "https://www.kalleurho.fi",
+
   // localhost for development
   "http://localhost:3000",
   "http://localhost:3001", // BSG2 Vite dev server
+  "http://localhost:3002", // kalleurho.fi Vite dev server
   "http://localhost:5173", // Vite dev server
   "http://localhost:8080",
   "http://127.0.0.1:3000",
