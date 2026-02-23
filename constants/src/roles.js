@@ -60,10 +60,10 @@ export const COMPANY_ROLE_TO_TYPE_ID = {
   /** Betoni Viewer - Read-only access to concrete data */
   isBetoniViewer: 19,
 
-  /** Pumppu Handler - Can manage pump operations */
+  /** @deprecated OBSOLETE - Use keikkaHandler/keikkaViewer with isPumppuToimittaja company flag */
   isPumppuHandler: 20,
 
-  /** Pumppu Viewer - Read-only access to pump data */
+  /** @deprecated OBSOLETE - Use keikkaHandler/keikkaViewer with isPumppuToimittaja company flag */
   isPumppuViewer: 21,
 
   /** Asiakas Owner - Company owner */
@@ -95,8 +95,8 @@ export const TYPE_ID_TO_ROLE_NAME = {
   17: 'Keikka Viewer',
   18: 'Betoni Handler',
   19: 'Betoni Viewer',
-  20: 'Pumppu Handler',
-  21: 'Pumppu Viewer',
+  20: 'Pumppu Handler (OBSOLETE)',
+  21: 'Pumppu Viewer (OBSOLETE)',
   22: 'Asiakas Owner',
   24: 'HR Admin',
 };

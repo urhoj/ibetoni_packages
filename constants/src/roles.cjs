@@ -19,9 +19,10 @@ const COMPANY_ROLE_TO_TYPE_ID = {
   isKeikkaViewer: 17,
   isBetoniHandler: 18,
   isBetoniViewer: 19,
-  isPumppuHandler: 20,
-  isPumppuViewer: 21,
+  isPumppuHandler: 20, // OBSOLETE
+  isPumppuViewer: 21, // OBSOLETE
   isAsiakasOwner: 22,
+  isHRAdmin: 24,
 };
 
 const TYPE_ID_TO_ROLE_NAME = {
@@ -40,9 +41,10 @@ const TYPE_ID_TO_ROLE_NAME = {
   17: 'Keikka Viewer',
   18: 'Betoni Handler',
   19: 'Betoni Viewer',
-  20: 'Pumppu Handler',
-  21: 'Pumppu Viewer',
+  20: 'Pumppu Handler (OBSOLETE)',
+  21: 'Pumppu Viewer (OBSOLETE)',
   22: 'Asiakas Owner',
+  24: 'HR Admin',
 };
 
 module.exports = {
