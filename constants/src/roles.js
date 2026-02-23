@@ -68,6 +68,9 @@ export const COMPANY_ROLE_TO_TYPE_ID = {
 
   /** Asiakas Owner - Company owner */
   isAsiakasOwner: 22,
+
+  /** HR Admin - Human Resources administrator */
+  isHRAdmin: 24,
 };
 
 /**
@@ -95,4 +98,5 @@ export const TYPE_ID_TO_ROLE_NAME = {
   20: 'Pumppu Handler',
   21: 'Pumppu Viewer',
   22: 'Asiakas Owner',
+  24: 'HR Admin',
 };
