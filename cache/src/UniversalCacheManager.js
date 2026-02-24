@@ -442,7 +442,7 @@ class UniversalCacheManager {
   }
 
   /**
-   * Generate MD5 hash for cache keys (consistent short hashes)
+   * Generate SHA-256 hash for cache keys (consistent short hashes)
    */
   generateHash(input, length = 8) {
     if (!input || typeof input !== "string") {
@@ -450,7 +450,7 @@ class UniversalCacheManager {
     }
 
     return crypto
-      .createHash("md5")
+      .createHash("sha256")
       .update(input.toLowerCase().trim())
       .digest("hex")
       .substring(0, length);
