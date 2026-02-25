@@ -26,7 +26,7 @@ const {
   RATE_LIMIT_WINDOW,
   MAX_REQUESTS_PER_WINDOW,
 } = require("./src/security.cjs");
-const { COMPANY_ROLE_TO_TYPE_ID, TYPE_ID_TO_ROLE_NAME } = require("./src/roles.cjs");
+const { COMPANY_ROLE_TO_TYPE_ID, ROLE_NAME_TO_KEY_MAP, TYPE_ID_TO_ROLE_NAME } = require("./src/roles.cjs");
 
 module.exports = {
   // Domain constants
@@ -55,5 +55,6 @@ module.exports = {
 
   // Role mapping constants
   COMPANY_ROLE_TO_TYPE_ID,
+  ROLE_NAME_TO_KEY_MAP,
   TYPE_ID_TO_ROLE_NAME,
 };

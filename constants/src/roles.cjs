@@ -25,6 +25,25 @@ const COMPANY_ROLE_TO_TYPE_ID = {
   isHRAdmin: 24,
 };
 
+const ROLE_NAME_TO_KEY_MAP = {
+  laskupohjaAdmin: "isLaskupohjaAdmin",
+  asiakasAdmin: "isAsiakasAdmin",
+  laskuAdmin: "isLaskuAdmin",
+  asiakasEditor: "isAsiakasEditor",
+  pumppari: "isPumppari",
+  typisSuhteessa: "isTyösuhteessa",
+  attachmentHandler: "isAttachmentHandler",
+  keikkaHandler: "isKeikkaHandler",
+  sijaintiHandler: "isSijaintiHandler",
+  vehicleHandler: "isVehicleHandler",
+  tuoteHandler: "isTuoteHandler",
+  lomaseurannassa: "isLomaseurannassa",
+  assignee: "isAssignee",
+  keikkaViewer: "isKeikkaViewer",
+  asiakasOwner: "isAsiakasOwner",
+  hrAdmin: "isHRAdmin",
+};
+
 const TYPE_ID_TO_ROLE_NAME = {
   1: 'Laskupohja Admin',
   2: 'Asiakas Admin',
@@ -49,5 +68,6 @@ const TYPE_ID_TO_ROLE_NAME = {
 
 module.exports = {
   COMPANY_ROLE_TO_TYPE_ID,
+  ROLE_NAME_TO_KEY_MAP,
   TYPE_ID_TO_ROLE_NAME,
 };

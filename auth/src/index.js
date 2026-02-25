@@ -33,6 +33,7 @@ module.exports = {
   comparePassword: jwtUtils.comparePassword,
   isTokenExpiringSoon: jwtUtils.isTokenExpiringSoon,
   refreshToken: jwtUtils.refreshToken,
+  roleNameToKeyMap: jwtUtils.roleNameToKeyMap,
 
   // Google OAuth
   GoogleAuth,

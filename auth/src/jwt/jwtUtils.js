@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+const { ROLE_NAME_TO_KEY_MAP: roleNameToKeyMap } = require("@ibetoni/constants");
 
 /**
  * JWT Utilities for betoni.online platform
@@ -38,25 +39,6 @@ const getJwtKey = async (options = {}) => {
  * @returns {object} companyRoles object with boolean flags
  */
 const deriveCompanyRoles = (asiakasesWithTypes, ownerAsiakasId) => {
-  // Map role name strings to companyRoles object keys
-  // Must match frontend jwtUtils.js roleNameToKeyMap
-  const roleNameToKeyMap = {
-    laskupohjaAdmin: "isLaskupohjaAdmin",
-    asiakasAdmin: "isAsiakasAdmin",
-    laskuAdmin: "isLaskuAdmin",
-    asiakasEditor: "isAsiakasEditor",
-    pumppari: "isPumppari",
-    typisSuhteessa: "isTyösuhteessa",
-    attachmentHandler: "isAttachmentHandler",
-    keikkaHandler: "isKeikkaHandler",
-    sijaintiHandler: "isSijaintiHandler",
-    vehicleHandler: "isVehicleHandler",
-    tuoteHandler: "isTuoteHandler",
-    lomaseurannassa: "isLomaseurannassa",
-    assignee: "isAssignee",
-    keikkaViewer: "isKeikkaViewer",
-    asiakasOwner: "isAsiakasOwner",
-  };
 
   const companyRoles = {
     ownerAsiakasId: ownerAsiakasId,
@@ -75,6 +57,7 @@ const deriveCompanyRoles = (asiakasesWithTypes, ownerAsiakasId) => {
     isTuoteHandler: false,
     isLomaseurannassa: false,
     isAsiakasOwner: false,
+    isHRAdmin: false,
   };
 
   if (!asiakasesWithTypes || !ownerAsiakasId) {
@@ -353,4 +336,5 @@ module.exports = {
   isTokenExpiringSoon,
   refreshToken,
   deriveCompanyRoles, // Export for use in other modules if needed
+  roleNameToKeyMap, // Re-exported from @ibetoni/constants for convenience
 };

@@ -74,6 +74,31 @@ export const COMPANY_ROLE_TO_TYPE_ID = {
 };
 
 /**
+ * Maps JWT role name strings (from asiakasesWithTypes.roles) to companyRoles boolean keys.
+ * Used by deriveCompanyRoles to convert role arrays to boolean flags.
+ *
+ * @constant {Object.<string, string>} ROLE_NAME_TO_KEY_MAP
+ */
+export const ROLE_NAME_TO_KEY_MAP = {
+  laskupohjaAdmin: "isLaskupohjaAdmin",
+  asiakasAdmin: "isAsiakasAdmin",
+  laskuAdmin: "isLaskuAdmin",
+  asiakasEditor: "isAsiakasEditor",
+  pumppari: "isPumppari",
+  typisSuhteessa: "isTyösuhteessa",
+  attachmentHandler: "isAttachmentHandler",
+  keikkaHandler: "isKeikkaHandler",
+  sijaintiHandler: "isSijaintiHandler",
+  vehicleHandler: "isVehicleHandler",
+  tuoteHandler: "isTuoteHandler",
+  lomaseurannassa: "isLomaseurannassa",
+  assignee: "isAssignee",
+  keikkaViewer: "isKeikkaViewer",
+  asiakasOwner: "isAsiakasOwner",
+  hrAdmin: "isHRAdmin",
+};
+
+/**
  * Reverse mapping: Type ID to role name
  * Useful for debugging and display purposes
  *

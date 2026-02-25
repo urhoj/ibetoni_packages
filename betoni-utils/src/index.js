@@ -25,3 +25,6 @@ export { RasitusLuokatArr, WEATHER_RESISTANT_CLASSES } from "./constants.js";
 
 // Export person utility functions
 export { formatPersonName } from "./personUtils.js";
+
+// Export email utility functions
+export { isEmail, parseMultipleEmails, validateMultipleEmails } from "./emailUtils.js";

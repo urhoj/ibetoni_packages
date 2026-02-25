@@ -30,7 +30,7 @@ import {
   RATE_LIMIT_WINDOW,
   MAX_REQUESTS_PER_WINDOW,
 } from "./security.js";
-import { COMPANY_ROLE_TO_TYPE_ID, TYPE_ID_TO_ROLE_NAME } from "./roles.js";
+import { COMPANY_ROLE_TO_TYPE_ID, ROLE_NAME_TO_KEY_MAP, TYPE_ID_TO_ROLE_NAME } from "./roles.js";
 
 export {
   // Domain constants
@@ -59,5 +59,6 @@ export {
 
   // Role mapping constants
   COMPANY_ROLE_TO_TYPE_ID,
+  ROLE_NAME_TO_KEY_MAP,
   TYPE_ID_TO_ROLE_NAME,
 };
