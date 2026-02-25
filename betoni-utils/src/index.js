@@ -22,3 +22,6 @@ export { betoni_isComplete } from "./betoniValidator.js";
 
 // Export constants
 export { RasitusLuokatArr, WEATHER_RESISTANT_CLASSES } from "./constants.js";
+
+// Export person utility functions
+export { formatPersonName } from "./personUtils.js";
