@@ -155,6 +155,13 @@ export const ASIAKAS_WORKING_HOURS_ROLE_TYPE_ID = 23;
 export const KALLE_URHO_OY_ASIAKAS_ID = 8;
 
 /**
+ * MaxBe Oy asiakasId used in shared cross-company access checks.
+ *
+ * @constant {number}
+ */
+export const MAXBE_OY_ASIAKAS_ID = 62;
+
+/**
  * Company setting type IDs that grant any admin-level access in asiakasAuthClass.
  *
  * @constant {number[]}
