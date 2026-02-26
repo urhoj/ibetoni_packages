@@ -1763,18 +1763,21 @@ class UniversalCacheManager {
           sijaintiTyomaaCount,
           sijaintiKeikkaCount,
           sijaintiGridCount,
+          sijaintiAsiakasCount,
         ] = await Promise.all([
           this.invalidate(operation, "geocode", params),
           this.invalidate(operation, "tyomaa", params),
           this.invalidate(operation, "keikka", params),
           this.invalidateGridSmart("TYOMAA_UPDATE", params.body || {}, params),
+          this.invalidate(operation, "asiakas", params),
         ]);
 
         totalInvalidated +=
           sijaintiGeocodeCount +
           sijaintiTyomaaCount +
           sijaintiKeikkaCount +
-          sijaintiGridCount;
+          sijaintiGridCount +
+          sijaintiAsiakasCount;
 
         this.logger.info("SIJAINTI operation invalidation completed", {
           operation,
