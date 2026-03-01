@@ -5,19 +5,19 @@
  * Provides consistent cache invalidation across all services.
  *
  * Usage:
- *   const { createCacheManager } = require('@ibetoni/cache');
- *   const cacheManager = createCacheManager({ logger: myLogger });
+ *   const { getSingletonCacheManager } = require('@ibetoni/cache');
+ *   const cacheManager = getSingletonCacheManager({ logger: myLogger });
  *   await cacheManager.invalidateCrossEntity('KEIKKA_BULK_UPDATE', {...});
  */
 
 const UniversalCacheManager = require('./UniversalCacheManager');
 const CacheMetrics = require('./CacheMetrics');
-const { DistributedLockManager, DistributedLock, releaseAllLocks } = require('./DistributedLockManager');
+const { DistributedLockManager, releaseAllLocks } = require('./DistributedLockManager');
 
 /**
  * Create a configured cache manager instance
  * @param {Object} options - Configuration options
- * @param {Object} [options.logger] - Winston logger instance
+ * @param {Object} [options.logger] - Logger instance
  * @param {Object} [options.cacheMetrics] - Optional custom cache metrics instance
  * @param {Object} [options.redisConfig] - Optional Redis configuration override
  * @returns {UniversalCacheManager} Configured cache manager instance
@@ -32,10 +32,7 @@ function createCacheManager(options = {}) {
   });
 }
 
-/**
- * Create a singleton cache manager instance
- * Useful for importing across multiple files without recreating
- */
+/** Singleton cache manager instance */
 let singletonInstance = null;
 
 function getSingletonCacheManager(options = {}) {
@@ -45,25 +42,12 @@ function getSingletonCacheManager(options = {}) {
   return singletonInstance;
 }
 
-/**
- * Get cache manager singleton (legacy alias for backward compatibility)
- * @deprecated Use getSingletonCacheManager() instead
- * @returns {UniversalCacheManager} Singleton cache manager instance
- */
-function getCacheManager(options = {}) {
-  return getSingletonCacheManager(options);
-}
-
 module.exports = {
-  // Primary exports
   UniversalCacheManager,
   CacheMetrics,
   createCacheManager,
   getSingletonCacheManager,
-  getCacheManager, // Backward compatibility
-
-  // Distributed locking exports
+  getCacheManager: getSingletonCacheManager, // Legacy alias
   DistributedLockManager,
-  DistributedLock,
   releaseAllLocks,
 };

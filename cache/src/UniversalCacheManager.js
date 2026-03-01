@@ -9,12 +9,7 @@
  * - DB 3: API cache (production)
  * - DB 4: API cache (development)
  *
- * **Runtime Database Switching** (January 2026):
- * - `currentDb` property tracks current database (3 or 4)
- * - `selectDatabase(db)` switches at runtime via Redis SELECT command
- * - `getCurrentDb()` returns current database number
- * - Default: DB 3 for production (`NODE_ENV=production`), DB 4 otherwise
- *
+ * Default: DB 3 for production (`NODE_ENV=production`), DB 4 otherwise.
  * Shared package version - logger and metrics are injectable.
  */
 
@@ -136,7 +131,7 @@ class UniversalCacheManager {
     // Apply TTL multiplier to generate effective TTLs
     this.TTL = this._applyTtlMultiplier(this.BASE_TTL);
 
-    this.logger.info("TTL multiplier applied", {
+    this.logger.debug("TTL multiplier applied", {
       multiplier: this.ttlMultiplier,
       excluded: Array.from(TTL_MULTIPLIER_EXCLUDED),
       maxTtl: MAX_TTL_SECONDS,
@@ -206,28 +201,6 @@ class UniversalCacheManager {
   }
 
   /**
-   * Get current TTL multiplier value
-   * @returns {number} The active TTL multiplier
-   */
-  getTtlMultiplier() {
-    return this.ttlMultiplier;
-  }
-
-  /**
-   * Get TTL configuration summary for monitoring/debugging
-   * @returns {Object} TTL configuration including multiplier and effective values
-   */
-  getTtlConfig() {
-    return {
-      multiplier: this.ttlMultiplier,
-      maxTtl: MAX_TTL_SECONDS,
-      excluded: Array.from(TTL_MULTIPLIER_EXCLUDED),
-      effectiveTtls: { ...this.TTL },
-      baseTtls: { ...this.BASE_TTL },
-    };
-  }
-
-  /**
    * Get Redis configuration with Azure/local fallback
    */
   getRedisConfig() {
@@ -239,13 +212,8 @@ class UniversalCacheManager {
       keyPrefix: "", // No prefix to avoid scan/invalidation mismatches
       connectTimeout: 10000,
       retryStrategy: (times) => Math.min(times * 1000, 5000),
+      db: this.currentDb, // DB 3 for production, DB 4 for development
     };
-
-    // Environment-based DB selection for cache isolation:
-    // Production: DB 3, Development: DB 4
-    // Socket.io sessions remain on DB 1 (shared) - see redisSessionClient.js
-    const isProduction = process.env.NODE_ENV === "production";
-    const cacheDb = isProduction ? 3 : 4;
 
     return process.env.REDIS_HOSTNAME
       ? {
@@ -254,13 +222,11 @@ class UniversalCacheManager {
           port: parseInt(process.env.REDIS_PORT || "6380"),
           password: process.env.REDIS_ACCESS_KEY,
           tls: { servername: process.env.REDIS_HOSTNAME },
-          db: cacheDb, // DB 3 for production, DB 4 for development
         }
       : {
           ...base,
           host: process.env.SIMPLIFIED_REDIS_HOST || "localhost",
           port: parseInt(process.env.SIMPLIFIED_REDIS_PORT || "6379"),
-          db: cacheDb, // DB 3 for production, DB 4 for development
         };
   }
 
@@ -393,12 +359,7 @@ class UniversalCacheManager {
   /**
    * Execute Redis operation with consistent error handling
    */
-  async withRedis(
-    operation,
-    fallback = null,
-    _logPrefix = "[UniversalCache]",
-    operationType = "operation",
-  ) {
+  async withRedis(operation, fallback = null, operationType = "operation") {
     const startTime = Date.now();
 
     try {
@@ -425,13 +386,6 @@ class UniversalCacheManager {
       this.cacheMetrics.recordError(operationType, "unknown", error);
       return fallback;
     }
-  }
-
-  /**
-   * Sum array of numbers (utility for Promise.all results)
-   */
-  _sumResults(results) {
-    return results.reduce((sum, count) => sum + count, 0);
   }
 
   /**
@@ -519,23 +473,14 @@ class UniversalCacheManager {
     // If already in yyyymmdd format, return as is
     if (/^\d{8}$/.test(dateInput)) return dateInput;
 
-    try {
-      // Parse and format date using native JavaScript
-      const date = new Date(dateInput);
-      if (isNaN(date.getTime())) return null;
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) return null;
 
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
 
-      return `${year}${month}${day}`;
-    } catch (error) {
-      this.logger.error("Grid date parsing error", {
-        error: error.message,
-        dateInput,
-      });
-      return null;
-    }
+    return `${year}${month}${day}`;
   }
 
   /**
@@ -594,7 +539,6 @@ class UniversalCacheManager {
         return true;
       },
       false,
-      "[UniversalCache]",
       `cache ${entityType}`,
     );
   }
@@ -603,25 +547,21 @@ class UniversalCacheManager {
    * Retrieve cached data
    */
   async get(key, entityType = "data") {
-    const startTime = Date.now();
-
     return await this.withRedis(
       async (redis) => {
         const data = await redis.get(key);
-        const responseTime = Date.now() - startTime;
 
         if (data) {
           this.logger.debug("Cache hit", { entityType, key });
-          this.cacheMetrics.recordHit(entityType, responseTime);
+          this.cacheMetrics.recordHit(entityType);
           return JSON.parse(data);
         }
 
         this.logger.debug("Cache miss", { entityType, key });
-        this.cacheMetrics.recordMiss(entityType, responseTime);
+        this.cacheMetrics.recordMiss(entityType);
         return null;
       },
       null,
-      "[UniversalCache]",
       `get ${entityType}`,
     );
   }
@@ -682,7 +622,6 @@ class UniversalCacheManager {
         return keys;
       },
       [],
-      "[UniversalCache]",
       "scan keys",
     );
   }
@@ -708,7 +647,6 @@ class UniversalCacheManager {
               error: deleteError.message,
               batchSize: batch.length,
             });
-            // Continue with remaining batches rather than failing completely
             continue;
           }
         }
@@ -720,7 +658,6 @@ class UniversalCacheManager {
         return deletedCount;
       },
       0,
-      "[UniversalCache]",
       "batch delete",
     );
   }
@@ -815,7 +752,7 @@ class UniversalCacheManager {
           this.invalidateByPattern(individualPattern),
           this.invalidateByPattern(listPattern),
         ]);
-        return this._sumResults(results);
+        return results.reduce((sum, c) => sum + c, 0);
       }
       case "asiakas":
         pattern = `asiakas:*:${asiakasId || "*"}*`;
@@ -867,7 +804,7 @@ class UniversalCacheManager {
         const results = await Promise.all(
           patterns.map((p) => this.invalidateByPattern(p)),
         );
-        const totalDeleted = this._sumResults(results);
+        const totalDeleted = results.reduce((sum, c) => sum + c, 0);
 
         if (totalDeleted > 0) {
           this.logger.info("Grid cache invalidated", {
@@ -901,7 +838,7 @@ class UniversalCacheManager {
         const results = await Promise.all(
           patterns.map((p) => this.invalidateByPattern(p)),
         );
-        return this._sumResults(results);
+        return results.reduce((sum, c) => sum + c, 0);
       }
       case "personpvm":
         // PersonPVM keys: personpvm:list:asiakasId or personpvm:list:asiakasId:startDate:endDate
@@ -1103,42 +1040,17 @@ class UniversalCacheManager {
       case "KEIKKA_UPDATE":
       case "KEIKKA_DELETE":
       case "KEIKKA_CREATE": {
-        // Parallelize independent invalidations for better performance
-        const [
-          keikkaCount,
-          keikkaPersonCount,
-          keikkaBetoniCount,
-          stepLogCount,
-          attachmentCount,
-          gridCount,
-          v6roleCount,
-          v7tenantCount,
-          listByAsiakasesCount,
-        ] = await Promise.all([
+        // invalidateGridSmart already handles grid:v6role and grid:v7tenant patterns
+        const counts = await Promise.all([
           this.invalidate(operation, "keikka", params),
           this.invalidate(operation, "keikkaPerson", params),
           this.invalidate(operation, "keikkaBetoni", params),
           this.invalidate(operation, "stepLog", params),
           this.invalidate(operation, "attachment", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
-          this.invalidateByPattern(
-            `grid:v6role:${this._extractYYYYMMDD(params)}:*`,
-          ),
-          this.invalidateByPattern(
-            `grid:v7tenant:${this._extractYYYYMMDD(params)}:*`,
-          ),
           this.invalidateByPattern("keikka:listByAsiakases:*"),
         ]);
-        totalInvalidated +=
-          keikkaCount +
-          keikkaPersonCount +
-          keikkaBetoniCount +
-          stepLogCount +
-          attachmentCount +
-          gridCount +
-          v6roleCount +
-          v7tenantCount +
-          listByAsiakasesCount;
+        totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         break;
       }
 
@@ -1256,25 +1168,14 @@ class UniversalCacheManager {
       case "VEHICLE_DATE_UPDATE":
       case "VEHICLE_DATE_CREATE":
       case "VEHICLE_DATE_DELETE": {
-        // Parallelize independent invalidations for better performance
-        const [
-          vehicleDateCount,
-          vehicleCount,
-          vehicleReqCount,
-          vehicleGridCount,
-        ] = await Promise.all([
+        const counts = await Promise.all([
           this.invalidate(operation, "vehicleDate", params),
           this.invalidate(operation, "vehicle", params),
           this.invalidate(operation, "vehicleRequiredDateType", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
         ]);
-
-        totalInvalidated +=
-          vehicleDateCount + vehicleCount + vehicleReqCount + vehicleGridCount;
-        this.logger.debug("VEHICLE_DATE operation completed", {
-          operation,
-          keysInvalidated: totalInvalidated,
-        });
+        totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
+        this.logger.debug("VEHICLE_DATE operation completed", { operation, keysInvalidated: totalInvalidated });
         break;
       }
 
@@ -1283,32 +1184,16 @@ class UniversalCacheManager {
       case "PERSON_DATE_UPDATE":
       case "PERSON_DATE_CREATE":
       case "PERSON_DATE_DELETE": {
-        // Parallelize independent invalidations for better performance
         // CRITICAL: keikka cache must be invalidated because order views show person compliance status
-        const [
-          personDateCount,
-          personCount,
-          personReqCount,
-          personGridCount,
-          personKeikkaCount,
-        ] = await Promise.all([
+        const counts = await Promise.all([
           this.invalidate(operation, "personDate", params),
           this.invalidate(operation, "person", params),
           this.invalidate(operation, "personRequiredDateType", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
           this.invalidate(operation, "keikka", params),
         ]);
-
-        totalInvalidated +=
-          personDateCount +
-          personCount +
-          personReqCount +
-          personGridCount +
-          personKeikkaCount;
-        this.logger.debug("PERSON_DATE operation completed", {
-          operation,
-          keysInvalidated: totalInvalidated,
-        });
+        totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
+        this.logger.debug("PERSON_DATE operation completed", { operation, keysInvalidated: totalInvalidated });
         break;
       }
 
@@ -1317,32 +1202,16 @@ class UniversalCacheManager {
       case "TYOMAA_DATE_UPDATE":
       case "TYOMAA_DATE_CREATE":
       case "TYOMAA_DATE_DELETE": {
-        // Parallelize independent invalidations for better performance
         // CRITICAL: keikka cache must be invalidated because order views show tyomaa compliance status
-        const [
-          tyomaaDateCount,
-          tyomaaCount,
-          tyomaaReqCount,
-          tyomaaGridCount,
-          tyomaaKeikkaCount,
-        ] = await Promise.all([
+        const counts = await Promise.all([
           this.invalidate(operation, "tyomaaDate", params),
           this.invalidate(operation, "tyomaa", params),
           this.invalidate(operation, "tyomaaRequiredDateType", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
           this.invalidate(operation, "keikka", params),
         ]);
-
-        totalInvalidated +=
-          tyomaaDateCount +
-          tyomaaCount +
-          tyomaaReqCount +
-          tyomaaGridCount +
-          tyomaaKeikkaCount;
-        this.logger.debug("TYOMAA_DATE operation completed", {
-          operation,
-          keysInvalidated: totalInvalidated,
-        });
+        totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
+        this.logger.debug("TYOMAA_DATE operation completed", { operation, keysInvalidated: totalInvalidated });
         break;
       }
 
@@ -1351,25 +1220,14 @@ class UniversalCacheManager {
       case "ASIAKAS_DATE_UPDATE":
       case "ASIAKAS_DATE_CREATE":
       case "ASIAKAS_DATE_DELETE": {
-        // Parallelize independent invalidations for better performance
-        const [
-          asiakasDateCount,
-          asiakasCount,
-          asiakasReqCount,
-          asiakasGridCount,
-        ] = await Promise.all([
+        const counts = await Promise.all([
           this.invalidate(operation, "asiakasDate", params),
           this.invalidate(operation, "asiakas", params),
           this.invalidate(operation, "asiakasRequiredDateType", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
         ]);
-
-        totalInvalidated +=
-          asiakasDateCount + asiakasCount + asiakasReqCount + asiakasGridCount;
-        this.logger.debug("ASIAKAS_DATE operation completed", {
-          operation,
-          keysInvalidated: totalInvalidated,
-        });
+        totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
+        this.logger.debug("ASIAKAS_DATE operation completed", { operation, keysInvalidated: totalInvalidated });
         break;
       }
 
@@ -1424,38 +1282,19 @@ class UniversalCacheManager {
       case "PERSON_PVM_UPDATE":
       case "PERSON_PVM_DELETE":
       case "PERSON_PVM_CREATE": {
-        // Parallelize independent invalidations for better performance
         const datePattern = this._extractYYYYMMDD(params);
-        const [
-          personPvmCount,
-          personPvmGridCount,
-          personPvmPersonCount,
-          personPvmVehicleCount,
-          gridRoleCount,
-        ] = await Promise.all([
+        const counts = await Promise.all([
           this.invalidate(operation, "personpvm", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
           this.invalidate(operation, "person", params),
           params.vehicleId
             ? this.invalidate(operation, "vehicle", params)
             : Promise.resolve(0),
-          // Invalidate both v6role and v7tenant caches
-          Promise.all([
-            this.invalidateByPattern(`grid:v6role:${datePattern}:*`),
-            this.invalidateByPattern(`grid:v7tenant:${datePattern}:*`),
-          ]).then((counts) => counts.reduce((sum, c) => sum + c, 0)),
+          this.invalidateByPattern(`grid:v6role:${datePattern}:*`),
+          this.invalidateByPattern(`grid:v7tenant:${datePattern}:*`),
         ]);
-
-        totalInvalidated +=
-          personPvmCount +
-          personPvmGridCount +
-          personPvmPersonCount +
-          personPvmVehicleCount +
-          gridRoleCount;
-        this.logger.debug("PERSON_PVM operation completed", {
-          operation,
-          keysInvalidated: totalInvalidated,
-        });
+        totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
+        this.logger.debug("PERSON_PVM operation completed", { operation, keysInvalidated: totalInvalidated });
         break;
       }
 
@@ -1598,28 +1437,9 @@ class UniversalCacheManager {
       // Person operations - cross-entity invalidation for person data changes
       case "PERSON_MERGE": {
         // Person merge affects 34 tables - comprehensive invalidation required
-        // SQL: person_combinator_merge.sql modifies keikkaPerson, personPvm,
-        // tyomaaPerson, vehicleDriverDays, asiakas, tyomaa, keikka, and 27 more
-        this.logger.info("PERSON_MERGE invalidation starting", {
-          params,
-        });
+        this.logger.info("PERSON_MERGE invalidation starting", { params });
 
-        const [
-          personMergeCount,
-          keikkaMergeCount,
-          keikkaPersonMergeCount,
-          gridMergeCount,
-          asiakasMergeCount,
-          tyomaaMergeCount,
-          tyomaaPersonMergeCount,
-          vehicleMergeCount,
-          personpvmMergeCount,
-          attachmentMergeCount,
-          statMergeCount,
-          betoniMergeCount,
-          laskuMergeCount,
-          authMergeCount,
-        ] = await Promise.all([
+        const counts = await Promise.all([
           this.invalidate(operation, "person", params),
           this.invalidate(operation, "keikka", params),
           this.invalidate(operation, "keikkaPerson", params),
@@ -1635,26 +1455,8 @@ class UniversalCacheManager {
           this.invalidate(operation, "lasku", params),
           this.invalidateByPattern("auth:*"),
         ]);
-
-        totalInvalidated =
-          personMergeCount +
-          keikkaMergeCount +
-          keikkaPersonMergeCount +
-          gridMergeCount +
-          asiakasMergeCount +
-          tyomaaMergeCount +
-          tyomaaPersonMergeCount +
-          vehicleMergeCount +
-          personpvmMergeCount +
-          attachmentMergeCount +
-          statMergeCount +
-          betoniMergeCount +
-          laskuMergeCount +
-          authMergeCount;
-
-        this.logger.info("PERSON_MERGE invalidation completed", {
-          keysInvalidated: totalInvalidated,
-        });
+        totalInvalidated = counts.reduce((sum, c) => sum + c, 0);
+        this.logger.info("PERSON_MERGE invalidation completed", { keysInvalidated: totalInvalidated });
         break;
       }
 
@@ -1670,22 +1472,8 @@ class UniversalCacheManager {
 
       case "PERSON_UPDATE": {
         // Person updates affect contact displays across modules
-        // SQL: person_save.sql modifies person table (name, phone, email, etc.)
-        this.logger.debug("PERSON_UPDATE invalidation starting", {
-          params,
-        });
-
         const personEntityId = params.entityId || params.personId;
-        const [
-          personUpdateCount,
-          keikkaUpdateCount,
-          asiakasUpdateCount,
-          tyomaaUpdateCount,
-          gridUpdateCount,
-          authUpdateCount,
-          v6roleCount,
-          v7tenantCount,
-        ] = await Promise.all([
+        const counts = await Promise.all([
           this.invalidate(operation, "person", params),
           this.invalidate(operation, "keikka", params),
           this.invalidate(operation, "asiakas", params),
@@ -1697,40 +1485,15 @@ class UniversalCacheManager {
           this.invalidateByPattern("grid:v6role:*"),
           this.invalidateByPattern("grid:v7tenant:*"),
         ]);
-
-        totalInvalidated =
-          personUpdateCount +
-          keikkaUpdateCount +
-          asiakasUpdateCount +
-          tyomaaUpdateCount +
-          gridUpdateCount +
-          authUpdateCount +
-          v6roleCount +
-          v7tenantCount;
-
-        this.logger.debug("PERSON_UPDATE invalidation completed", {
-          keysInvalidated: totalInvalidated,
-        });
+        totalInvalidated = counts.reduce((sum, c) => sum + c, 0);
+        this.logger.debug("PERSON_UPDATE invalidation completed", { keysInvalidated: totalInvalidated });
         break;
       }
 
       case "PERSON_DELETE": {
-        // Person deletion must remove from all listings and assignments
-        // SQL: person_save.sql sets deletedTime (soft delete)
-        this.logger.debug("PERSON_DELETE invalidation starting", {
-          params,
-        });
-
+        // Person deletion must remove from all listings and assignments (soft delete)
         const deletedPersonId = params.entityId || params.personId;
-        const [
-          personDeleteCount,
-          keikkaDeleteCount,
-          asiakasDeleteCount,
-          tyomaaDeleteCount,
-          gridDeleteCount,
-          authDeleteCount,
-          v6roleDeleteCount,
-        ] = await Promise.all([
+        const counts = await Promise.all([
           this.invalidate(operation, "person", params),
           this.invalidate(operation, "keikka", params),
           this.invalidate(operation, "asiakas", params),
@@ -1741,130 +1504,55 @@ class UniversalCacheManager {
             : Promise.resolve(0),
           this.invalidateByPattern("grid:v6role:*"),
         ]);
-
-        totalInvalidated =
-          personDeleteCount +
-          keikkaDeleteCount +
-          asiakasDeleteCount +
-          tyomaaDeleteCount +
-          gridDeleteCount +
-          authDeleteCount +
-          v6roleDeleteCount;
-
-        this.logger.debug("PERSON_DELETE invalidation completed", {
-          keysInvalidated: totalInvalidated,
-        });
+        totalInvalidated = counts.reduce((sum, c) => sum + c, 0);
+        this.logger.debug("PERSON_DELETE invalidation completed", { keysInvalidated: totalInvalidated });
         break;
       }
 
-      // Sijainti operations - cross-entity invalidation
       // Sijainti (location) changes affect tyomaa lookups, keikka deliveries, and grid displays
       case "SIJAINTI_UPDATE":
       case "SIJAINTI_CREATE":
       case "SIJAINTI_DELETE": {
-        this.logger.debug("SIJAINTI operation invalidation starting", {
-          operation,
-          params,
-        });
-
-        const [
-          sijaintiGeocodeCount,
-          sijaintiTyomaaCount,
-          sijaintiKeikkaCount,
-          sijaintiGridCount,
-          sijaintiAsiakasCount,
-        ] = await Promise.all([
+        const counts = await Promise.all([
           this.invalidate(operation, "geocode", params),
           this.invalidate(operation, "tyomaa", params),
           this.invalidate(operation, "keikka", params),
           this.invalidateGridSmart("TYOMAA_UPDATE", params.body || {}, params),
           this.invalidate(operation, "asiakas", params),
         ]);
-
-        totalInvalidated +=
-          sijaintiGeocodeCount +
-          sijaintiTyomaaCount +
-          sijaintiKeikkaCount +
-          sijaintiGridCount +
-          sijaintiAsiakasCount;
-
-        this.logger.info("SIJAINTI operation invalidation completed", {
-          operation,
-          keysInvalidated: totalInvalidated,
-        });
+        totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
+        this.logger.info("SIJAINTI operation invalidation completed", { operation, keysInvalidated: totalInvalidated });
         break;
       }
 
-      // Tyomaa operations - cross-entity invalidation
       case "TYOMAA_UPDATE":
       case "TYOMAA_CREATE":
       case "TYOMAA_DELETE": {
-        // Tyomaa changes affect: tyomaa, keikka (keikkaTyomaa), tyomaaPerson, person, grid
-        const [
-          tyomaaEntityCount,
-          keikkaEntityCount,
-          tyomaaPersonEntityCount,
-          personEntityCount,
-          gridEntityCount,
-        ] = await Promise.all([
+        const counts = await Promise.all([
           this.invalidate(operation, "tyomaa", params),
           this.invalidate(operation, "keikka", params),
           this.invalidate(operation, "tyomaaPerson", params),
           this.invalidate(operation, "person", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
         ]);
-
-        totalInvalidated +=
-          tyomaaEntityCount +
-          keikkaEntityCount +
-          tyomaaPersonEntityCount +
-          personEntityCount +
-          gridEntityCount;
-
-        this.logger.info("TYOMAA operation invalidation completed", {
-          operation,
-          keysInvalidated: totalInvalidated,
-        });
+        totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
+        this.logger.info("TYOMAA operation invalidation completed", { operation, keysInvalidated: totalInvalidated });
         break;
       }
 
-      // Vehicle operations - cross-entity invalidation
-      // Vehicle changes affect: vehicle lists, keikka (vehicle display), grid (vehicle columns), person (assigned drivers)
+      // Vehicle changes affect: vehicle lists, keikka, grid, person (assigned drivers)
       case "VEHICLE_UPDATE":
       case "VEHICLE_CREATE":
       case "VEHICLE_DELETE": {
-        this.logger.debug("VEHICLE operation invalidation starting", {
-          operation,
-          params,
-        });
-
-        const [
-          vehicleEntityCount,
-          keikkaVehicleCount,
-          gridVehicleCount,
-          personVehicleCount,
-          v6roleVehicleCount,
-        ] = await Promise.all([
+        const counts = await Promise.all([
           this.invalidate(operation, "vehicle", params),
           this.invalidate(operation, "keikka", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
           this.invalidate(operation, "person", params),
-          this.invalidateByPattern(
-            `grid:v6role:${this._extractYYYYMMDD(params)}:*`,
-          ),
+          this.invalidateByPattern(`grid:v6role:${this._extractYYYYMMDD(params)}:*`),
         ]);
-
-        totalInvalidated +=
-          vehicleEntityCount +
-          keikkaVehicleCount +
-          gridVehicleCount +
-          personVehicleCount +
-          v6roleVehicleCount;
-
-        this.logger.info("VEHICLE operation invalidation completed", {
-          operation,
-          keysInvalidated: totalInvalidated,
-        });
+        totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
+        this.logger.info("VEHICLE operation invalidation completed", { operation, keysInvalidated: totalInvalidated });
         break;
       }
 
@@ -1932,30 +1620,17 @@ class UniversalCacheManager {
         break;
       }
 
-      // Tuote (Product) operations - cross-entity invalidation
-      // CRITICAL: tuotteet_delete SQL procedure modifies keikkaLaskuRivit (invoice line items)
-      // Product changes affect: tuote lists, lasku (invoices with product names/prices), keikka (embedded pricing)
+      // CRITICAL: tuotteet_delete modifies keikkaLaskuRivit - products affect invoices and keikka pricing
       case "TUOTE_UPDATE":
       case "TUOTE_CREATE":
       case "TUOTE_DELETE": {
-        this.logger.debug("TUOTE operation invalidation starting", {
-          operation,
-          params,
-        });
-
-        // Parallelize independent invalidations for better performance
-        const [tuoteCount, laskuCount, keikkaCount] = await Promise.all([
+        const counts = await Promise.all([
           this.invalidate(operation, "tuote", params),
-          this.invalidate(operation, "lasku", params), // CRITICAL: Invoice cache - products affect invoice line items
-          this.invalidate(operation, "keikka", params), // Keikka may embed pricing data
+          this.invalidate(operation, "lasku", params),
+          this.invalidate(operation, "keikka", params),
         ]);
-
-        totalInvalidated += tuoteCount + laskuCount + keikkaCount;
-
-        this.logger.info("TUOTE operation invalidation completed", {
-          operation,
-          keysInvalidated: totalInvalidated,
-        });
+        totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
+        this.logger.info("TUOTE operation invalidation completed", { operation, keysInvalidated: totalInvalidated });
         break;
       }
 
@@ -2131,37 +1806,6 @@ class UniversalCacheManager {
         this.isShuttingDown = false;
       }
     }
-  }
-
-  /**
-   * Switch Redis database at runtime
-   * @param {number} dbNumber - Database number (3 = production, 4 = development)
-   * @returns {Promise<number>} The new database number
-   */
-  async selectDatabase(dbNumber) {
-    if (![3, 4].includes(dbNumber)) {
-      throw new Error(
-        "Invalid database number. Must be 3 (production) or 4 (development)",
-      );
-    }
-
-    const redis = await this.getClient();
-    if (!redis) {
-      throw new Error("Redis client not available");
-    }
-
-    await redis.select(dbNumber);
-    this.currentDb = dbNumber;
-    this.logger.info("Redis database switched", { db: dbNumber });
-    return dbNumber;
-  }
-
-  /**
-   * Get current Redis database number
-   * @returns {number} Current database (3 = production, 4 = development)
-   */
-  getCurrentDb() {
-    return this.currentDb;
   }
 
   /**

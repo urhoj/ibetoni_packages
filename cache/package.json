@@ -17,8 +17,7 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
-    "ioredis": "^5.10.0",
-    "winston": "^3.19.0"
+    "ioredis": "^5.10.0"
   },
   "engines": {
     "node": ">=18.0.0"
