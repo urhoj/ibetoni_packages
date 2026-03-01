@@ -13,9 +13,10 @@
   "author": "betoni.online",
   "license": "UNLICENSED",
   "private": true,
-  "peerDependencies": {
-    "jsonwebtoken": "^9.0.0",
-    "bcryptjs": "^2.4.3 || ^3.0.0",
-    "google-auth-library": "^9.0.0 || ^10.0.0"
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "google-auth-library": "^10.6.1",
+    "jsonwebtoken": "^9.0.3",
+    "jwks-rsa": "^4.0.0"
   }
 }

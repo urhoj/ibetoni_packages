@@ -20,8 +20,8 @@
   ],
   "author": "betoni.online",
   "license": "UNLICENSED",
-  "peerDependencies": {
-    "winston": "^3.x.x"
+  "dependencies": {
+    "winston": "^3.19.0"
   },
   "engines": {
     "node": ">=18.0.0"
