@@ -41,6 +41,8 @@ const ROLE_NAME_TO_KEY_MAP = {
   lomaseurannassa: "isLomaseurannassa",
   assignee: "isAssignee",
   keikkaViewer: "isKeikkaViewer",
+  betoniHandler: "isBetoniHandler",
+  betoniViewer: "isBetoniViewer",
   asiakasOwner: "isAsiakasOwner",
   hrAdmin: "isHRAdmin",
 };
@@ -108,6 +110,11 @@ const PERSON_SETTING_TYPE_IDS = {
   NOTIFY_ADMIN_WORKSITE_CREATED: 32,
   NOTIFY_ADMIN_ORDER_CANCELLED: 33,
   HAPTIC_FEEDBACK: 38,
+  EULA_ACCEPTANCE: 39,
+  TOS_ACCEPTANCE: 40,
+  PRIVACY_ACCEPTANCE: 41,
+  COOKIES_ACCEPTANCE: 42,
+  GLOBAL_USER_CONSENT_LEGACY: 43,
   GLOBAL_USER_CONSENT: 44,
   DEFAULT_URL: 45,
 };
