@@ -17,9 +17,9 @@ const { DistributedLockManager, DistributedLock, releaseAllLocks } = require('./
 /**
  * Create a configured cache manager instance
  * @param {Object} options - Configuration options
- * @param {Object} options.logger - Winston logger instance (required)
- * @param {Object} options.cacheMetrics - Optional custom cache metrics instance
- * @param {Object} options.redisConfig - Optional Redis configuration override
+ * @param {Object} [options.logger] - Winston logger instance
+ * @param {Object} [options.cacheMetrics] - Optional custom cache metrics instance
+ * @param {Object} [options.redisConfig] - Optional Redis configuration override
  * @returns {UniversalCacheManager} Configured cache manager instance
  */
 function createCacheManager(options = {}) {

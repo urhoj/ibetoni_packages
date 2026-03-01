@@ -54,10 +54,10 @@ const MAX_TTL_SECONDS = 604800; // 7 days
 class UniversalCacheManager {
   /**
    * @param {Object} options - Configuration options
-   * @param {Object} options.logger - Winston logger instance with categories.CACHE
-   * @param {Object} options.cacheMetrics - Optional cache metrics instance
-   * @param {Object} options.redisConfig - Optional Redis configuration override
-   * @param {number} options.ttlMultiplier - Override TTL multiplier (default: env or 4.0)
+   * @param {Object} [options.logger] - Winston logger instance with categories.CACHE
+   * @param {Object} [options.cacheMetrics] - Optional cache metrics instance
+   * @param {Object} [options.redisConfig] - Optional Redis configuration override
+   * @param {number} [options.ttlMultiplier] - Override TTL multiplier (default: env or 4.0)
    */
   constructor(options = {}) {
     this.logger = options.logger || this._createDefaultLogger();
@@ -322,6 +322,7 @@ class UniversalCacheManager {
    */
   async _createConnection() {
     const config = this.getRedisConfig();
+    // @ts-ignore - ioredis CommonJS interop: `new Redis()` works at runtime
     const client = new Redis(config);
 
     // Set up event handlers to prevent memory leaks
@@ -764,6 +765,13 @@ class UniversalCacheManager {
    * @param {string} [params.asiakasId] - Customer ID for scoping
    * @param {string} [params.personId] - Person ID
    * @param {string} [params.pumppuAika] - Date for date-scoped invalidation (ISO format)
+   * @param {string} [params.betoniToimittajaAsiakasId] - Supplier ID for betoni laatu cache keys
+   * @param {Object} [params.body] - Request body with nested date/entity fields
+   * @param {string} [params.newDate] - New date for date-change operations
+   * @param {string} [params.date] - Fallback date field
+   * @param {string} [params.yyyymmdd] - Date in YYYYMMDD format
+   * @param {string} [params.keikkaId] - Keikka ID for entity-specific invalidation
+   * @param {string} [params.entityId] - Generic entity ID
    * @returns {Promise<number>} Number of cache keys invalidated
    */
   async invalidate(operation, entityType, params = {}) {
@@ -1550,7 +1558,7 @@ class UniversalCacheManager {
         // Default pattern would incorrectly use 'betoniLaatu:*' which never matches
         const betoniToimittajaAsiakasId =
           params.betoniToimittajaAsiakasId || params.asiakasId;
-        const [betoniLaatuListCount, betoniLaatuFilterCount, betoniListCount] =
+        const [betoniLaatuListCount, betoniLaatuFilterCount, betoniLaatuGetCount, betoniListCount] =
           await Promise.all([
             this.invalidateByPattern(
               `betoni:laatu:list:${betoniToimittajaAsiakasId || "*"}`,
@@ -1558,10 +1566,11 @@ class UniversalCacheManager {
             this.invalidateByPattern(
               `betoni:laatu:filter:${betoniToimittajaAsiakasId || "*"}`,
             ),
+            this.invalidateByPattern(`betoni:laatu:get:*`),
             this.invalidateByPattern(`betoni:list:filter:*`), // Also invalidate search results
           ]);
         totalInvalidated +=
-          betoniLaatuListCount + betoniLaatuFilterCount + betoniListCount;
+          betoniLaatuListCount + betoniLaatuFilterCount + betoniLaatuGetCount + betoniListCount;
         this.logger.info("BETONI_LAATU invalidation completed", {
           operation,
           betoniToimittajaAsiakasId,

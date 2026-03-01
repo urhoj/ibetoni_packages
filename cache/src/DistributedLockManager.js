@@ -202,7 +202,7 @@ class DistributedLock {
    * @param {string} lockValue - Unique value identifying this lock holder
    * @param {Object} logger - Logger instance
    * @param {Object} metrics - Optional CacheMetrics instance
-   * @private
+   * @internal Called by DistributedLockManager.acquire()
    */
   constructor(redis, lockKey, lockValue, logger, metrics = null) {
     this.redis = redis;
