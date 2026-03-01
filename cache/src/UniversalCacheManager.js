@@ -147,6 +147,11 @@ class UniversalCacheManager {
     this.SCAN_COUNT = 500; // Increased from 100 to reduce Redis round-trips (5× fewer iterations)
   }
 
+  /** @returns {object} CacheMetrics instance for external integrations */
+  get metrics() {
+    return this.cacheMetrics;
+  }
+
   /**
    * Create default logger if none provided
    */
