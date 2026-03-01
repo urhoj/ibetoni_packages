@@ -147,6 +147,13 @@ export const ADMIN_COMPANY_ROLE_TYPE_IDS = [1, 2, 6, 8, 11, 12, 13];
 export const ASIAKAS_EDITOR_ROLE_TYPE_ID = 6;
 
 /**
+ * Company setting type ID for working-hours feature enablement.
+ *
+ * @constant {number}
+ */
+export const ASIAKAS_WORKING_HOURS_ROLE_TYPE_ID = 23;
+
+/**
  * Special company IDs used by access checks.
  *
  * @constant {number}
@@ -159,6 +166,27 @@ export const KALLE_URHO_OY_ASIAKAS_ID = 8;
  * @constant {number}
  */
 export const MAXBE_OY_ASIAKAS_ID = 62;
+
+/**
+ * Company setting type IDs that grant any admin-level access in asiakasAuthClass.
+ *
+ * @constant {number[]}
+ */
+export const ASIAKAS_ANY_ADMIN_ROLE_TYPE_IDS = [22, 6, 11, 2, 1];
+
+/**
+ * Company setting type IDs that grant any worker-level access in asiakasAuthClass.
+ *
+ * @constant {number[]}
+ */
+export const ASIAKAS_ANY_WORKER_ROLE_TYPE_IDS = [8, 6, 11, 9, 16, 2, 1];
+
+/**
+ * Company setting type IDs that grant any viewer-level access in asiakasAuthClass.
+ *
+ * @constant {number[]}
+ */
+export const ASIAKAS_ANY_VIEWER_ROLE_TYPE_IDS = [3, 4, 7, 17, 19, 21];
 
 /**
  * Company setting type IDs that grant invoice read access.
@@ -183,6 +211,7 @@ export const PERSON_SETTING_TYPE_IDS = {
   DISABLE_ORDER_INFO_SEND: 1,
   ENABLE_MARKETING_EMAIL: 2,
   ALLOW_SHARING: 3,
+  LAST_MINUTE_NOTIFICATIONS: 4,
   DEFAULT_PUMPPU_TOIMITTAJA_ASIAKAS_ID: 5,
   DEFAULT_BETONI_TOIMITTAJA_ASIAKAS_ID: 6,
   DEFAULT_LATTIA_TOIMITTAJA_ASIAKAS_ID: 7,
@@ -209,6 +238,10 @@ export const PERSON_SETTING_TYPE_IDS = {
   NOTIFY_ADMIN_CUSTOMER_CREATED: 31,
   NOTIFY_ADMIN_WORKSITE_CREATED: 32,
   NOTIFY_ADMIN_ORDER_CANCELLED: 33,
+  NOTIFY_DAILY_CONFIRMED: 34,
+  NOTIFY_ONLY_UNDER_14H: 35,
+  IS_GLOBAL_EDITOR: 36,
+  NOTIFY_DAY_CONFIRMED: 37,
   HAPTIC_FEEDBACK: 38,
   EULA_ACCEPTANCE: 39,
   TOS_ACCEPTANCE: 40,
@@ -217,4 +250,43 @@ export const PERSON_SETTING_TYPE_IDS = {
   GLOBAL_USER_CONSENT_LEGACY: 43,
   GLOBAL_USER_CONSENT: 44,
   DEFAULT_URL: 45,
+};
+
+/**
+ * Company setting type IDs from the asiakasSettingType table.
+ * Maps company-level feature flags and settings to their database IDs.
+ *
+ * @constant {Object.<string, number>}
+ */
+export const ASIAKAS_SETTING_TYPE_IDS = {
+  HAS_PUMIFI: 1,
+  HAS_NETVISOR: 2,
+  HAS_LEMONSOFT: 3,
+  HAS_HENKILOT: 4,
+  HAS_SIJAINNIT: 5,
+  HAS_AJONEUVOT: 6,
+  HAS_TUOTTEET: 7,
+  HAS_TOIMITUS: 8,
+  HAS_LASKUTUS: 9,
+  ALV: 10,
+  HAS_TIEDOSTOT: 11,
+  HAS_TYO: 12,
+  DEFAULT_VEHICLE: 13,
+  HAS_ECOFLEET: 15,
+  KEIKKA_VALIDOINTI: 16,
+  HAS_FENNOA: 17,
+  HAS_WEATHER: 18,
+  HAS_TRAFFIC: 19,
+  USE_PERSON_DATES: 20,
+  USE_VEHICLE_DATES: 21,
+  USE_TYOMAA_DATES: 22,
+  USE_ASIAKAS_DATES: 23,
+  HAS_VARASTO: 24,
+  MULTI_TENANT_VEHICLE_VISIBILITY: 25,
+  BUG_REPORTING: 26,
+  HAS_KELI_KAMERAT: 27,
+  TUNTIKIRJAUS: 28,
+  LOMASEURANTA: 29,
+  HAS_OCR: 30,
+  HAS_NEWS: 31,
 };
