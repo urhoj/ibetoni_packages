@@ -1,5 +1,8 @@
 const jwt = require("jsonwebtoken");
+const { promisify } = require("util");
 const jwksClient = require("jwks-rsa");
+
+const jwtVerify = promisify(jwt.verify);
 
 /**
  * Microsoft Authentication Service for betoni.online platform
@@ -73,69 +76,25 @@ class MicrosoftAuth {
   }
 
   /**
-   * Get signing key from JWKS
+   * Get signing key from JWKS endpoint
    * @param {object} header - Token header containing kid
-   * @returns {Promise<string>} Signing key
+   * @param {function} callback - Callback for jwt.verify compatibility
    */
   getKey(header, callback) {
-    const client = this.getJwksClient();
-    client.getSigningKey(header.kid, (err, key) => {
-      if (err) {
-        callback(err, null);
-      } else {
-        const signingKey = key.getPublicKey();
-        callback(null, signingKey);
-      }
-    });
+    this.getJwksClient()
+      .getSigningKey(header.kid)
+      .then((key) => callback(null, key.getPublicKey()))
+      .catch((err) => callback(err));
   }
 
   /**
    * Verify a Microsoft ID token with comprehensive security validations
    *
-   * Performs the following security checks:
-   * - Signature validation using Microsoft's public keys (JWKS)
-   * - Audience (aud) claim matches configured MICROSOFT_CLIENT_ID
-   * - Issuer (iss) claim matches Azure AD pattern: https://login.microsoftonline.com/{tenant-guid}/v2.0
-   * - Token expiration (exp) with 60-second clock skew tolerance
-   * - Token age validation (rejects tokens older than 1 hour)
-   * - Nonce claim presence (warns if missing - replay attack risk)
-   * - Tenant ID logging for audit trail
-   *
    * @param {string} token - Microsoft ID token from frontend (OIDC ID token)
-   * @returns {Promise<object>} Verified token payload containing user info and security claims
-   * @returns {Promise<object>} payload.email - User email address
-   * @returns {Promise<object>} payload.name - User display name
-   * @returns {Promise<object>} payload.given_name - First name
-   * @returns {Promise<object>} payload.family_name - Last name
-   * @returns {Promise<object>} payload.oid - User object ID (unique identifier)
-   * @returns {Promise<object>} payload.tid - Tenant ID
-   * @returns {Promise<object>} payload.iss - Issuer URL
-   * @returns {Promise<object>} payload.aud - Audience (client ID)
-   * @returns {Promise<object>} payload.exp - Expiration timestamp
-   * @returns {Promise<object>} payload.iat - Issued at timestamp
-   * @returns {Promise<object>} payload.nbf - Not before timestamp
-   * @returns {Promise<object>} payload.nonce - Nonce for replay protection (should be present)
-   * @returns {Promise<object>} payload.amr - Authentication methods reference (e.g., ["pwd", "mfa"])
-   *
-   * @throws {Error} If token is invalid, expired, from unauthorized issuer, or verification fails
-   * @throws {Error} If token signature doesn't match Microsoft's public key
-   * @throws {Error} If audience doesn't match configured MICROSOFT_CLIENT_ID
-   * @throws {Error} If issuer pattern doesn't match Azure AD
-   * @throws {Error} If token is older than maxAge (1 hour)
-   *
-   * @example
-   * // Verify Microsoft ID token from frontend
-   * try {
-   *   const payload = await microsoftAuth.verifyIdToken(idToken);
-   *   console.log('User:', payload.email, payload.name);
-   *   console.log('Tenant:', payload.tid);
-   *   console.log('MFA:', payload.amr?.includes('mfa'));
-   * } catch (error) {
-   *   console.error('Token verification failed:', error.message);
-   * }
+   * @returns {Promise<object>} Verified token payload
+   * @throws {Error} If token is invalid, expired, or verification fails
    *
    * @see https://learn.microsoft.com/en-us/entra/identity-platform/id-tokens
-   * @see https://learn.microsoft.com/en-us/entra/identity-platform/access-tokens
    */
   async verifyIdToken(token) {
     try {
@@ -144,58 +103,35 @@ class MicrosoftAuth {
       }
 
       const clientId = await getMicrosoftClientId(this.getEnvVar);
-      // We don't strictly validate tenant ID for "common" multi-tenant apps unless restricted
+      const getKeyWrapper = (header, callback) => this.getKey(header, callback);
 
-      return new Promise((resolve, reject) => {
-        // getKey needs to be bound or wrapped because jwt.verify calls it
-        const getKeyWrapper = (header, callback) => this.getKey(header, callback);
-
-        const verifyOptions = {
-          audience: clientId,
-          algorithms: ["RS256"],
-          // Multi-tenant issuer validation: accept tokens from any Azure AD tenant
-          // Pattern matches: https://login.microsoftonline.com/{tenant-guid}/v2.0
-          issuer: /^https:\/\/login\.microsoftonline\.com\/[a-f0-9-]+\/v2\.0$/,
-          // Clock skew tolerance (60 seconds) to handle time differences between servers
-          clockTolerance: 60,
-          // Additional safety: reject tokens older than 1 hour
-          maxAge: "1h",
-        };
-
-        jwt.verify(token, getKeyWrapper, verifyOptions, (err, decoded) => {
-          if (err) {
-            reject(err);
-          } else {
-            // Additional security validations
-            if (!decoded.nonce) {
-              if (this.logger?.warn) {
-                this.logger.warn("Microsoft token missing nonce claim (replay attack risk)", {
-                  email: decoded.email || decoded.preferred_username,
-                  tokenId: decoded.oid,
-                });
-              }
-            }
-
-            // Log tenant ID for audit purposes
-            if (this.logger?.info) {
-              this.logger.info("Microsoft token verified", {
-                tenantId: decoded.tid,
-                email: decoded.email || decoded.preferred_username,
-                issuer: decoded.iss,
-              });
-            }
-
-            resolve(decoded);
-          }
-        });
+      const decoded = await jwtVerify(token, getKeyWrapper, {
+        audience: clientId,
+        algorithms: ["RS256"],
+        issuer: /^https:\/\/login\.microsoftonline\.com\/[a-f0-9-]+\/v2\.0$/,
+        clockTolerance: 60,
+        maxAge: "1h",
       });
-    } catch (error) {
-      if (this.logger?.error) {
-        this.logger.error("Microsoft token verification failed", {
-          error: error.message,
-          stack: error.stack,
+
+      if (!decoded.nonce) {
+        this.logger?.warn?.("Microsoft token missing nonce claim (replay attack risk)", {
+          email: decoded.email || decoded.preferred_username,
+          tokenId: decoded.oid,
         });
       }
+
+      this.logger?.info?.("Microsoft token verified", {
+        tenantId: decoded.tid,
+        email: decoded.email || decoded.preferred_username,
+        issuer: decoded.iss,
+      });
+
+      return decoded;
+    } catch (error) {
+      this.logger?.error?.("Microsoft token verification failed", {
+        error: error.message,
+        stack: error.stack,
+      });
       throw new Error(`Microsoft authentication failed: ${error.message}`);
     }
   }
