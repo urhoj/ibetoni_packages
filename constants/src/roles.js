@@ -21,6 +21,9 @@ export const COMPANY_ROLE_TO_TYPE_ID = {
   /** Asiakas Admin - Customer administrator */
   isAsiakasAdmin: 2,
 
+  /** Asiakas Editor - Customer editor */
+  isAsiakasEditor: 6,
+
   /** Lasku Admin - Invoice administrator */
   isLaskuAdmin: 5,
 
@@ -107,6 +110,7 @@ export const ROLE_NAME_TO_KEY_MAP = {
 export const TYPE_ID_TO_ROLE_NAME = {
   1: "Laskupohja Admin",
   2: "Asiakas Admin",
+  6: "Asiakas Editor",
   5: "Lasku Admin",
   8: "Pumppari",
   9: "Työsuhteessa",

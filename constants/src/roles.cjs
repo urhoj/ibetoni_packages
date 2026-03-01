@@ -6,6 +6,7 @@
 const COMPANY_ROLE_TO_TYPE_ID = {
   isLaskupohjaAdmin: 1,
   isAsiakasAdmin: 2,
+  isAsiakasEditor: 6,
   isLaskuAdmin: 5,
   isPumppari: 8,
   isTyösuhteessa: 9,
@@ -47,6 +48,7 @@ const ROLE_NAME_TO_KEY_MAP = {
 const TYPE_ID_TO_ROLE_NAME = {
   1: "Laskupohja Admin",
   2: "Asiakas Admin",
+  6: "Asiakas Editor",
   5: "Lasku Admin",
   8: "Pumppari",
   9: "Työsuhteessa",
