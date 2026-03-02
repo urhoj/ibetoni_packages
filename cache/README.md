@@ -55,11 +55,9 @@ Or use file reference in package.json (recommended):
 
 ```javascript
 const { createCacheManager } = require('@ibetoni/cache');
-const logger = require('./logger'); // Your Winston logger
-
-// Create cache manager instance
+// Create cache manager instance (logger is optional, falls back to console)
 const cacheManager = createCacheManager({
-  logger: logger.categories.CACHE
+  logger: console
 });
 
 // Invalidate cache after database update
@@ -73,11 +71,10 @@ await cacheManager.invalidateCrossEntity('KEIKKA_BULK_UPDATE', {
 
 ```javascript
 const { getSingletonCacheManager } = require('@ibetoni/cache');
-const logger = require('./logger');
 
-// Initialize once
+// Initialize once (logger is optional, falls back to console)
 const cacheManager = getSingletonCacheManager({
-  logger: logger.categories.CACHE
+  logger: console
 });
 
 // Use anywhere in your application
@@ -90,12 +87,9 @@ For legacy code using `getCacheManager()`:
 
 ```javascript
 const { getCacheManager } = require('@ibetoni/cache');
-const logger = require('./logger');
 
 // Works the same as getSingletonCacheManager()
-const cacheManager = getCacheManager({
-  logger: logger.categories.CACHE
-});
+const cacheManager = getCacheManager({ logger: console });
 ```
 
 **Note**: `getCacheManager()` is deprecated but supported for backward compatibility. New code should use `getSingletonCacheManager()`.

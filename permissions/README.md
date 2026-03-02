@@ -21,30 +21,18 @@ This package provides unified permission validation logic shared between:
 
 ## Installation
 
-### Prerequisites
-
-This package requires **winston** for logging (peer dependency):
-
-```bash
-npm install winston
-```
-
-**Why is winston required?**
-When using file-based npm dependencies (recommended for monorepo setup), the parent project must explicitly declare peer dependencies. This ensures consistent logging across services.
-
 ### Install the Package
 
-Or use file reference in package.json (recommended):
+Use file reference in package.json (recommended):
 ```json
 {
   "dependencies": {
-    "@ibetoni/permissions": "file:../ibetoni_packages/permissions",
-    "winston": "^3.18.3"
+    "@ibetoni/permissions": "file:../ibetoni_packages/permissions"
   }
 }
 ```
 
-**Important:** Always include `winston` alongside the permissions package when using file-based dependencies.
+**Note:** Logger injection is optional. The package uses `console` as fallback if no logger is provided.
 
 ## Usage
 
@@ -236,26 +224,16 @@ No environment variables required. The package is pure business logic with injec
 
 ## Troubleshooting
 
-### Cannot find module 'winston'
+### Logger not working
 
-**Error:** `Error: Cannot find module 'winston'`
+**Symptom:** No log output from the permissions package.
 
-**Cause:** The consuming project doesn't have `winston` installed as a direct dependency.
+**Cause:** No logger was injected during initialization.
 
-**Solution:**
-1. Add winston to your project's package.json:
-   ```json
-   {
-     "dependencies": {
-       "winston": "^3.18.3"
-     }
-   }
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+**Solution:** Pass a logger (or `console`) when creating the validator:
+```javascript
+const validator = createBackendValidator({ logger: console });
+```
 
 See [Installation Prerequisites](#prerequisites) for more details.
 

@@ -49,7 +49,7 @@ const MAX_TTL_SECONDS = 604800; // 7 days
 class UniversalCacheManager {
   /**
    * @param {Object} options - Configuration options
-   * @param {Object} [options.logger] - Winston logger instance with categories.CACHE
+   * @param {Object} [options.logger] - Logger instance (console-compatible), falls back to console
    * @param {Object} [options.cacheMetrics] - Optional cache metrics instance
    * @param {Object} [options.redisConfig] - Optional Redis configuration override
    * @param {number} [options.ttlMultiplier] - Override TTL multiplier (default: env or 4.0)
