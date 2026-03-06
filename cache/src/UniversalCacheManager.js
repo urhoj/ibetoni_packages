@@ -38,6 +38,7 @@ const TTL_MULTIPLIER = parseFloat(process.env.CACHE_TTL_MULTIPLIER) || 4.0;
  */
 const TTL_MULTIPLIER_EXCLUDED = new Set([
   "ecofleet", // Real-time vehicle GPS positions - must stay at 1 minute
+  "ecofleet-daily", // Keikka presence check - must stay at 4h
 ]);
 
 /**
@@ -119,6 +120,7 @@ class UniversalCacheManager {
       legalDocument: 86400, // 24 hours - legal documents, changes rarely
       weather: 3600, // 1 hour - weather module status and forecasts
       ecofleet: 60, // 1 minute - external fleet tracking API (real-time, excluded from multiplier)
+      "ecofleet-daily": 14400, // 4 hours - daily keikka presence check for smart fetch skip
       lasku: 3600, // 1 hour - invoice data
       laskupohja: 7200, // 2 hours - invoice templates (more stable than invoices)
       laskuStatusType: 43200, // 12 hours - invoice status types (static reference data)
