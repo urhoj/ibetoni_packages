@@ -561,7 +561,13 @@ class UniversalCacheManager {
         if (data) {
           this.logger.debug("Cache hit", { entityType, key });
           this.cacheMetrics.recordHit(entityType);
-          return JSON.parse(data);
+          try {
+            return JSON.parse(data);
+          } catch {
+            this.logger.warn("Corrupt cache data, deleting key", { key, entityType });
+            await redis.del(key);
+            return null;
+          }
         }
 
         this.logger.debug("Cache miss", { entityType, key });
