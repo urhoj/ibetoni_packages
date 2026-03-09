@@ -28,3 +28,6 @@ export { formatPersonName } from "./personUtils.js";
 
 // Export email utility functions
 export { isEmail, parseMultipleEmails, validateMultipleEmails } from "./emailUtils.js";
+
+// Export ecofleet XML and geolocation utilities
+export { getText, HAVERSINE_DISTANCE_M } from "./ecofleetUtils.js";
