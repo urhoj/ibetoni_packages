@@ -17,22 +17,27 @@ Then run `npm install`
 ## Features
 
 - ✅ **Multiple String Formats** - Standard, comprehensive, with/without attributes
-- ✅ **Cross-Platform** - Works in frontend (React), backend (Node.js), and Azure Functions
+- ✅ **Cross-Platform** - Works in frontend (React/ESM), backend (Node.js/CJS), and Azure Functions
 - ✅ **Flexible Input** - Handles various betoni object formats (database, class instances, API responses)
 - ✅ **Validation** - Check if betoni specifications are complete
 - ✅ **Constants** - Exposure classes (Rasitusluokat) and other betoni-related constants
 - ✅ **Clean Output** - Automatically removes "Ei tietoa" and handles whitespace
+- ✅ **Person Utilities** - Format person names with null-safe handling
+- ✅ **Email Utilities** - Validate and parse semicolon-separated email lists
+- ✅ **Ecofleet Utilities** - XML text extraction and Haversine SQL distance formula
 
 ## Usage
+
+> **Note:** The package uses CommonJS (`require`/`module.exports`). Frontend projects using a bundler (Vite/Webpack) can use ESM `import` syntax — the bundler handles the conversion.
 
 ### String Formatting
 
 ```javascript
-import {
+const {
   betoni_getString,
   betoni_getString_noAttr,
   betoni_getComprehensiveString,
-} from "@ibetoni/betoni-utils";
+} = require("@ibetoni/betoni-utils");
 
 // Standard format without attributes
 const standard = betoni_getString_noAttr(betoni);
@@ -54,7 +59,7 @@ const multiple = betoni_getString([betoni1, betoni2]);
 ### Validation
 
 ```javascript
-import { betoni_isComplete } from "@ibetoni/betoni-utils";
+const { betoni_isComplete } = require("@ibetoni/betoni-utils");
 
 const result = betoni_isComplete(betoni);
 if (!result.isComplete) {
@@ -63,19 +68,55 @@ if (!result.isComplete) {
 }
 ```
 
+### Person Name Formatting
+
+```javascript
+const { formatPersonName } = require("@ibetoni/betoni-utils");
+
+formatPersonName("Matti", "Virtanen"); // "Matti Virtanen"
+formatPersonName(null, "Virtanen");    // "Virtanen"
+formatPersonName(null, null);          // "Nimetön" (default fallback)
+formatPersonName(null, null, "–");     // "–" (custom fallback)
+```
+
+### Email Utilities
+
+```javascript
+const { isEmail, parseMultipleEmails, validateMultipleEmails } = require("@ibetoni/betoni-utils");
+
+isEmail("user@example.com"); // true
+isEmail("not-an-email");     // false
+
+// Parse semicolon-separated emails (returns only valid ones)
+parseMultipleEmails("a@b.com; bad; c@d.com"); // ["a@b.com", "c@d.com"]
+
+// Validate and separate valid/invalid
+validateMultipleEmails("a@b.com; bad; c@d.com");
+// { valid: ["a@b.com", "c@d.com"], invalid: ["bad"] }
+```
+
 ### Constants
 
 ```javascript
-import {
-  RasitusLuokatArr,
-  WEATHER_RESISTANT_CLASSES,
-} from "@ibetoni/betoni-utils";
+const { RasitusLuokatArr, WEATHER_RESISTANT_CLASSES } = require("@ibetoni/betoni-utils");
 
 console.log(RasitusLuokatArr);
 // ["X0", "XC1", "XC2", "XC3", "XC4", "XD1", "XD2", "XD3", "XF1", "XF2", "XF3", "XF4", "XS1", "XS2", "XS3", "XA1", "XA2", "XA3"]
 
 console.log(WEATHER_RESISTANT_CLASSES);
 // ["XF1", "XF3"]
+```
+
+### Ecofleet Utilities
+
+```javascript
+const { getText, HAVERSINE_DISTANCE_M } = require("@ibetoni/betoni-utils");
+
+// Extract _text from xml-js compact-mode node
+const value = getText(xmlNode?.SomeField); // returns _text or null
+
+// SQL fragment for great-circle distance in metres (requires @lat/@lng params + lat/lng columns)
+const query = `SELECT *, ${HAVERSINE_DISTANCE_M} AS distanceM FROM vehicle_location_snapshots WHERE ...`;
 ```
 
 ## API Reference
@@ -172,6 +213,51 @@ const result = betoni_isComplete(betoni);
 // { isComplete: false, reason: "Lujuutta ei ole valittu" }
 ```
 
+### Person Utilities
+
+#### `formatPersonName(firstName, lastName, fallback?)`
+
+Format a person's full name from first and last name parts. Handles null/undefined gracefully.
+
+**Parameters:**
+- `firstName` (string|null|undefined)
+- `lastName` (string|null|undefined)
+- `fallback` (string): Returned when both names are empty (default: `"Nimetön"`)
+
+**Returns:** string
+
+### Email Utilities
+
+#### `isEmail(value)`
+
+Check if a string is a valid email address.
+
+**Returns:** boolean
+
+#### `parseMultipleEmails(emailString)`
+
+Parse semicolon-separated email string, returning only valid emails.
+
+**Returns:** string[] - Array of valid email addresses
+
+#### `validateMultipleEmails(emailString)`
+
+Parse and categorize semicolon-separated emails into valid and invalid.
+
+**Returns:** `{ valid: string[], invalid: string[] }`
+
+### Ecofleet Utilities
+
+#### `getText(obj)`
+
+Extract `_text` value from an xml-js compact-mode node property. Returns `null` when the node is absent or has no text content.
+
+#### `HAVERSINE_DISTANCE_M`
+
+SQL fragment computing great-circle distance in metres using the Haversine formula.
+
+**Requires:** Query parameters `@lat` (Decimal 10,8) and `@lng` (Decimal 11,8), plus `lat`/`lng` columns on the queried table.
+
 ### Constants
 
 #### `RasitusLuokatArr`
@@ -238,13 +324,12 @@ import { betoni_getString_noAttr } from "@ibetoni/betoni-utils";
 ### In keikkaBetoniSql.js
 
 ```javascript
-import { betoni_getString_noAttr } from "@ibetoni/betoni-utils";
+const { betoni_getString_noAttr } = require("@ibetoni/betoni-utils");
 
 async getKeikkaBetonit(keikkaId) {
   const conn = await mssqlcon.getConnection();
   const result = await conn.request().query(query);
 
-  // Add betoniString to each record
   result.recordset.forEach(betoni => {
     betoni.betoniString = betoni_getString_noAttr(betoni);
   });
@@ -256,7 +341,7 @@ async getKeikkaBetonit(keikkaId) {
 ### In pdfUtils.js
 
 ```javascript
-import { betoni_getComprehensiveString_noAttr } from "@ibetoni/betoni-utils";
+const { betoni_getComprehensiveString_noAttr } = require("@ibetoni/betoni-utils");
 
 function generatePdf(betoni) {
   const betoniDescription = betoni_getComprehensiveString_noAttr(betoni);
@@ -281,6 +366,13 @@ UNLICENSED - Internal use only for betoni.online
 - betoni.online team
 
 ## Changelog
+
+### 1.1.0 (2026-03)
+
+- **CJS conversion**: All source files converted to CommonJS (`module.exports`) for compatibility with Azure Functions and Node.js backend
+- Added `personUtils.js` — `formatPersonName` for null-safe full name formatting
+- Added `emailUtils.js` — `isEmail`, `parseMultipleEmails`, `validateMultipleEmails`
+- Added `ecofleetUtils.js` — `getText` (xml-js helper) and `HAVERSINE_DISTANCE_M` (SQL fragment)
 
 ### 1.0.0 (2025-11-03)
 
