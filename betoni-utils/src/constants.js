@@ -41,4 +41,4 @@ const RasitusLuokatArr = [
  */
 const WEATHER_RESISTANT_CLASSES = ["XF1", "XF3"];
 
-export { RasitusLuokatArr, WEATHER_RESISTANT_CLASSES };
+module.exports = { RasitusLuokatArr, WEATHER_RESISTANT_CLASSES };

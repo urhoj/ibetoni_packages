@@ -40,4 +40,4 @@ function betoni_isComplete(betoni) {
   return { isComplete: true, reason: "" };
 }
 
-export { betoni_isComplete };
+module.exports = { betoni_isComplete };

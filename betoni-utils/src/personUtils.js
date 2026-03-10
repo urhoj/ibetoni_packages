@@ -7,6 +7,8 @@
  * @param {string} fallback - Returned when both names are empty
  * @returns {string}
  */
-export function formatPersonName(firstName, lastName, fallback = "Nimetön") {
+function formatPersonName(firstName, lastName, fallback = "Nimetön") {
   return [firstName, lastName].filter(Boolean).join(" ") || fallback;
 }
+
+module.exports = { formatPersonName };

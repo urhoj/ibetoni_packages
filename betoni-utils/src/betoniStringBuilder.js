@@ -7,7 +7,7 @@
  * @module betoniStringBuilder
  */
 
-import { WEATHER_RESISTANT_CLASSES } from "./constants.js";
+const { WEATHER_RESISTANT_CLASSES } = require("./constants.js");
 
 /**
  * Helper function to remove "Ei tietoa" (No information) text from betoni strings
@@ -397,7 +397,7 @@ function betoni_getComprehensiveString_noAttr(betoni, excludeVolume = false) {
   return parts.filter((part) => part && part !== "").join(" ");
 }
 
-export {
+module.exports = {
   removeEiTietoaFromBetoniString,
   betoni_getStrings,
   betoni_getString,

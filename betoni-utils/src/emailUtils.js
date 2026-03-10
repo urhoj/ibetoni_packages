@@ -12,7 +12,7 @@ const EMAIL_REGEX =
  * @param {string} value - The string to validate
  * @returns {boolean} True if valid email
  */
-export function isEmail(value) {
+function isEmail(value) {
   return EMAIL_REGEX.test(value);
 }
 
@@ -21,7 +21,7 @@ export function isEmail(value) {
  * @param {string} emailString - String like "email1@test.com; email2@test.com"
  * @returns {string[]} Array of valid email addresses
  */
-export function parseMultipleEmails(emailString) {
+function parseMultipleEmails(emailString) {
   if (!emailString) return [];
 
   return emailString
@@ -35,7 +35,7 @@ export function parseMultipleEmails(emailString) {
  * @param {string} emailString - String like "email1@test.com; email2@test.com"
  * @returns {{ valid: string[], invalid: string[] }}
  */
-export function validateMultipleEmails(emailString) {
+function validateMultipleEmails(emailString) {
   if (!emailString) return { valid: [], invalid: [] };
 
   const parts = emailString
@@ -54,3 +54,5 @@ export function validateMultipleEmails(emailString) {
   }
   return { valid, invalid };
 }
+
+module.exports = { isEmail, parseMultipleEmails, validateMultipleEmails };

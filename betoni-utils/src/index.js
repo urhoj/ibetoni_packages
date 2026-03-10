@@ -7,27 +7,27 @@
  * @module @ibetoni/betoni-utils
  */
 
-// Export all string building functions
-export {
+const { betoni_getString, betoni_getString_noAttr, betoni_getStrings, betoni_getComprehensiveString, betoni_getComprehensiveString_noAttr, removeEiTietoaFromBetoniString } = require("./betoniStringBuilder.js");
+const { betoni_isComplete } = require("./betoniValidator.js");
+const { RasitusLuokatArr, WEATHER_RESISTANT_CLASSES } = require("./constants.js");
+const { formatPersonName } = require("./personUtils.js");
+const { isEmail, parseMultipleEmails, validateMultipleEmails } = require("./emailUtils.js");
+const { getText, HAVERSINE_DISTANCE_M } = require("./ecofleetUtils.js");
+
+module.exports = {
   betoni_getString,
   betoni_getString_noAttr,
   betoni_getStrings,
   betoni_getComprehensiveString,
   betoni_getComprehensiveString_noAttr,
   removeEiTietoaFromBetoniString,
-} from "./betoniStringBuilder.js";
-
-// Export validation functions
-export { betoni_isComplete } from "./betoniValidator.js";
-
-// Export constants
-export { RasitusLuokatArr, WEATHER_RESISTANT_CLASSES } from "./constants.js";
-
-// Export person utility functions
-export { formatPersonName } from "./personUtils.js";
-
-// Export email utility functions
-export { isEmail, parseMultipleEmails, validateMultipleEmails } from "./emailUtils.js";
-
-// Export ecofleet XML and geolocation utilities
-export { getText, HAVERSINE_DISTANCE_M } from "./ecofleetUtils.js";
+  betoni_isComplete,
+  RasitusLuokatArr,
+  WEATHER_RESISTANT_CLASSES,
+  formatPersonName,
+  isEmail,
+  parseMultipleEmails,
+  validateMultipleEmails,
+  getText,
+  HAVERSINE_DISTANCE_M,
+};
