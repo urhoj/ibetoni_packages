@@ -705,7 +705,7 @@ class UniversalCacheManager {
    * - grid: Invalidates all three formats:
    *         1. v6role: grid:v6role:{dateKey}:* (list_v6role endpoint)
    *         2. v7tenant: grid:v7tenant:{dateKey}:* (list_v7tenant endpoint)
-   *         3. legacy: grid:personId:*:pumppuAika:{dateKey}
+   *         (only v6role and v7tenant formats are active)
    * - stat: Clears all stat caches (varying segment counts)
    * - attachment: Multiple patterns for different attachment key formats
    *
@@ -801,17 +801,6 @@ class UniversalCacheManager {
           `grid:v6role:${datePattern}:*`,
           `grid:v7tenant:${datePattern}:*`,
         ];
-
-        // Legacy format for backwards compatibility
-        if (personId && dateKey) {
-          patterns.push(`grid:personId:${personId}:pumppuAika:${dateKey}`);
-        } else if (dateKey) {
-          patterns.push(`grid:personId:*:pumppuAika:${dateKey}`);
-        } else if (personId) {
-          patterns.push(`grid:personId:${personId}:pumppuAika:*`);
-        } else {
-          patterns.push(`grid:personId:*:pumppuAika:*`);
-        }
 
         // Invalidate all patterns and return combined count
         const results = await Promise.all(
@@ -1516,6 +1505,7 @@ class UniversalCacheManager {
             ? this.invalidateByPattern(`auth:*:${deletedPersonId}*`)
             : Promise.resolve(0),
           this.invalidateByPattern("grid:v6role:*"),
+          this.invalidateByPattern("grid:v7tenant:*"),
         ]);
         totalInvalidated = counts.reduce((sum, c) => sum + c, 0);
         this.logger.debug("PERSON_DELETE invalidation completed", { keysInvalidated: totalInvalidated });
@@ -1563,6 +1553,7 @@ class UniversalCacheManager {
           this.invalidateGridSmart(operation, params.body || {}, params),
           this.invalidate(operation, "person", params),
           this.invalidateByPattern(`grid:v6role:${this._extractYYYYMMDD(params)}:*`),
+          this.invalidateByPattern(`grid:v7tenant:${this._extractYYYYMMDD(params)}:*`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         this.logger.info("VEHICLE operation invalidation completed", { operation, keysInvalidated: totalInvalidated });
