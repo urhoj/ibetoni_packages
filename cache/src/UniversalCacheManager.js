@@ -424,23 +424,18 @@ class UniversalCacheManager {
   formatDateForRedis(dateInput) {
     if (dateInput === null || dateInput === undefined) return "null";
 
-    // Handle timestamp format (20250827120000)
-    if (typeof dateInput === "number" && dateInput > 10000000000000) {
-      return String(dateInput);
-    }
-
     // Handle simple yyyymmdd format (20250827)
     if (
       typeof dateInput === "number" &&
       dateInput >= 20000101 &&
       dateInput <= 99991231
     ) {
-      return String(dateInput * 1000000 + 120000);
+      return String(dateInput);
     }
 
     // Handle string formats like "20250827"
     if (typeof dateInput === "string" && /^\d{8}$/.test(dateInput)) {
-      return dateInput + "120000";
+      return dateInput;
     }
 
     if (dateInput === 0) return "0";
@@ -702,10 +697,9 @@ class UniversalCacheManager {
    * Entity-specific behaviors:
    * - keikka: Targets individual keikka + list caches by date/personId
    * - asiakas: Pattern-based by asiakasId
-   * - grid: Invalidates all three formats:
+   * - grid: Invalidates both active formats:
    *         1. v6role: grid:v6role:{dateKey}:* (list_v6role endpoint)
    *         2. v7tenant: grid:v7tenant:{dateKey}:* (list_v7tenant endpoint)
-   *         3. legacy: grid:personId:*:pumppuAika:{dateKey}
    * - stat: Clears all stat caches (varying segment counts)
    * - attachment: Multiple patterns for different attachment key formats
    *
@@ -789,29 +783,16 @@ class UniversalCacheManager {
         // Use simple prefix pattern to catch all stat keys
         return await this.invalidateByPattern(`stat:*`);
       case "grid": {
-        // Grid has multiple key formats that need invalidation:
+        // Grid has two active key formats:
         // 1. v6role format: grid:v6role:{dateKey}:{sortedCompanies} (used by list_v6role)
         // 2. v7tenant format: grid:v7tenant:{dateKey}:{sortedAsiakasIds}:{outputMode} (used by list_v7tenant)
-        // 3. Legacy format: grid:personId:{personId}:pumppuAika:{dateKey}
         const dateKey = pumppuAika ? this.formatGridDate(pumppuAika) : null;
         const datePattern = dateKey || "*";
 
         const patterns = [
-          // v6role and v7tenant formats (both use same date-scoped pattern structure)
           `grid:v6role:${datePattern}:*`,
           `grid:v7tenant:${datePattern}:*`,
         ];
-
-        // Legacy format for backwards compatibility
-        if (personId && dateKey) {
-          patterns.push(`grid:personId:${personId}:pumppuAika:${dateKey}`);
-        } else if (dateKey) {
-          patterns.push(`grid:personId:*:pumppuAika:${dateKey}`);
-        } else if (personId) {
-          patterns.push(`grid:personId:${personId}:pumppuAika:*`);
-        } else {
-          patterns.push(`grid:personId:*:pumppuAika:*`);
-        }
 
         // Invalidate all patterns and return combined count
         const results = await Promise.all(
@@ -1516,6 +1497,7 @@ class UniversalCacheManager {
             ? this.invalidateByPattern(`auth:*:${deletedPersonId}*`)
             : Promise.resolve(0),
           this.invalidateByPattern("grid:v6role:*"),
+          this.invalidateByPattern("grid:v7tenant:*"),
         ]);
         totalInvalidated = counts.reduce((sum, c) => sum + c, 0);
         this.logger.debug("PERSON_DELETE invalidation completed", { keysInvalidated: totalInvalidated });
@@ -1563,6 +1545,7 @@ class UniversalCacheManager {
           this.invalidateGridSmart(operation, params.body || {}, params),
           this.invalidate(operation, "person", params),
           this.invalidateByPattern(`grid:v6role:${this._extractYYYYMMDD(params)}:*`),
+          this.invalidateByPattern(`grid:v7tenant:${this._extractYYYYMMDD(params)}:*`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         this.logger.info("VEHICLE operation invalidation completed", { operation, keysInvalidated: totalInvalidated });
