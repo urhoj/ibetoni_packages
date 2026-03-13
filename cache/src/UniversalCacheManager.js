@@ -1539,13 +1539,14 @@ class UniversalCacheManager {
       case "VEHICLE_UPDATE":
       case "VEHICLE_CREATE":
       case "VEHICLE_DELETE": {
+        const dateKey = this._extractYYYYMMDD(params);
         const counts = await Promise.all([
           this.invalidate(operation, "vehicle", params),
           this.invalidate(operation, "keikka", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
           this.invalidate(operation, "person", params),
-          this.invalidateByPattern(`grid:v6role:${this._extractYYYYMMDD(params)}:*`),
-          this.invalidateByPattern(`grid:v7tenant:${this._extractYYYYMMDD(params)}:*`),
+          this.invalidateByPattern(`grid:v6role:${dateKey}:*`),
+          this.invalidateByPattern(`grid:v7tenant:${dateKey}:*`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         this.logger.info("VEHICLE operation invalidation completed", { operation, keysInvalidated: totalInvalidated });
