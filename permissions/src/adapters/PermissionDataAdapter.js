@@ -29,7 +29,7 @@ class PermissionDataAdapter {
    *   isPumppuViewer: boolean
    * }
    */
-  async getUserPermissions(user) {
+  async getUserPermissions(_user) {
     throw new Error('getUserPermissions() must be implemented by subclass');
   }
 

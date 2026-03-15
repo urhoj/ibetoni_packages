@@ -147,7 +147,7 @@ class CacheMetrics {
    * @param {boolean} acquired - Whether lock was successfully acquired
    * @param {number} durationMs - Time taken to attempt acquisition
    */
-  recordLockAcquisition(resource, acquired, durationMs) {
+  recordLockAcquisition(resource, acquired, _durationMs) {
     this.metrics.locks.acquisitionAttempts++;
 
     if (acquired) {

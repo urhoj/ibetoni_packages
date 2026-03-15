@@ -28,7 +28,7 @@ import {
  * @param {Object} page - Azure Document Intelligence page object (optional, for advanced features)
  * @returns {ClassificationResult}
  */
-export function classifyDocumentType(ocrText, page = null) {
+export function classifyDocumentType(ocrText, _page = null) {
   const text = ocrText.toLowerCase();
 
   // Strategy: Check for external supplier patterns FIRST (they may contain customer names like "Kalle Urho")

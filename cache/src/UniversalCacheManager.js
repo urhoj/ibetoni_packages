@@ -722,7 +722,6 @@ class UniversalCacheManager {
   async invalidate(operation, entityType, params = {}) {
     // Safely extract parameters
     const asiakasId = params.asiakasId;
-    const personId = params.personId;
     const pumppuAika = params.pumppuAika;
 
     // Generate invalidation pattern
@@ -1712,8 +1711,6 @@ class UniversalCacheManager {
         const {
           laskupohjaId,
           laskupohjaRiviId,
-          targetLaskupohjaId,
-          sourceLaskupohjaId,
         } = params;
         const patterns = [];
 

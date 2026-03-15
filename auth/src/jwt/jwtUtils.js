@@ -298,7 +298,7 @@ const isTokenExpiringSoon = async (token, options = {}) => {
       expiresAt,
       hoursUntilExpiry: Math.round(hoursUntilExpiry * 10) / 10, // Round to 1 decimal
     };
-  } catch (error) {
+  } catch (_error) {
     // If token is invalid or expired, return true for expiring soon
     return {
       isExpiringSoon: true,
@@ -320,7 +320,7 @@ const refreshToken = async (token, options = {}) => {
   const decoded = await getTokenData(token, options);
 
   // Extract relevant claims (excluding JWT standard claims like exp, iat)
-  const { email, personId, exp, iat, ...additionalClaims } = decoded;
+  const { email, personId, exp: _exp, iat: _iat, ...additionalClaims } = decoded;
 
   // Issue new token with same claims but fresh expiration
   const newToken = await createToken(email, personId, additionalClaims, options);
