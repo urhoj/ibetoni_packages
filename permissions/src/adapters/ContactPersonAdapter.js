@@ -21,7 +21,7 @@ class ContactPersonAdapter {
    * @param {string} accessType - Type of access ('read' or 'edit')
    * @returns {Promise<boolean>} True if user has contact person access
    */
-  async hasContactPersonAccess(user, keikka, accessType = 'read') {
+  async hasContactPersonAccess(user, keikka, _accessType = 'read') {
     throw new Error('hasContactPersonAccess() must be implemented by subclass');
   }
 }

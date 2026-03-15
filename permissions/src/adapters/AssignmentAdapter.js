@@ -16,7 +16,7 @@ class AssignmentAdapter {
    * @param {Object} keikka - Keikka object to check assignment for
    * @returns {Promise<boolean>} True if person is assigned to the keikka
    */
-  async isPersonAssignedToKeikka(user, keikka) {
+  async isPersonAssignedToKeikka(_user, _keikka) {
     throw new Error('isPersonAssignedToKeikka() must be implemented by subclass');
   }
 }
