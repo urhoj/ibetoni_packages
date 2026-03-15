@@ -91,6 +91,22 @@ await setCachedData('keikka', customerId, data, CACHE_TTL.KEIKKA);
 
 **Legacy exports (deprecated)**: `DEFAULT_KEIKKA_TTL`, `DEFAULT_TYOMAA_TTL`, `DEFAULT_PERSON_TTL`, `DEFAULT_VEHICLE_TTL`, `DEFAULT_WEATHER_TTL`
 
+### Step Log Types (`src/steplog.js`)
+
+- **STEP_LOG_TYPE**: Integer map of all recognized step log event types (IDs 0–33)
+  - Used as the `stepLogTypeId` argument to `ChangeTracker.saveChanges(token, stepLogTypeId)`
+  - Key entries: `UNDEFINED` (0), `EMAIL_SENT` (4), `ENTITY_MODIFIED` (13), `ORDER_CREATED` (15), `STATUS_CHANGE` (11), `ORDER_DELIVERED` (21), `INVOICE_CREATED` (29), `ORDER_CANCELLED` (31)
+
+```javascript
+// Backend
+const { STEP_LOG_TYPE } = require('@ibetoni/constants');
+await tracker.saveChanges(token, STEP_LOG_TYPE.ENTITY_MODIFIED);
+
+// Frontend
+import { STEP_LOG_TYPE } from '@ibetoni/constants';
+await tracker.saveChanges(token, STEP_LOG_TYPE.STATUS_CHANGE);
+```
+
 ### Security Constants (`src/security.js`)
 
 - **SECURITY**: Security and rate limiting constants

@@ -26,6 +26,7 @@ const {
   RATE_LIMIT_WINDOW,
   MAX_REQUESTS_PER_WINDOW,
 } = require("./src/security.cjs");
+const { STEP_LOG_TYPE } = require("./src/steplog.cjs");
 const {
   ADMIN_COMPANY_ROLE_TYPE_IDS,
   ASIAKAS_EDITOR_ROLE_TYPE_ID,
@@ -45,6 +46,9 @@ const {
 } = require("./src/roles.cjs");
 
 module.exports = {
+  // Step log type constants
+  STEP_LOG_TYPE,
+
   // Domain constants
   allowedOrigins,
 

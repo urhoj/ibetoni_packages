@@ -30,6 +30,7 @@ import {
   RATE_LIMIT_WINDOW,
   MAX_REQUESTS_PER_WINDOW,
 } from "./security.js";
+import { STEP_LOG_TYPE } from "./steplog.js";
 import {
   ADMIN_COMPANY_ROLE_TYPE_IDS,
   ASIAKAS_EDITOR_ROLE_TYPE_ID,
@@ -49,6 +50,9 @@ import {
 } from "./roles.js";
 
 export {
+  // Step log type constants
+  STEP_LOG_TYPE,
+
   // Domain constants
   allowedOrigins,
 
