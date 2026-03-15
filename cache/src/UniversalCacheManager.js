@@ -700,6 +700,7 @@ class UniversalCacheManager {
    * - grid: Invalidates both active formats:
    *         1. v6role: grid:v6role:{dateKey}:* (list_v6role endpoint)
    *         2. v7tenant: grid:v7tenant:{dateKey}:* (list_v7tenant endpoint)
+   *         (only v6role and v7tenant formats are active)
    * - stat: Clears all stat caches (varying segment counts)
    * - attachment: Multiple patterns for different attachment key formats
    *
