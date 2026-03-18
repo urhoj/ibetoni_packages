@@ -42,6 +42,7 @@ const allowedOrigins = [
   "https://staging.betoni.online",
 
   // production (live)
+  "https://wonderful-rock-08f826703.azurestaticapps.net",
   "https://puminet7app.azurewebsites.net",
   "https://puminet7api.azurewebsites.net",
   "https://betoni.online",
