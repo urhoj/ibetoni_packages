@@ -39,7 +39,6 @@ const getJwtKey = async (options = {}) => {
  * @returns {object} companyRoles object with boolean flags
  */
 const deriveCompanyRoles = (asiakasesWithTypes, ownerAsiakasId) => {
-
   const companyRoles = {
     ownerAsiakasId: ownerAsiakasId,
     isAsiakasAdmin: false,
@@ -102,9 +101,12 @@ const createVerifyTokenMiddleware = (options = {}) => {
 
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
         if (logger?.warn) {
-          logger.warn("Authentication failed: Missing token in both cookie and Authorization header", {
-            path: req.path,
-          });
+          logger.warn(
+            "Authentication failed: Missing token in both cookie and Authorization header",
+            {
+              path: req.path,
+            }
+          );
         } else {
           log.log("Authentication failed: Missing token in both cookie and Authorization header");
         }
@@ -160,20 +162,14 @@ const createVerifyTokenMiddleware = (options = {}) => {
       // Derive companyRoles from asiakasesWithTypes if not already present
       // This provides backward compatibility - JWT no longer stores companyRoles directly
       if (!decoded.companyRoles && decoded.asiakasesWithTypes && decoded.ownerAsiakasId) {
-        decoded.companyRoles = deriveCompanyRoles(decoded.asiakasesWithTypes, decoded.ownerAsiakasId);
+        decoded.companyRoles = deriveCompanyRoles(
+          decoded.asiakasesWithTypes,
+          decoded.ownerAsiakasId
+        );
       }
 
       // Attach user data to request
       req.user = decoded;
-
-      if (logger?.info) {
-        logger.info("JWT verified successfully", {
-          email: decoded.email,
-          personId: decoded.personId,
-          path: req.path,
-          tokenSource, // Log where the token came from (cookie or header)
-        });
-      }
 
       return next();
     } catch (error) {
