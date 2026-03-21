@@ -12,9 +12,9 @@ const { ROLE_NAME_TO_KEY_MAP: roleNameToKeyMap } = require("@ibetoni/constants")
 /**
  * Get JWT key from environment
  * Supports both sync and async retrieval
- * @param {object} options - Configuration options
- * @param {function} options.getEnvVar - Optional async function to get env var
- * @returns {Promise<string>|string} JWT key
+ * @param {object} [options] - Configuration options
+ * @param {function} [options.getEnvVar] - Optional async function to get env var
+ * @returns {Promise<string>} JWT key
  */
 const getJwtKey = async (options = {}) => {
   if (options.getEnvVar) {
@@ -81,9 +81,9 @@ const deriveCompanyRoles = (asiakasesWithTypes, ownerAsiakasId) => {
 
 /**
  * Create Express middleware to verify JWT tokens
- * @param {object} options - Middleware options
- * @param {object} options.logger - Optional logger instance
- * @param {function} options.getEnvVar - Optional async function to get env vars
+ * @param {object} [options] - Middleware options
+ * @param {object} [options.logger] - Optional logger instance
+ * @param {function} [options.getEnvVar] - Optional async function to get env vars
  * @returns {function} Express middleware function
  */
 const createVerifyTokenMiddleware = (options = {}) => {
@@ -139,7 +139,7 @@ const createVerifyTokenMiddleware = (options = {}) => {
 
     try {
       const jwtKey = await getJwtKey(options);
-      const decoded = jwt.verify(token, jwtKey);
+      const decoded = /** @type {import('jsonwebtoken').JwtPayload} */ (jwt.verify(token, jwtKey));
 
       // Validate required claims
       if (!decoded.personId && !decoded.email) {
@@ -197,10 +197,10 @@ const createVerifyTokenMiddleware = (options = {}) => {
  * @param {string} email - User email
  * @param {number} personId - User person ID
  * @param {object} additionalClaims - Additional claims to include in token
- * @param {object} options - Token creation options
- * @param {function} options.getEnvVar - Optional async function to get env vars
- * @param {object} options.logger - Optional logger instance
- * @param {string} options.expiresIn - Optional token expiry (e.g. '60d'), defaults to '7d'
+ * @param {object} [options] - Token creation options
+ * @param {function} [options.getEnvVar] - Optional async function to get env vars
+ * @param {object} [options.logger] - Optional logger instance
+ * @param {string} [options.expiresIn] - Optional token expiry (e.g. '60d'), defaults to '7d'
  * @returns {Promise<string>} JWT token
  */
 const createToken = async (email, personId, additionalClaims = {}, options = {}) => {
@@ -223,7 +223,7 @@ const createToken = async (email, personId, additionalClaims = {}, options = {})
   };
 
   const token = jwt.sign(user, jwtKey, {
-    expiresIn,
+    expiresIn: /** @type {any} */ (expiresIn),
   });
 
   if (logger?.info) {
@@ -241,13 +241,13 @@ const createToken = async (email, personId, additionalClaims = {}, options = {})
 /**
  * Get decoded JWT token data
  * @param {string} token - JWT token
- * @param {object} options - Decoding options
- * @param {function} options.getEnvVar - Optional async function to get env vars
+ * @param {object} [options] - Decoding options
+ * @param {function} [options.getEnvVar] - Optional async function to get env vars
  * @returns {Promise<object>} Decoded token payload
  */
 const getTokenData = async (token, options = {}) => {
   const jwtKey = await getJwtKey(options);
-  const decoded = jwt.verify(token, jwtKey);
+  const decoded = /** @type {import('jsonwebtoken').JwtPayload} */ (jwt.verify(token, jwtKey));
   return decoded;
 };
 
@@ -275,10 +275,10 @@ const comparePassword = async (password, hashedPassword) => {
 /**
  * Check if token is close to expiration
  * @param {string} token - JWT token to check
- * @param {object} options - Check options
- * @param {number} options.hoursBeforeExpiry - Hours before expiry to consider "close" (default: 24)
- * @param {function} options.getEnvVar - Optional async function to get env vars
- * @returns {Promise<{isExpiringSoon: boolean, expiresAt: Date, hoursUntilExpiry: number}>}
+ * @param {object} [options] - Check options
+ * @param {number} [options.hoursBeforeExpiry] - Hours before expiry to consider "close" (default: 24)
+ * @param {function} [options.getEnvVar] - Optional async function to get env vars
+ * @returns {Promise<{isExpiringSoon: boolean, expiresAt: Date|null, hoursUntilExpiry: number}>}
  */
 const isTokenExpiringSoon = async (token, options = {}) => {
   const hoursBeforeExpiry = options.hoursBeforeExpiry || 24;
@@ -287,7 +287,7 @@ const isTokenExpiringSoon = async (token, options = {}) => {
     const decoded = await getTokenData(token, options);
     const expiresAt = new Date(decoded.exp * 1000);
     const now = new Date();
-    const hoursUntilExpiry = (expiresAt - now) / (1000 * 60 * 60);
+    const hoursUntilExpiry = (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60);
 
     return {
       isExpiringSoon: hoursUntilExpiry <= hoursBeforeExpiry,
@@ -307,9 +307,9 @@ const isTokenExpiringSoon = async (token, options = {}) => {
 /**
  * Refresh a JWT token (issue new token with same claims)
  * @param {string} token - Current JWT token
- * @param {object} options - Refresh options
- * @param {function} options.getEnvVar - Optional async function to get env vars
- * @param {object} options.logger - Optional logger instance
+ * @param {object} [options] - Refresh options
+ * @param {function} [options.getEnvVar] - Optional async function to get env vars
+ * @param {object} [options.logger] - Optional logger instance
  * @returns {Promise<string>} New JWT token with refreshed expiration
  */
 const refreshToken = async (token, options = {}) => {
