@@ -61,25 +61,16 @@ Projects reference packages using `file:` protocol in `package.json`:
 
 ### In CI/CD
 
-GitHub Actions workflows automatically checkout `ibetoni_packages` during build:
+All three application repositories (puminet4, puminet5api, puminet7-functions-app) include `ibetoni_packages` as a **git submodule** pointing to `urhoj/ibetoni_packages` (branch: `master`). GitHub Actions workflows check out the submodule automatically:
 
 ```yaml
-- name: Checkout shared packages
+- name: Checkout repository
   uses: actions/checkout@v4
   with:
-    repository: urhoj/betoni-online-workspace
-    token: ${{ secrets.GH_PAT }}
-    sparse-checkout: |
-      ibetoni_packages
-    path: _workspace
-
-- name: Setup shared packages
-  run: |
-    mv _workspace/ibetoni_packages ../ibetoni_packages
-    rm -rf _workspace
+    submodules: true
 ```
 
-This makes packages available at `../ibetoni_packages/` so `file:` references work correctly.
+No `GH_PAT` secret is required. The submodule is checked out at the pinned commit pointer stored in each project repo.
 
 ## 📖 Package Documentation
 
@@ -299,15 +290,19 @@ const formatted = formatLujuusLuokka('C30/37'); // "C30/37"
 
 ### Making Changes to Packages
 
-Changes to shared packages are immediately reflected in all consuming applications via symlinks:
+Changes to shared packages are immediately reflected in all consuming applications via symlinks. After editing, commit and push to this repo, then sync all project submodule pointers from the workspace root:
 
 ```bash
-# Edit package source
+# 1. Edit package source (changes immediately available in dev via symlinks)
 vim ibetoni_packages/cache/src/index.js
 
-# Changes immediately available in apps
-cd puminet5api
-npm run dev  # Uses updated cache package
+# 2. Commit and push to ibetoni_packages repo
+git -C /c/Users/juhau/code/ibetoni_packages add .
+git -C /c/Users/juhau/code/ibetoni_packages commit -m "feat: your change"
+git -C /c/Users/juhau/code/ibetoni_packages push origin master
+
+# 3. Update submodule pointers in all 3 project repos (from workspace root)
+npm run sync
 ```
 
 No rebuild or republish needed during development!
@@ -338,8 +333,8 @@ Planned additions include:
 
 These packages may contain business logic that should not be exposed publicly:
 
-- ✅ Packages are in **private** `betoni-online-workspace` repository
-- ✅ CI/CD uses `GH_PAT` secret for authentication
+- ✅ Packages are in **private** `urhoj/ibetoni_packages` repository
+- ✅ CI/CD uses git submodules — no `GH_PAT` required
 - ✅ No packages published to npm registry
 - ✅ All dependencies stay within organization
 
@@ -363,7 +358,7 @@ npm install
 
 ### CI/CD build fails with "Cannot resolve @ibetoni/..."
 
-Ensure `GH_PAT` secret is configured in the repository. See [Root README](../README.md#ci-cd-configuration).
+Ensure the project's `.gitmodules` file correctly references `urhoj/ibetoni_packages` and that the workflow uses `submodules: true` in its checkout step. See [Root README](../README.md#ci-cd-configuration).
 
 ## 📚 More Information
 

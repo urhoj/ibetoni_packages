@@ -27,6 +27,9 @@ export {
 
 // ===== Classification =====
 export {
+  extractDocumentType,
+  extractSourceAsiakasId,
+  extractKuormakirjanumero,
   classifyDocumentType,
   extractKeikkaNumber,
   isHighConfidenceClassification,
