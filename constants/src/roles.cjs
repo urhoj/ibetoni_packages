@@ -157,6 +157,7 @@ const ASIAKAS_SETTING_TYPE_IDS = {
   LOMASEURANTA: 29,
   HAS_OCR: 30,
   HAS_NEWS: 31,
+  HAS_ILMOITUSTAULU: 32,
 };
 
 module.exports = {
