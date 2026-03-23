@@ -29,10 +29,7 @@ export function extractDocumentType(ocrText) {
   }
 
   if (text.includes("kuormakirja") && text.includes("peab")) {
-    const isPump = text.includes("pumpun siirto");
-    return isPump
-      ? { attachmentTypeId: DOCUMENT_TYPES.KUORMAKIRJA_PUMP, attachmentGroupId: ATTACHMENT_GROUPS.TILAUS, confidence: 0.90, reason: 'Peab kuormakirja with "pumpun siirto"' }
-      : { attachmentTypeId: DOCUMENT_TYPES.KUORMAKIRJA_TRUCK, attachmentGroupId: ATTACHMENT_GROUPS.TILAUS, confidence: 0.90, reason: 'Peab kuormakirja without pump transfer keyword' };
+    return { attachmentTypeId: DOCUMENT_TYPES.KUORMAKIRJA_PUMP, attachmentGroupId: ATTACHMENT_GROUPS.TILAUS, confidence: 0.90, reason: 'Contains "kuormakirja" and "peab"' };
   }
 
   // Kalle Urho internal formats (check after external suppliers)
