@@ -136,7 +136,7 @@ import { getDocumentTypeName, getSourceAsiakasName, SOURCE_ASIAKAS_IDS } from '@
 getDocumentTypeName(15);                        // "Kuormakirja (Pumppu)"
 getDocumentTypeName(99);                        // "Tuntematon"
 getSourceAsiakasName(SOURCE_ASIAKAS_IDS.RUDUS); // "Rudus"
-getSourceAsiakasName(null);                     // null
+getSourceAsiakasName(null);                     // 'Unknown'
 ```
 
 ### `classification.js`
