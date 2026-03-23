@@ -74,7 +74,7 @@ export const PROCESSING_STATUS_NAMES = {
 export const SOURCE_ASIAKAS_IDS = {
   KALLE_URHO: 8,      // Internal betoni.online kuormakirjas (asiakasId = 8)
   RUDUS: 30,          // Rudus concrete plant kuormakirjas (asiakasId = 30)
-  PEAB: 456           // PEAB concrete plant kuormakirjas (TBD - actual asiakasId)
+  PEAB: 28            // PEAB concrete plant kuormakirjas (asiakasId = 28)
 };
 
 /**
@@ -83,7 +83,7 @@ export const SOURCE_ASIAKAS_IDS = {
 export const SOURCE_ASIAKAS_NAMES = {
   8: 'Kalle Urho',
   30: 'Rudus',
-  456: 'PEAB'
+  28: 'PEAB'
 };
 
 /**

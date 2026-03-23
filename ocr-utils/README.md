@@ -125,7 +125,7 @@ if (canTransitionStatus(currentStatus, nextStatus)) {
 - `DOCUMENT_TYPES` - Document type IDs (15-18, 99)
 - `ATTACHMENT_GROUPS` - Attachment group IDs (1-8)
 - `PROCESSING_STATUSES` - Processing status IDs (1-7)
-- `SOURCE_ASIAKAS_IDS` - Source company IDs (Kalle Urho: 8, Rudus: 30, PEAB: 456)
+- `SOURCE_ASIAKAS_IDS` - Source company IDs (Kalle Urho: 8, Rudus: 30, PEAB: 28)
 - `CONFIDENCE_THRESHOLDS` - Confidence level thresholds
 - `getDocumentTypeName(attachmentTypeId)` - Returns human-readable document type name, e.g. `"Kuormakirja (Pumppu)"`
 - `getSourceAsiakasName(sourceAsiakasId)` - Returns source company name, e.g. `"Kalle Urho"`, `"Rudus"`, `"PEAB"`; returns `null` for unrecognized IDs
