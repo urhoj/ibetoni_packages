@@ -22,11 +22,17 @@ export function extractDocumentType(ocrText) {
 
   // Check external suppliers first — their docs may contain customer names like "Kalle Urho"
   if (text.includes("kuormakirja") && text.includes("www.rudus.fi")) {
-    return { attachmentTypeId: DOCUMENT_TYPES.KUORMAKIRJA_PUMP, attachmentGroupId: ATTACHMENT_GROUPS.TILAUS, confidence: 0.92, reason: 'Contains "kuormakirja" and "www.rudus.fi"' };
+    const isPump = text.includes("pumpun siirto");
+    return isPump
+      ? { attachmentTypeId: DOCUMENT_TYPES.KUORMAKIRJA_PUMP, attachmentGroupId: ATTACHMENT_GROUPS.TILAUS, confidence: 0.92, reason: 'Rudus kuormakirja with "pumpun siirto"' }
+      : { attachmentTypeId: DOCUMENT_TYPES.KUORMAKIRJA_TRUCK, attachmentGroupId: ATTACHMENT_GROUPS.TILAUS, confidence: 0.92, reason: 'Rudus kuormakirja without pump transfer keyword' };
   }
 
   if (text.includes("kuormakirja") && text.includes("peab")) {
-    return { attachmentTypeId: DOCUMENT_TYPES.KUORMAKIRJA_PUMP, attachmentGroupId: ATTACHMENT_GROUPS.TILAUS, confidence: 0.90, reason: 'Contains "kuormakirja" and "peab"' };
+    const isPump = text.includes("pumpun siirto");
+    return isPump
+      ? { attachmentTypeId: DOCUMENT_TYPES.KUORMAKIRJA_PUMP, attachmentGroupId: ATTACHMENT_GROUPS.TILAUS, confidence: 0.90, reason: 'Peab kuormakirja with "pumpun siirto"' }
+      : { attachmentTypeId: DOCUMENT_TYPES.KUORMAKIRJA_TRUCK, attachmentGroupId: ATTACHMENT_GROUPS.TILAUS, confidence: 0.90, reason: 'Peab kuormakirja without pump transfer keyword' };
   }
 
   // Kalle Urho internal formats (check after external suppliers)
