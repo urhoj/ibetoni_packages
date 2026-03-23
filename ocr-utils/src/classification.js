@@ -105,17 +105,18 @@ export function extractKuormakirjanumero(ocrText) {
   const tilausMatch = ocrText.match(/Tilausnumero[:\s]*\n?\s*(\d{4,10})/i);
   if (tilausMatch) return tilausMatch[1];
 
-  // Rudus: "28386640 / 20152"
-  const rudusMatch = ocrText.match(/\b(283\d{5})\s*\/\s*(\d{4,6})\b/);
+  // Rudus: "27962502 / 20073" or "28386640 / 20152" (8-digit KK number / delivery sub-number)
+  const rudusMatch = ocrText.match(/\b(\d{7,9})\s*\/\s*(\d{4,6})\b/);
   if (rudusMatch) return `${rudusMatch[1]} / ${rudusMatch[2]}`;
 
   // Rudus bracket format: "( 1137 , 28386640 )"
-  const bracketMatch = ocrText.match(/\(\s*\d+\s*,\s*(283\d{5})\s*\)/);
+  const bracketMatch = ocrText.match(/\(\s*\d+\s*,\s*(\d{7,9})\s*\)/);
   if (bracketMatch) return bracketMatch[1];
 
   // Generic: "kuormakirja nro 123456" or "kk no 123456"
+  // Exclude numbers starting with 0 (Finnish phone numbers, e.g. 0204477670)
   const genericMatch = ocrText.match(/(?:kuormakirja|kk)[^0-9]*(?:n[:.]?o?|numero|nro)?[^0-9]*(\d{6,10})/i);
-  if (genericMatch) return genericMatch[1];
+  if (genericMatch && !genericMatch[1].startsWith('0')) return genericMatch[1];
 
   return null;
 }
