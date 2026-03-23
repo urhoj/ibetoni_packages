@@ -89,6 +89,7 @@ export function extractDocumentType(ocrText) {
  * @returns {number|null} sourceAsiakasId or null if unknown
  */
 export function extractSourceAsiakasId(ocrText) {
+  if (!ocrText) return null;
   const text = ocrText.toLowerCase();
 
   if (text.includes("www.rudus.fi")) return SOURCE_ASIAKAS_IDS.RUDUS;
@@ -144,16 +145,9 @@ export function classifyDocumentType(ocrText) {
  * @returns {string|null}
  */
 export function extractKeikkaNumber(ocrText) {
-  const tilausMatch = ocrText.match(/tilaus(?:numero)?[:\s]+(\d{4,10})/i);
-  if (tilausMatch) return tilausMatch[1];
-
-  const keikkaMatch = ocrText.match(/keikka(?:numero)?[:\s]+(\d{4,10})/i);
-  if (keikkaMatch) return keikkaMatch[1];
-
-  const orderMatch = ocrText.match(/order[:\s]+(\d{4,10})/i);
-  if (orderMatch) return orderMatch[1];
-
-  return null;
+  if (!ocrText) return null;
+  const match = ocrText.match(/(?:tilaus(?:numero)?|keikka(?:numero)?|order)[:\s]+(\d{4,10})/i);
+  return match ? match[1] : null;
 }
 
 /**
@@ -169,9 +163,7 @@ export function isHighConfidenceClassification(confidence) {
  * @returns {boolean}
  */
 export function needsClassificationReview(classification) {
-  if (classification.confidence < 0.75) return true;
-  if (classification.attachmentTypeId === DOCUMENT_TYPES.UNKNOWN) return true;
-  return false;
+  return classification.confidence < 0.75 || classification.attachmentTypeId === DOCUMENT_TYPES.UNKNOWN;
 }
 
 /**

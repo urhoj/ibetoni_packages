@@ -33,19 +33,22 @@ import {
   extractKuormakirjanumero
 } from '@ibetoni/ocr-utils';
 
+// Kalle Urho internal document — Tilausnumero is NOT extracted as KK number
 const ocrText = "Kuormakirja\nKalle Urho Oy\nTilausnumero\n10163";
 
 // Document type detection
 const { attachmentTypeId, attachmentGroupId, confidence, reason } = extractDocumentType(ocrText);
-// { attachmentTypeId: 15, attachmentGroupId: 1, confidence: 0.95, reason: '...' }
+// { attachmentTypeId: 15, attachmentGroupId: 1, confidence: 0.95,
+//   reason: 'Contains "kuormakirja" and "kalle urho"' }
 
 // Source company detection
 const sourceAsiakasId = extractSourceAsiakasId(ocrText);
 // 8  (Kalle Urho)
 
 // Delivery note number extraction
+// Returns null for Kalle Urho internal docs — Tilausnumero is NOT used as KK number
 const kuormakirjanumero = extractKuormakirjanumero(ocrText);
-// "10163"
+// null
 ```
 
 ### Document Classification (Convenience Wrapper)
@@ -55,17 +58,40 @@ const kuormakirjanumero = extractKuormakirjanumero(ocrText);
 ```javascript
 import { classifyDocumentType } from '@ibetoni/ocr-utils';
 
-const ocrText = "Kuormakirja\nKalle Urho Oy\nTilausnumero\n10163";
-const result = classifyDocumentType(ocrText);
-
-console.log(result);
+// Rudus kuormakirja WITH "pumpun siirto" → pump type (15)
+const rudusWithPump = "Kuormakirja\nwww.rudus.fi\npumpun siirto\n28386640 / 20152";
+classifyDocumentType(rudusWithPump);
 // {
-//   attachmentTypeId: 15,
+//   attachmentTypeId: 15,      // KUORMAKIRJA_PUMP
 //   attachmentGroupId: 1,
-//   sourceAsiakasId: 8,
-//   kuormakirjanumero: "10163",
-//   confidence: 0.95,
-//   reason: 'Contains "kuormakirja" - pumppuauto format'
+//   sourceAsiakasId: 30,       // Rudus
+//   kuormakirjanumero: "28386640 / 20152",
+//   confidence: 0.92,
+//   reason: 'Rudus kuormakirja with "pumpun siirto"'
+// }
+
+// Rudus kuormakirja WITHOUT "pumpun siirto" → truck type (16)
+const rudusNoTransfer = "Kuormakirja\nwww.rudus.fi\n27962502 / 20073";
+classifyDocumentType(rudusNoTransfer);
+// {
+//   attachmentTypeId: 16,      // KUORMAKIRJA_TRUCK
+//   attachmentGroupId: 1,
+//   sourceAsiakasId: 30,
+//   kuormakirjanumero: "27962502 / 20073",
+//   confidence: 0.92,
+//   reason: 'Rudus kuormakirja without pump transfer keyword'
+// }
+
+// PEAB kuormakirja → always pump type (15)
+const peab = "Kuormakirja\nPEAB Betoni\nbetoni 32-2";
+classifyDocumentType(peab);
+// {
+//   attachmentTypeId: 15,      // KUORMAKIRJA_PUMP
+//   attachmentGroupId: 1,
+//   sourceAsiakasId: 28,       // PEAB
+//   kuormakirjanumero: null,
+//   confidence: 0.90,
+//   reason: 'Contains "kuormakirja" and "peab"'
 // }
 ```
 
@@ -140,10 +166,31 @@ getSourceAsiakasName(null);                     // 'Unknown'
 ```
 
 ### `classification.js`
-- `extractDocumentType(ocrText)` - Detect document type → `{ attachmentTypeId, attachmentGroupId, confidence, reason }`
+- `extractDocumentType(ocrText)` - Detect document type → `{ attachmentTypeId, attachmentGroupId, confidence, reason }`. Returns safe default if `ocrText` is falsy.
 - `extractSourceAsiakasId(ocrText)` - Detect source company → `number | null`
-- `extractKuormakirjanumero(ocrText)` - Extract delivery note number → `string | null`
+- `extractKuormakirjanumero(ocrText)` - Extract delivery note number → `string | null`. Returns `null` if `ocrText` is falsy. Does NOT extract Tilausnumero values from Kalle Urho internal documents as KK numbers.
 - `classifyDocumentType(ocrText)` - Convenience wrapper: calls all three, returns combined result
+
+**Classification rules (priority order):**
+
+| Condition | Type ID | Confidence | Notes |
+|---|---|---|---|
+| `kuormakirja` + `www.rudus.fi` + `pumpun siirto` | 15 (PUMP) | 0.92 | Rudus with pump transfer |
+| `kuormakirja` + `www.rudus.fi` (no pump transfer) | 16 (TRUCK) | 0.92 | Rudus truck delivery |
+| `kuormakirja` + `peab` | 15 (PUMP) | 0.90 | PEAB always pump |
+| Kalle Urho internal formats (sarkatie/pumppaus/tilausnumero/betoni.online) | 15 (PUMP) | 0.95 | Checked after external suppliers |
+| `kuormakirja` + `kalle urho` | 15 (PUMP) | 0.95 | |
+| `kuormakirja` + `pumppu`/`pumppaus` | 15 (PUMP) | 0.85 | Generic pump keyword |
+| `kuormakirja` + `betoniauto`/`kuljetus` | 16 (TRUCK) | 0.85 | Generic truck keyword |
+| `pystytyspöytäkirja` | 17 | 0.90 | |
+| Waste disposal keywords | 18 | 0.85 | |
+| `kuormakirja` (fallback) | 15 (PUMP) | 0.70 | No specific type identified |
+| No match | 99 (UNKNOWN) | 0.50 | |
+
+**KK number extraction rules:**
+- Rudus slash format: `\d{7,9}\s*/\s*\d{4,6}` (e.g. `"28386640 / 20152"`)
+- Rudus bracket format: `(\d+, \d{7,9})` (e.g. `"( 1137 , 28386640 )"`)
+- Generic label match: `kuormakirja`/`kk` + label words + `\d{6,10}` — rejects values starting with `0` (prevents matching Finnish phone numbers)
 
 ### `confidence.js`
 - `calculateFieldConfidence(ocrConfidence, validationResult)` - Calculate adjusted confidence
