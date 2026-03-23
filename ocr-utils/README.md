@@ -125,9 +125,19 @@ if (canTransitionStatus(currentStatus, nextStatus)) {
 - `DOCUMENT_TYPES` - Document type IDs (15-18, 99)
 - `ATTACHMENT_GROUPS` - Attachment group IDs (1-8)
 - `PROCESSING_STATUSES` - Processing status IDs (1-7)
-- `SOURCE_ASIAKAS_IDS` - Source company IDs (Kalle Urho, Rudus, PEAB)
+- `SOURCE_ASIAKAS_IDS` - Source company IDs (Kalle Urho: 8, Rudus: 30, PEAB: 456)
 - `CONFIDENCE_THRESHOLDS` - Confidence level thresholds
-- Helper functions: `getDocumentTypeName()`, `getSourceAsiakasName()`, etc.
+- `getDocumentTypeName(attachmentTypeId)` - Returns human-readable document type name, e.g. `"Kuormakirja (Pumppu)"`
+- `getSourceAsiakasName(sourceAsiakasId)` - Returns source company name, e.g. `"Kalle Urho"`, `"Rudus"`, `"PEAB"`; returns `null` for unrecognized IDs
+
+```javascript
+import { getDocumentTypeName, getSourceAsiakasName, SOURCE_ASIAKAS_IDS } from '@ibetoni/ocr-utils';
+
+getDocumentTypeName(15);                        // "Kuormakirja (Pumppu)"
+getDocumentTypeName(99);                        // "Tuntematon"
+getSourceAsiakasName(SOURCE_ASIAKAS_IDS.RUDUS); // "Rudus"
+getSourceAsiakasName(null);                     // null
+```
 
 ### `classification.js`
 - `extractDocumentType(ocrText)` - Detect document type → `{ attachmentTypeId, attachmentGroupId, confidence, reason }`
