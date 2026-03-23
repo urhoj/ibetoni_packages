@@ -108,8 +108,8 @@ export function extractSourceAsiakasId(ocrText) {
 export function extractKuormakirjanumero(ocrText) {
   if (!ocrText) return null;
 
-  // Rudus: "27962502 / 20073" or "28386640 / 20152" (8-digit KK number / delivery sub-number)
-  const rudusMatch = ocrText.match(/\b(\d{7,9})\s*\/\s*(\d{4,6})\b/);
+  // Rudus: "KUORMAKIRJANUMERO: 27962502 / 20073" — anchor to label to avoid false positives
+  const rudusMatch = ocrText.match(/KUORMAKIRJANUMERO[^0-9]*(\d{7,9})\s*\/\s*(\d{4,6})/i);
   if (rudusMatch) return `${rudusMatch[1]} / ${rudusMatch[2]}`;
 
   // Rudus bracket format: "( 1137 , 28386640 )"
