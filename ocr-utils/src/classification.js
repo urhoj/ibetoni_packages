@@ -18,6 +18,7 @@ import {
  * @returns {{ attachmentTypeId: number, attachmentGroupId: number, confidence: number, reason: string }}
  */
 export function extractDocumentType(ocrText) {
+  if (!ocrText) return { attachmentTypeId: DOCUMENT_TYPES.UNKNOWN, attachmentGroupId: ATTACHMENT_GROUPS.TILAUS, confidence: 0, reason: 'No OCR text' };
   const text = ocrText.toLowerCase();
 
   // Check external suppliers first — their docs may contain customer names like "Kalle Urho"
@@ -104,9 +105,7 @@ export function extractSourceAsiakasId(ocrText) {
  * @returns {string|null} kuormakirjanumero or null if not found
  */
 export function extractKuormakirjanumero(ocrText) {
-  // Kalle Urho internal: "Tilausnumero: 10163" (this is the keikkaId)
-  const tilausMatch = ocrText.match(/Tilausnumero[:\s]*\n?\s*(\d{4,10})/i);
-  if (tilausMatch) return tilausMatch[1];
+  if (!ocrText) return null;
 
   // Rudus: "27962502 / 20073" or "28386640 / 20152" (8-digit KK number / delivery sub-number)
   const rudusMatch = ocrText.match(/\b(\d{7,9})\s*\/\s*(\d{4,6})\b/);
