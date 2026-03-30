@@ -1,0 +1,20 @@
+{
+  "name": "@ibetoni/fennoa-utils",
+  "version": "1.0.0",
+  "description": "Shared Fennoa invoice parsing and payment status utilities for betoni.online",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "fennoa",
+    "invoice",
+    "payment-status",
+    "utilities"
+  ],
+  "author": "betoni.online",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
