@@ -44,6 +44,7 @@ const {
   ROLE_NAME_TO_KEY_MAP,
   TYPE_ID_TO_ROLE_NAME,
 } = require("./src/roles.cjs");
+const { FENNOA_PAYMENT_STATUS, FENNOA_PAYMENT_STATUS_LABELS_FI } = require("./src/fennoa.cjs");
 
 module.exports = {
   // Step log type constants
@@ -89,4 +90,8 @@ module.exports = {
   PERSON_ANY_ADMIN_SETTING_TYPE_IDS,
   PERSON_SETTING_TYPE_IDS,
   ASIAKAS_SETTING_TYPE_IDS,
+
+  // Fennoa constants
+  FENNOA_PAYMENT_STATUS,
+  FENNOA_PAYMENT_STATUS_LABELS_FI,
 };

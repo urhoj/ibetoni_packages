@@ -32,6 +32,10 @@
     "./roles": {
       "import": "./src/roles.js",
       "require": "./src/roles.cjs"
+    },
+    "./fennoa": {
+      "import": "./src/fennoa.js",
+      "require": "./src/fennoa.cjs"
     }
   },
   "keywords": [
