@@ -11,6 +11,7 @@ Shared business logic packages for the betoni.online concrete delivery managemen
 | [@ibetoni/constants](./constants/) | 1.0.0 | Shared CORS origins and domain constants | [README](./constants/README.md) |
 | [@ibetoni/permissions](./permissions/) | 1.0.0 | Role-based permission validation | [README](./permissions/README.md) |
 | [@ibetoni/betoni-utils](./betoni-utils/) | 1.0.0 | Betoni string formatting and validation | [README](./betoni-utils/README.md) |
+| [@ibetoni/fennoa-utils](./fennoa-utils/) | 1.0.0 | Fennoa invoice response parsing and payment status computation | [README](./fennoa-utils/README.md) |
 
 ## 🎯 Purpose
 
@@ -21,6 +22,7 @@ These packages encapsulate core business logic that needs to be shared across mu
 - **`@ibetoni/constants`** - Centralized CORS allowed origins and domain constants (eliminates 90 lines of duplicate code)
 - **`@ibetoni/permissions`** - Centralizes role-based access control logic used by both frontend and backend
 - **`@ibetoni/betoni-utils`** - Common utilities for concrete specification formatting, validation, and string building
+- **`@ibetoni/fennoa-utils`** - Fennoa API response parsing (`parseFennoaInvoiceResponse`) and payment status computation (`computePaymentStatus`)
 
 ## 🚀 Usage
 
@@ -40,7 +42,8 @@ node_modules/
 ├── @ibetoni/cache → ../../ibetoni_packages/cache
 ├── @ibetoni/constants → ../../ibetoni_packages/constants
 ├── @ibetoni/permissions → ../../ibetoni_packages/permissions
-└── @ibetoni/betoni-utils → ../../ibetoni_packages/betoni-utils
+├── @ibetoni/betoni-utils → ../../ibetoni_packages/betoni-utils
+└── @ibetoni/fennoa-utils → ../../ibetoni_packages/fennoa-utils
 ```
 
 ### In Individual Projects
@@ -54,7 +57,8 @@ Projects reference packages using `file:` protocol in `package.json`:
     "@ibetoni/cache": "file:../ibetoni_packages/cache",
     "@ibetoni/constants": "file:../ibetoni_packages/constants",
     "@ibetoni/permissions": "file:../ibetoni_packages/permissions",
-    "@ibetoni/betoni-utils": "file:../ibetoni_packages/betoni-utils"
+    "@ibetoni/betoni-utils": "file:../ibetoni_packages/betoni-utils",
+    "@ibetoni/fennoa-utils": "file:../ibetoni_packages/fennoa-utils"
   }
 }
 ```
