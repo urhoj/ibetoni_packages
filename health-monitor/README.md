@@ -9,11 +9,9 @@ This package provides comprehensive health checking functionality for monitoring
 ## Features
 
 - ✅ Real-time health checks for all deployment environments
-- 📊 Visual status dashboard with color-coded indicators
+- 📊 Color-coded status indicators
 - ⚡ Response time monitoring
 - 📦 Version tracking for each deployment
-- 🔄 Auto-refresh capability
-- 🎨 Reusable React components
 
 ## Monitored Endpoints
 
@@ -37,21 +35,6 @@ npm install @ibetoni/health-monitor
 ```
 
 ## Usage
-
-### React Component
-
-```jsx
-import { HealthDashboard } from '@ibetoni/health-monitor';
-
-function StatusPage() {
-  return (
-    <HealthDashboard
-      refreshInterval={60000}  // 60 seconds
-      autoRefresh={true}
-    />
-  );
-}
-```
 
 ### Programmatic Health Checks
 
@@ -157,17 +140,6 @@ Returns color code for status level.
 #### `sortByStatus(results)`
 Sorts results with down services first.
 
-## Components
-
-### `<HealthDashboard>`
-
-Main dashboard component for displaying health status.
-
-**Props:**
-- `refreshInterval` (number): Auto-refresh interval in ms (default: 60000)
-- `autoRefresh` (boolean): Enable auto-refresh (default: true)
-- `style` (object): Custom styling
-
 ## Integration Examples
 
 ### Functions App (Express)
@@ -186,21 +158,6 @@ app.get('/api/health', async (req, res) => {
   const results = await checkMultipleEndpoints(endpoints);
   res.json(results);
 });
-```
-
-### Frontend (React)
-
-```jsx
-import { HealthDashboard } from '@ibetoni/health-monitor';
-
-function AdminStatusPage() {
-  return (
-    <div>
-      <h1>System Status</h1>
-      <HealthDashboard />
-    </div>
-  );
-}
 ```
 
 ## Development
