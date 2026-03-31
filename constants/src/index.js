@@ -48,7 +48,7 @@ import {
   ROLE_NAME_TO_KEY_MAP,
   TYPE_ID_TO_ROLE_NAME,
 } from "./roles.js";
-import { FENNOA_PAYMENT_STATUS, FENNOA_PAYMENT_STATUS_LABELS_FI } from "./fennoa.js";
+import { FENNOA_PAYMENT_STATUS, FENNOA_PAYMENT_STATUS_LABELS_FI, FENNOA_PAYMENT_STATUS_SEVERITY } from "./fennoa.js";
 
 export {
   // Step log type constants
@@ -98,4 +98,5 @@ export {
   // Fennoa constants
   FENNOA_PAYMENT_STATUS,
   FENNOA_PAYMENT_STATUS_LABELS_FI,
+  FENNOA_PAYMENT_STATUS_SEVERITY,
 };

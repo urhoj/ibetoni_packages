@@ -32,5 +32,3 @@ export {
   calculateUptime
 } from './utils.js';
 
-// Export React component (if in browser environment)
-export { default as HealthDashboard } from './HealthDashboard.jsx';
