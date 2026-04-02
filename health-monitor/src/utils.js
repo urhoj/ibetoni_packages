@@ -22,7 +22,7 @@ export function formatTimestamp(isoString) {
   } else if (diffMin < 60) {
     return `${diffMin} minutes ago`;
   } else {
-    return date.toLocaleTimeString();
+    return date.toLocaleTimeString("fi-FI", { timeZone: "Europe/Helsinki" });
   }
 }
 
