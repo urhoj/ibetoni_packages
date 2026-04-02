@@ -265,20 +265,18 @@ describe("canEditKeikka", () => {
     expect(await validator.canEditKeikka(testUser, { ...testKeikka, tilaId: 8 })).toBe(false);
   });
 
-  // NOTE: Unlike canReadKeikka, canEditKeikka does NOT check tenant for admin/laskuAdmin.
-  // This documents actual behavior - admin can edit any keikka with tilaId < 7.
-  it("admin can edit foreign tenant keikka with tilaId < 7 (no tenant check)", async () => {
+  it("admin cannot edit foreign tenant keikka even with tilaId < 7", async () => {
     const adapters = createMockAdapters({ isAsiakasAdmin: true });
     const validator = new KeikkaPermissionValidator(adapters);
     const foreignKeikka = { keikkaId: 200, sourceAsiakasId: 99, ownerAsiakasId: 99, betoniAsiakasId: 99, pumppuAsiakasId: 99, tilaId: 3 };
-    expect(await validator.canEditKeikka(testUser, foreignKeikka)).toBe(true);
+    expect(await validator.canEditKeikka(testUser, foreignKeikka)).toBe(false);
   });
 
-  it("laskuAdmin can edit foreign tenant keikka with tilaId === 7 (no tenant check)", async () => {
+  it("laskuAdmin cannot edit foreign tenant keikka even with tilaId === 7", async () => {
     const adapters = createMockAdapters({ isLaskuAdmin: true });
     const validator = new KeikkaPermissionValidator(adapters);
     const foreignKeikka = { keikkaId: 200, sourceAsiakasId: 99, ownerAsiakasId: 99, betoniAsiakasId: 99, pumppuAsiakasId: 99, tilaId: 7 };
-    expect(await validator.canEditKeikka(testUser, foreignKeikka)).toBe(true);
+    expect(await validator.canEditKeikka(testUser, foreignKeikka)).toBe(false);
   });
 
   it("laskuAdmin can edit keikka with tilaId === 7", async () => {

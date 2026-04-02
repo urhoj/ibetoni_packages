@@ -214,13 +214,23 @@ class KeikkaPermissionValidator {
     });
 
     // System/Customer Admin: Full access until laskutettu (tilaId < 7)
-    if (permissions.isAsiakasAdmin && tilaId < 7) {
+    if (permissions.isAsiakasAdmin && tilaId < 7 && (
+      keikka.sourceAsiakasId === ownerAsiakasId ||
+      keikka.ownerAsiakasId === ownerAsiakasId ||
+      keikka.betoniAsiakasId === ownerAsiakasId ||
+      keikka.pumppuAsiakasId === ownerAsiakasId
+    )) {
       this.logger.debug('Edit permission granted: AsiakasAdmin access (tilaId < 7)');
       return true;
     }
 
     // Lasku Admin: Can edit laskutettu status (tilaId === 7)
-    if (permissions.isLaskuAdmin && tilaId === 7) {
+    if (permissions.isLaskuAdmin && tilaId === 7 && (
+      keikka.sourceAsiakasId === ownerAsiakasId ||
+      keikka.ownerAsiakasId === ownerAsiakasId ||
+      keikka.betoniAsiakasId === ownerAsiakasId ||
+      keikka.pumppuAsiakasId === ownerAsiakasId
+    )) {
       this.logger.debug('Edit permission granted: LaskuAdmin access (tilaId === 7)');
       return true;
     }
