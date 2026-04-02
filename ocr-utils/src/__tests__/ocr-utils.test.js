@@ -300,6 +300,13 @@ describe("confidence", () => {
     it("returns error for low", () => {
       expect(getConfidenceColor(0.50)).toBe("error.main");
     });
+
+    it("handles exact threshold boundaries", () => {
+      expect(getConfidenceColor(0.90)).toBe("success.main");  // exactly HIGH
+      expect(getConfidenceColor(0.8999)).toBe("warning.main"); // just below HIGH
+      expect(getConfidenceColor(0.75)).toBe("warning.main");  // exactly MEDIUM
+      expect(getConfidenceColor(0.7499)).toBe("error.main");  // just below MEDIUM
+    });
   });
 
   describe("getConfidenceIcon", () => {

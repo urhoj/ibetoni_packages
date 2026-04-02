@@ -145,6 +145,11 @@ describe("betoni_getString", () => {
   it("returns empty for null", () => {
     expect(betoni_getString(null)).toBe("");
   });
+
+  it("returns empty string for very short result (length <= 4)", () => {
+    const minimal = { laatu: { laatuNimike: "AB" } };
+    expect(betoni_getString(minimal)).toBe("");
+  });
 });
 
 // --- betoni_getStrings ---
