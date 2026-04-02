@@ -1266,6 +1266,15 @@ class UniversalCacheManager {
           totalInvalidated += linkedAsiakasCount;
         }
 
+        // Invalidate grid cache - asiakas settings affect grid visibility
+        // (e.g., setting 33 controls betoni manufacturer visibility)
+        const gridCount = await this.invalidate(
+          operation,
+          "grid",
+          params,
+        );
+        totalInvalidated += gridCount;
+
         this.logger.debug("ASIAKAS operation completed", {
           operation,
           keysInvalidated: totalInvalidated,
