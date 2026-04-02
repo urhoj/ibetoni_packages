@@ -270,7 +270,7 @@ class UniversalCacheManager {
 
       if (!this.isConnected && this.client) {
         const timeoutPromise = new Promise((resolve) =>
-          setTimeout(() => resolve(null), 2000),
+          setTimeout(() => resolve(null), 10000),
         );
         const pingPromise = this.client
           .ping()
