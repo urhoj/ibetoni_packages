@@ -269,14 +269,17 @@ class UniversalCacheManager {
       }
 
       if (!this.isConnected && this.client) {
-        const timeoutPromise = new Promise((resolve) =>
-          setTimeout(() => resolve(null), 10000),
-        );
+        let timer;
+        const timeoutPromise = new Promise((resolve) => {
+          timer = setTimeout(() => resolve(null), 10000);
+        });
         const pingPromise = this.client
           .ping()
           .then(() => this.client)
           .catch(() => null);
-        return await Promise.race([pingPromise, timeoutPromise]);
+        const result = await Promise.race([pingPromise, timeoutPromise]);
+        clearTimeout(timer);
+        return result;
       }
 
       return this.client;
