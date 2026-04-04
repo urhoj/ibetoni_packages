@@ -12,6 +12,7 @@ import { formatPersonName } from "../personUtils.js";
 import { isEmail, parseMultipleEmails, validateMultipleEmails } from "../emailUtils.js";
 import { getText, HAVERSINE_DISTANCE_M } from "../ecofleetUtils.js";
 import { RasitusLuokatArr, WEATHER_RESISTANT_CLASSES } from "../constants.js";
+import { escapeHtml } from "../htmlUtils.js";
 
 // --- Test fixtures ---
 
@@ -377,5 +378,32 @@ describe("constants", () => {
     expect(typeof HAVERSINE_DISTANCE_M).toBe("string");
     expect(HAVERSINE_DISTANCE_M).toContain("6371000");
     expect(HAVERSINE_DISTANCE_M).toContain("ACOS");
+  });
+});
+
+// --- escapeHtml ---
+
+describe("escapeHtml", () => {
+  it("escapes all 5 HTML special characters", () => {
+    expect(escapeHtml('&<>"\''))
+      .toBe("&amp;&lt;&gt;&quot;&#39;");
+  });
+
+  it("returns empty string for null/undefined", () => {
+    expect(escapeHtml(null)).toBe("");
+    expect(escapeHtml(undefined)).toBe("");
+  });
+
+  it("returns empty string for empty input", () => {
+    expect(escapeHtml("")).toBe("");
+  });
+
+  it("passes through safe strings unchanged", () => {
+    expect(escapeHtml("hello world")).toBe("hello world");
+  });
+
+  it("coerces non-string input to string", () => {
+    expect(escapeHtml(123)).toBe("123");
+    expect(escapeHtml(0)).toBe("0");
   });
 });
