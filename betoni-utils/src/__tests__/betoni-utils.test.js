@@ -9,7 +9,11 @@ import {
 } from "../betoniStringBuilder.js";
 import { betoni_isComplete } from "../betoniValidator.js";
 import { formatPersonName } from "../personUtils.js";
-import { isEmail, parseMultipleEmails, validateMultipleEmails } from "../emailUtils.js";
+import {
+  isEmail,
+  parseMultipleEmails,
+  validateMultipleEmails,
+} from "../emailUtils.js";
 import { getText, HAVERSINE_DISTANCE_M } from "../ecofleetUtils.js";
 import { RasitusLuokatArr, WEATHER_RESISTANT_CLASSES } from "../constants.js";
 import { escapeHtml } from "../htmlUtils.js";
@@ -34,8 +38,16 @@ const betoniWithAttrs = {
   ...baseBetoni,
   attr: {
     attr: [
-      { attrNimike: "Lisäaine1", keikkaBetoniAttrComment: "kommentti", keikkaBetoniAttrId: 1 },
-      { attrNimike: "Lisäaine2", keikkaBetoniAttrComment: "", keikkaBetoniAttrId: 2 },
+      {
+        attrNimike: "Lisäaine1",
+        keikkaBetoniAttrComment: "kommentti",
+        keikkaBetoniAttrId: 1,
+      },
+      {
+        attrNimike: "Lisäaine2",
+        keikkaBetoniAttrComment: "",
+        keikkaBetoniAttrId: 2,
+      },
     ],
   },
   betoniComment: "Huom tärkeä",
@@ -52,9 +64,9 @@ const betoniWithVolume = {
 
 describe("removeEiTietoaFromBetoniString", () => {
   it("removes 'Ei tietoa' from string", () => {
-    expect(removeEiTietoaFromBetoniString("Lattiabetoni Ei tietoa C25/30")).toBe(
-      "Lattiabetoni C25/30"
-    );
+    expect(
+      removeEiTietoaFromBetoniString("Lattiabetoni Ei tietoa C25/30"),
+    ).toBe("Lattiabetoni C25/30");
   });
 
   it("removes 'ei tietoa' (lowercase)", () => {
@@ -62,7 +74,9 @@ describe("removeEiTietoaFromBetoniString", () => {
   });
 
   it("removes 'undefined' text", () => {
-    expect(removeEiTietoaFromBetoniString("Lattiabetoni undefined S2")).toBe("Lattiabetoni S2");
+    expect(removeEiTietoaFromBetoniString("Lattiabetoni undefined S2")).toBe(
+      "Lattiabetoni S2",
+    );
   });
 
   it("returns empty string for null/undefined", () => {
@@ -220,7 +234,10 @@ describe("betoni_getComprehensiveString_noAttr", () => {
 
 describe("betoni_isComplete", () => {
   it("returns complete for valid betoni", () => {
-    expect(betoni_isComplete(baseBetoni)).toEqual({ isComplete: true, reason: "" });
+    expect(betoni_isComplete(baseBetoni)).toEqual({
+      isComplete: true,
+      reason: "",
+    });
   });
 
   it("returns incomplete for null", () => {
@@ -255,7 +272,13 @@ describe("betoni_isComplete", () => {
   });
 
   it("accepts nested IDs (laatu.laatuId)", () => {
-    const b = { laatu: { laatuId: 1 }, raeKoko: { raeKokoId: 1 }, lujuus: { lujuusId: 1 }, notkeus: { notkeusId: 1 }, kayttoIka: { kayttoIkaId: 1 } };
+    const b = {
+      laatu: { laatuId: 1 },
+      raeKoko: { raeKokoId: 1 },
+      lujuus: { lujuusId: 1 },
+      notkeus: { notkeusId: 1 },
+      kayttoIka: { kayttoIkaId: 1 },
+    };
     expect(betoni_isComplete(b).isComplete).toBe(true);
   });
 });
@@ -385,8 +408,7 @@ describe("constants", () => {
 
 describe("escapeHtml", () => {
   it("escapes all 5 HTML special characters", () => {
-    expect(escapeHtml('&<>"\''))
-      .toBe("&amp;&lt;&gt;&quot;&#39;");
+    expect(escapeHtml("&<>\"'")).toBe("&amp;&lt;&gt;&quot;&#39;");
   });
 
   it("returns empty string for null/undefined", () => {
