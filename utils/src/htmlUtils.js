@@ -1,3 +1,7 @@
+/**
+ * Escape HTML special characters to prevent XSS.
+ * Only treats null/undefined as empty — numeric 0, false, etc. are coerced to string.
+ */
 function escapeHtml(str) {
   if (str == null) return "";
   return String(str)
