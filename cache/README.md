@@ -410,6 +410,7 @@ const config = cacheManager.getTtlConfig();
 Some entity types are excluded from the multiplier (require real-time or fixed-duration data):
 - `ecofleet` - Real-time vehicle GPS positions (always 1 minute)
 - `ecofleet-daily` - Daily keikka presence check for cron smart fetch skip (always 4 hours)
+- `ecofleet-daily-today` - Today's GPS timeline/route data (always 10 minutes)
 
 ### Maximum TTL Cap
 
@@ -435,6 +436,7 @@ TTLs are capped at **7 days** (604,800 seconds) regardless of multiplier to prev
 | notifications | 2min | **8min** | Push notifications (time-sensitive) |
 | ecofleet | 1min | **1min** | Real-time GPS (excluded from multiplier) |
 | ecofleet-daily | 4hr | **4hr** | Daily keikka check, cron smart fetch (excluded from multiplier) |
+| ecofleet-daily-today | 10min | **10min** | Today's GPS timeline/route (excluded from multiplier) |
 | default | 1hr | **4hr** | Fallback for unknown types |
 
 ### TTL Jitter

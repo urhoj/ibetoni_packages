@@ -39,6 +39,7 @@ const TTL_MULTIPLIER = parseFloat(process.env.CACHE_TTL_MULTIPLIER) || 4.0;
 const TTL_MULTIPLIER_EXCLUDED = new Set([
   "ecofleet", // Real-time vehicle GPS positions - must stay at 1 minute
   "ecofleet-daily", // Keikka presence check - must stay at 4h
+  "ecofleet-daily-today", // Today's timeline data - must stay at 10min
 ]);
 
 /**
@@ -121,6 +122,7 @@ class UniversalCacheManager {
       weather: 3600, // 1 hour - weather module status and forecasts
       ecofleet: 60, // 1 minute - external fleet tracking API (real-time, excluded from multiplier)
       "ecofleet-daily": 14400, // 4 hours - daily keikka presence check for smart fetch skip
+      "ecofleet-daily-today": 600, // 10 minutes - today's timeline data (actively changing, excluded from multiplier)
       lasku: 3600, // 1 hour - invoice data
       laskupohja: 7200, // 2 hours - invoice templates (more stable than invoices)
       laskuStatusType: 43200, // 12 hours - invoice status types (static reference data)
@@ -1038,6 +1040,7 @@ class UniversalCacheManager {
       case "KEIKKA_DELETE":
       case "KEIKKA_CREATE": {
         // invalidateGridSmart already handles grid:v6role and grid:v7tenant patterns
+        const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
         const counts = await Promise.all([
           this.invalidate(operation, "keikka", params),
           this.invalidate(operation, "keikkaPerson", params),
@@ -1046,6 +1049,7 @@ class UniversalCacheManager {
           this.invalidate(operation, "attachment", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
           this.invalidateByPattern("keikka:listByAsiakases:*"),
+          this.invalidateByPattern(`ecofleet:keikka:*:${today}`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         break;
@@ -1520,12 +1524,15 @@ class UniversalCacheManager {
       case "SIJAINTI_UPDATE":
       case "SIJAINTI_CREATE":
       case "SIJAINTI_DELETE": {
+        const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
         const counts = await Promise.all([
           this.invalidate(operation, "geocode", params),
           this.invalidate(operation, "tyomaa", params),
           this.invalidate(operation, "keikka", params),
           this.invalidateGridSmart("TYOMAA_UPDATE", params.body || {}, params),
           this.invalidate(operation, "asiakas", params),
+          this.invalidateByPattern(`ecofleet:vehicleDayTimeline:*:${today}`),
+          this.invalidateByPattern(`ecofleet:vehicleDayRoute:*:${today}`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         this.logger.info("SIJAINTI operation invalidation completed", { operation, keysInvalidated: totalInvalidated });
@@ -1535,12 +1542,15 @@ class UniversalCacheManager {
       case "TYOMAA_UPDATE":
       case "TYOMAA_CREATE":
       case "TYOMAA_DELETE": {
+        const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
         const counts = await Promise.all([
           this.invalidate(operation, "tyomaa", params),
           this.invalidate(operation, "keikka", params),
           this.invalidate(operation, "tyomaaPerson", params),
           this.invalidate(operation, "person", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
+          this.invalidateByPattern(`ecofleet:vehicleDayTimeline:*:${today}`),
+          this.invalidateByPattern(`ecofleet:vehicleDayRoute:*:${today}`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         this.logger.info("TYOMAA operation invalidation completed", { operation, keysInvalidated: totalInvalidated });
