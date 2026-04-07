@@ -1,8 +1,9 @@
 /**
  * Universal Cache Manager for betoni.online
  *
- * Single unified cache system replacing all specialized cache strategies.
- * Handles all entity types with consistent patterns and minimal code duplication.
+ * Two-tier cache system: L1 in-memory LRU (30min TTL) → Redis.
+ * L1 caches only static reference data (entity types in L1_ENTITY_TYPES).
+ * All other entity types use Redis only.
  *
  * **Database Allocation**:
  * - DB 1: Socket.io sessions (managed by redisSessionClient.js)
@@ -15,6 +16,7 @@
 
 const crypto = require("crypto");
 const Redis = require("ioredis");
+const { LRUCache } = require("lru-cache");
 
 /**
  * TTL Multiplier - Global scaling factor for all cache TTL values
@@ -129,6 +131,7 @@ class UniversalCacheManager {
       holiday: 86400, // 24 hours - national holidays, changes rarely (weekly sync)
       notifications: 120, // 2 minutes - time-sensitive push notifications
       reminder: 7200, // 2 hours - reminder rules, infrequently changed
+      keikkaTila: 43200, // 12 hours - delivery status types (static reference data)
       default: 3600, // 1 hour fallback (same as keikka tier)
     };
 
@@ -149,6 +152,37 @@ class UniversalCacheManager {
     // Production-safe batch limits
     this.BATCH_SIZE = 2000;
     this.SCAN_COUNT = 500; // Increased from 100 to reduce Redis round-trips (5× fewer iterations)
+
+    // L1 in-memory cache for static reference data
+    // Only entity types in this set get L1 caching (30-minute TTL)
+    this.L1_ENTITY_TYPES = new Set([
+      "config",
+      "betoniReference",
+      "personpvmStatus",
+      "personDateType",
+      "personRequiredDateType",
+      "tyomaaDateType",
+      "asiakasDateType",
+      "vehicleDateType",
+      "vehicleRequiredDateType",
+      "attachmentTypes",
+      "productReference",
+      "barColor",
+      "invoiceStatus",
+      "laskuStatusType",
+      "help",
+      "holiday",
+      "keikkaTila",
+    ]);
+
+    this.L1_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+    this.l1Cache = new LRUCache({
+      max: 500,
+      ttl: this.L1_TTL_MS,
+      updateAgeOnGet: false,
+      allowStale: false,
+    });
   }
 
   /** @returns {object} CacheMetrics instance for external integrations */
@@ -523,7 +557,7 @@ class UniversalCacheManager {
   }
 
   /**
-   * Cache data with appropriate TTL
+   * Cache data in Redis with appropriate TTL. Also populates L1 for eligible entity types.
    */
   async cache(key, data, entityType = "default") {
     return await this.withRedis(
@@ -533,6 +567,10 @@ class UniversalCacheManager {
         const jitter = Math.floor(baseTtl * 0.05 * (Math.random() * 2 - 1));
         const ttl = baseTtl + jitter;
         await redis.setex(key, ttl, JSON.stringify(data));
+        // Populate L1 cache for eligible entity types
+        if (this.L1_ENTITY_TYPES.has(entityType)) {
+          this.l1Cache.set(key, data);
+        }
         this.logger.debug("Cache set successful", {
           entityType,
           key,
@@ -551,9 +589,19 @@ class UniversalCacheManager {
   }
 
   /**
-   * Retrieve cached data
+   * Retrieve cached data. Checks L1 in-memory cache first for eligible entity types, then Redis.
    */
   async get(key, entityType = "data") {
+    // Check L1 cache first for eligible entity types
+    if (this.L1_ENTITY_TYPES.has(entityType)) {
+      const l1Data = this.l1Cache.get(key);
+      if (l1Data !== undefined) {
+        this.logger.debug("L1 cache hit", { entityType, key });
+        this.cacheMetrics.recordHit(entityType);
+        return l1Data;
+      }
+    }
+
     return await this.withRedis(
       async (redis) => {
         const data = await redis.get(key);
@@ -562,7 +610,12 @@ class UniversalCacheManager {
           this.logger.debug("Cache hit", { entityType, key });
           this.cacheMetrics.recordHit(entityType);
           try {
-            return JSON.parse(data);
+            const parsed = JSON.parse(data);
+            // Populate L1 cache on Redis hit for eligible types
+            if (this.L1_ENTITY_TYPES.has(entityType)) {
+              this.l1Cache.set(key, parsed);
+            }
+            return parsed;
           } catch {
             this.logger.warn("Corrupt cache data, deleting key", { key, entityType });
             await redis.del(key);
@@ -676,9 +729,21 @@ class UniversalCacheManager {
   }
 
   /**
-   * Invalidate cache keys by pattern using scan and delete
+   * Invalidate cache keys by pattern. Clears matching L1 entries first, then Redis via scan+delete.
    */
   async invalidateByPattern(pattern) {
+    // Clear matching L1 entries
+    if (pattern.includes("*")) {
+      const regex = new RegExp("^" + pattern.replace(/\*/g, ".*") + "$");
+      for (const key of this.l1Cache.keys()) {
+        if (regex.test(key)) {
+          this.l1Cache.delete(key);
+        }
+      }
+    } else {
+      this.l1Cache.delete(pattern);
+    }
+
     const keys = await this.scanKeys(pattern);
     if (keys.length > 0) {
       const deletedCount = await this.batchDelete(keys);
@@ -694,6 +759,29 @@ class UniversalCacheManager {
       return deletedCount;
     }
     return 0;
+  }
+
+  /**
+   * Clear all L1 in-memory cache entries
+   * Called by memoryManager during memory pressure cleanup
+   */
+  clearL1Cache() {
+    const size = this.l1Cache.size;
+    this.l1Cache.clear();
+    if (size > 0) {
+      this.logger.info("L1 cache cleared", { entriesCleared: size });
+    }
+  }
+
+  /**
+   * Get L1 cache statistics for monitoring
+   */
+  getL1Stats() {
+    return {
+      size: this.l1Cache.size,
+      maxSize: this.l1Cache.max,
+      entityTypes: Array.from(this.L1_ENTITY_TYPES),
+    };
   }
 
   /**

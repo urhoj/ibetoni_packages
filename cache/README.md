@@ -17,6 +17,7 @@ This package provides unified cache management and invalidation logic shared bet
 - ✅ **Metrics Tracking** - Optional performance monitoring
 - ✅ **Azure Redis Support** - Works with Azure Redis Cache
 - ✅ **Production-Safe Scanning** - Uses SCAN instead of KEYS
+- ✅ **L1 In-Memory Cache** - LRU cache (30min TTL) for static reference data, eliminates Redis round-trips
 
 ## Installation
 
@@ -225,24 +226,34 @@ Invalidate cache for a specific entity type.
 
 ### `cacheManager.cache(key, data, entityType)`
 
-Store data in cache with appropriate TTL.
+Store data in Redis with appropriate TTL. Also populates L1 in-memory cache for eligible entity types.
 
 **Parameters:**
 - `key` (String) - Cache key
-- `data` (any) - Data to cache (will be JSON stringified)
+- `data` (any) - Data to cache (will be JSON stringified for Redis)
 - `entityType` (String) - Entity type for TTL selection (default: 'default')
 
 **Returns:** `Promise<boolean>` - Success status
 
 ### `cacheManager.get(key, entityType)`
 
-Retrieve data from cache.
+Retrieve data from cache. Checks L1 in-memory cache first for eligible entity types, then Redis.
 
 **Parameters:**
 - `key` (String) - Cache key
-- `entityType` (String) - Entity type for metrics (default: 'data')
+- `entityType` (String) - Entity type for metrics and L1 eligibility (default: 'data')
 
 **Returns:** `Promise<any|null>` - Cached data or null if not found
+
+### `cacheManager.clearL1Cache()`
+
+Clear all L1 in-memory cache entries. Called by `memoryManager` during memory pressure cleanup.
+
+### `cacheManager.getL1Stats()`
+
+Get L1 cache statistics for monitoring.
+
+**Returns:** `{ size, maxSize, entityTypes }` - Current L1 cache state
 
 ### `DistributedLockManager`
 
@@ -437,7 +448,16 @@ TTLs are capped at **7 days** (604,800 seconds) regardless of multiplier to prev
 | ecofleet | 1min | **1min** | Real-time GPS (excluded from multiplier) |
 | ecofleet-daily | 4hr | **4hr** | Daily keikka check, cron smart fetch (excluded from multiplier) |
 | ecofleet-daily-today | 10min | **10min** | Today's GPS timeline/route (excluded from multiplier) |
+| keikkaTila | 12hr | **48hr** | Delivery status types (L1 eligible) |
 | default | 1hr | **4hr** | Fallback for unknown types |
+
+### L1 In-Memory Cache
+
+Static reference data entity types are cached in an L1 in-memory LRU cache (max 500 entries, 30-minute TTL) in front of Redis. This eliminates Redis network round-trips for data that rarely changes.
+
+**L1-eligible entity types:** config, betoniReference, personpvmStatus, personDateType, personRequiredDateType, tyomaaDateType, asiakasDateType, vehicleDateType, vehicleRequiredDateType, attachmentTypes, productReference, barColor, invoiceStatus, laskuStatusType, help, holiday, keikkaTila
+
+L1 entries are automatically cleared on pattern-based invalidation and during memory pressure cleanup via `memoryManager`.
 
 ### TTL Jitter
 
