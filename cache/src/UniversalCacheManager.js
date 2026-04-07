@@ -597,7 +597,7 @@ class UniversalCacheManager {
       const l1Data = this.l1Cache.get(key);
       if (l1Data !== undefined) {
         this.logger.debug("L1 cache hit", { entityType, key });
-        this.cacheMetrics.recordHit(entityType);
+        this.cacheMetrics.recordL1Hit(entityType);
         return JSON.parse(JSON.stringify(l1Data));
       }
     }

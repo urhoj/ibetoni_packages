@@ -8,6 +8,7 @@
 const INITIAL_METRICS = () => ({
   global: {
     hits: 0,
+    l1Hits: 0,
     misses: 0,
     sets: 0,
     invalidations: 0,
@@ -47,7 +48,7 @@ class CacheMetrics {
    */
   _ensureEntity(entityType) {
     if (!this.metrics.byEntity[entityType]) {
-      this.metrics.byEntity[entityType] = { hits: 0, misses: 0, sets: 0, invalidations: 0 };
+      this.metrics.byEntity[entityType] = { hits: 0, l1Hits: 0, misses: 0, sets: 0, invalidations: 0 };
     }
     return this.metrics.byEntity[entityType];
   }
@@ -55,6 +56,13 @@ class CacheMetrics {
   recordHit(entityType) {
     this.metrics.global.hits++;
     this._ensureEntity(entityType).hits++;
+  }
+
+  recordL1Hit(entityType) {
+    this.metrics.global.hits++;
+    this.metrics.global.l1Hits++;
+    this._ensureEntity(entityType).hits++;
+    this._ensureEntity(entityType).l1Hits++;
   }
 
   recordMiss(entityType) {
@@ -131,6 +139,7 @@ class CacheMetrics {
 
     return {
       hits: this.metrics.global.hits,
+      l1Hits: this.metrics.global.l1Hits,
       misses: this.metrics.global.misses,
       sets: this.metrics.global.sets,
       invalidations: this.metrics.global.invalidations,
