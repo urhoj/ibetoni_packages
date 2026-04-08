@@ -245,6 +245,12 @@ Retrieve data from cache. Checks L1 in-memory cache first for eligible entity ty
 
 **Returns:** `Promise<any|null>` - Cached data or null if not found
 
+### `cacheManager.clearAllCache()`
+
+Clear all cached data — iterates all entity types, clears matching Redis keys, and clears L1 in-memory cache. Safer than `flushdb` because it only clears cache keys, not socket sessions.
+
+**Returns:** `Promise<number>` - Total Redis keys cleared
+
 ### `cacheManager.clearL1Cache()`
 
 Clear all L1 in-memory cache entries. Called by `memoryManager` during memory pressure cleanup.
