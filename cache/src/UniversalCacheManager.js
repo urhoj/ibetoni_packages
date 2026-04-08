@@ -775,6 +775,22 @@ class UniversalCacheManager {
   }
 
   /**
+   * Clear all cached data (all Redis entity types + L1 in-memory).
+   * Safer than flushdb — only clears cache keys, not socket sessions.
+   * @returns {Promise<number>} Total Redis keys cleared
+   */
+  async clearAllCache() {
+    let total = 0;
+    for (const entityType of Object.keys(this.BASE_TTL)) {
+      if (entityType === "default") continue;
+      const deleted = await this.invalidateByPattern(`${entityType}:*`);
+      if (typeof deleted === "number") total += deleted;
+    }
+    this.clearL1Cache();
+    return total;
+  }
+
+  /**
    * Get L1 cache statistics for monitoring
    */
   getL1Stats() {
