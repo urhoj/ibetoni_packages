@@ -208,6 +208,7 @@ class UniversalCacheManager {
   _createDefaultMetrics() {
     return {
       recordHit: () => {},
+      recordL1Hit: () => {},
       recordMiss: () => {},
       recordSet: () => {},
       recordInvalidation: () => {},
