@@ -733,16 +733,20 @@ class UniversalCacheManager {
    * Invalidate cache keys by pattern. Clears matching L1 entries first, then Redis via scan+delete.
    */
   async invalidateByPattern(pattern) {
-    // Clear matching L1 entries
-    if (pattern.includes("*")) {
-      const regex = new RegExp("^" + pattern.replace(/\*/g, ".*") + "$");
-      for (const key of this.l1Cache.keys()) {
-        if (regex.test(key)) {
-          this.l1Cache.delete(key);
+    // Clear matching L1 entries (isolated so a failure doesn't block Redis invalidation)
+    try {
+      if (pattern.includes("*")) {
+        const regex = new RegExp("^" + pattern.replace(/\*/g, ".*") + "$");
+        for (const key of this.l1Cache.keys()) {
+          if (regex.test(key)) {
+            this.l1Cache.delete(key);
+          }
         }
+      } else {
+        this.l1Cache.delete(pattern);
       }
-    } else {
-      this.l1Cache.delete(pattern);
+    } catch (l1Error) {
+      this.logger.warn("L1 cache pattern clear failed, continuing with Redis", { pattern, error: l1Error.message });
     }
 
     const keys = await this.scanKeys(pattern);
