@@ -963,19 +963,21 @@ class UniversalCacheManager {
     }
 
     // Clear matching L1 entries (L1 uses same key format as Redis)
-    try {
-      if (pattern.includes("*")) {
-        const regex = new RegExp("^" + pattern.replace(/\*/g, ".*") + "$");
-        for (const key of this.l1Cache.keys()) {
-          if (regex.test(key)) {
-            this.l1Cache.delete(key);
+    if (this.L1_ENTITY_TYPES.has(entityType)) {
+      try {
+        if (pattern.includes("*")) {
+          const regex = new RegExp("^" + pattern.replace(/\*/g, ".*") + "$");
+          for (const key of this.l1Cache.keys()) {
+            if (regex.test(key)) {
+              this.l1Cache.delete(key);
+            }
           }
+        } else {
+          this.l1Cache.delete(pattern);
         }
-      } else {
-        this.l1Cache.delete(pattern);
+      } catch (l1Error) {
+        this.logger.warn("L1 cache clear failed in invalidate", { pattern, error: l1Error.message });
       }
-    } catch (l1Error) {
-      this.logger.warn("L1 cache clear failed in invalidate", { pattern, error: l1Error.message });
     }
 
     const keys = await this.scanKeys(pattern);
