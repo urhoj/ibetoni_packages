@@ -807,6 +807,7 @@ class UniversalCacheManager {
 
   /**
    * Universal cache invalidation for all entity types.
+   * Clears both Redis keys and L1 in-memory cache entries (for entity types in L1_ENTITY_TYPES).
    *
    * Entity-specific behaviors:
    * - keikka: Targets individual keikka + list caches by date/personId
@@ -817,6 +818,7 @@ class UniversalCacheManager {
    *         (only v6role and v7tenant formats are active)
    * - stat: Clears all stat caches (varying segment counts)
    * - attachment: Multiple patterns for different attachment key formats
+   * - default: Pattern-based `{entityType}:*:{asiakasId}*` for all other types
    *
    * @param {string} operation - Operation type (KEIKKA_UPDATE, PALKKI_UPDATE, etc.)
    * @param {string} entityType - Entity type (keikka, grid, asiakas, etc.)
