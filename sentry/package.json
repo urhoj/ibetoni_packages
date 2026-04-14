@@ -1,0 +1,13 @@
+{
+  "name": "@ibetoni/sentry",
+  "version": "1.0.0",
+  "description": "Shared Sentry error tracking initialization and utilities",
+  "main": "src/index.js",
+  "private": true,
+  "license": "UNLICENSED",
+  "keywords": ["sentry", "error-tracking", "betoni"],
+  "author": "betoni.online",
+  "dependencies": {
+    "@sentry/node": "^10.48.0"
+  }
+}
