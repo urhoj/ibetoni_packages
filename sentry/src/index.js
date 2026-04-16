@@ -1,13 +1,30 @@
 const Sentry = require("@sentry/node");
+const fs = require("fs");
 const os = require("os");
+const path = require("path");
 
 let enabled = false;
+
+function readReleaseFile() {
+  try {
+    const filePath = path.join(process.cwd(), "release.txt");
+    if (fs.existsSync(filePath)) {
+      const sha = fs.readFileSync(filePath, "utf8").trim();
+      if (sha) return sha;
+    }
+  } catch {}
+  return null;
+}
 
 function init(options = {}) {
   const config = {
     dsn: process.env.SENTRY_DSN,
-    environment: process.env.NODE_ENV || "development",
-    release: process.env.npm_package_version || process.env.SENTRY_RELEASE,
+    environment:
+      process.env.SENTRY_ENVIRONMENT ||
+      process.env.WEBSITE_SLOT_NAME ||
+      process.env.NODE_ENV ||
+      "development",
+    release: process.env.SENTRY_RELEASE || readReleaseFile() || process.env.npm_package_version,
     enabled: process.env.SENTRY_ENABLED !== "false",
     debug: process.env.SENTRY_DEBUG === "true",
     serverName: process.env.SENTRY_SERVER_NAME || os.hostname(),
