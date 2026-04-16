@@ -16,6 +16,15 @@ function readReleaseFile() {
   return null;
 }
 
+function computeRelease() {
+  if (process.env.SENTRY_RELEASE) return process.env.SENTRY_RELEASE;
+  const version = process.env.npm_package_version;
+  const sha = readReleaseFile();
+  const shortSha = sha ? sha.slice(0, 8) : null;
+  if (version && shortSha) return `${version}+${shortSha}`;
+  return version || shortSha || undefined;
+}
+
 function init(options = {}) {
   const config = {
     dsn: process.env.SENTRY_DSN,
@@ -24,7 +33,7 @@ function init(options = {}) {
       process.env.WEBSITE_SLOT_NAME ||
       process.env.NODE_ENV ||
       "development",
-    release: process.env.SENTRY_RELEASE || readReleaseFile() || process.env.npm_package_version,
+    release: computeRelease(),
     enabled: process.env.SENTRY_ENABLED !== "false",
     debug: process.env.SENTRY_DEBUG === "true",
     serverName: process.env.SENTRY_SERVER_NAME || os.hostname(),
