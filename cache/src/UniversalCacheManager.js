@@ -138,16 +138,6 @@ class UniversalCacheManager {
     // Apply TTL multiplier to generate effective TTLs
     this.TTL = this._applyTtlMultiplier(this.BASE_TTL);
 
-      multiplier: this.ttlMultiplier,
-      excluded: Array.from(TTL_MULTIPLIER_EXCLUDED),
-      maxTtl: MAX_TTL_SECONDS,
-      sampleTtls: {
-        keikka: this.TTL.keikka,
-        grid: this.TTL.grid,
-        ecofleet: this.TTL.ecofleet,
-      },
-    });
-
     // Production-safe batch limits
     this.BATCH_SIZE = 2000;
     this.SCAN_COUNT = 500; // Increased from 100 to reduce Redis round-trips (5× fewer iterations)
@@ -339,9 +329,6 @@ class UniversalCacheManager {
     // Set up event handlers to prevent memory leaks
     const onReady = () => {
       this.isConnected = true;
-        host: config.host,
-        port: config.port,
-      });
     };
 
     const onError = (err) => {
@@ -406,8 +393,6 @@ class UniversalCacheManager {
     try {
       const redis = await this.getClient();
       if (!redis) {
-          operationType,
-        });
         return fallback;
       }
 
@@ -565,11 +550,6 @@ class UniversalCacheManager {
         if (this.L1_ENTITY_TYPES.has(entityType)) {
           this.l1Cache.set(key, data);
         }
-          entityType,
-          key,
-          baseTtl,
-          ttl,
-        });
 
         // Record cache set metric
         this.cacheMetrics.recordSet(entityType, key);
@@ -673,10 +653,6 @@ class UniversalCacheManager {
           }
         } while (cursor !== "0");
 
-          pattern,
-          keysFound: keys.length,
-          iterations,
-        });
         return keys;
       },
       [],
@@ -709,9 +685,6 @@ class UniversalCacheManager {
           }
         }
 
-          deletedCount,
-          batches: Math.ceil(keys.length / batchSize),
-        });
         return deletedCount;
       },
       0,
@@ -745,9 +718,6 @@ class UniversalCacheManager {
     const keys = await this.scanKeys(pattern);
     if (keys.length > 0) {
       const deletedCount = await this.batchDelete(keys);
-        pattern,
-        keysDeleted: deletedCount,
-      });
 
       // Record invalidation metric
       const entityType = pattern.split(":")[0] || "unknown";
@@ -882,13 +852,6 @@ class UniversalCacheManager {
         );
         const totalDeleted = results.reduce((sum, c) => sum + c, 0);
 
-        if (totalDeleted > 0) {
-            entityType,
-            operation,
-            keysDeleted: totalDeleted,
-            patterns,
-          });
-        }
         return totalDeleted;
       }
       case "attachment": {
@@ -954,10 +917,6 @@ class UniversalCacheManager {
 
     if (keys.length > 0) {
       const deletedCount = await this.batchDelete(keys);
-        entityType,
-        operation,
-        keysDeleted: deletedCount,
-      });
       return deletedCount;
     }
 
@@ -984,24 +943,11 @@ class UniversalCacheManager {
     const effectivePersonId = personId || creatorPersonId;
     const asiakasId = params.asiakasId;
 
-      operation,
-      pumppuAika,
-      newDate,
-      effectivePersonId,
-      asiakasId,
-    });
-
     switch (operation) {
       case "KEIKKA_UPDATE": {
         let totalInvalidated = 0;
 
         if (newDate) {
-            "Copy operation detected - invalidating ONLY target date",
-            {
-              newDate,
-              asiakasId,
-            },
-          );
           totalInvalidated += await this.invalidate(operation, "grid", {
             asiakasId,
             pumppuAika: newDate,
@@ -1025,9 +971,6 @@ class UniversalCacheManager {
 
       case "KEIKKA_COPY":
         if (newDate) {
-            newDate,
-            asiakasId,
-          });
           return await this.invalidate(operation, "grid", {
             asiakasId,
             pumppuAika: newDate,
@@ -1069,14 +1012,6 @@ class UniversalCacheManager {
 
         if (palkkiDate) {
           const dateKey = this.formatGridDate(palkkiDate);
-            "PALKKI operation - date-specific grid invalidation",
-            {
-              operation,
-              palkkiDate,
-              dateKey,
-              asiakasId,
-            },
-          );
           return await this.invalidate(operation, "grid", {
             asiakasId,
             pumppuAika: dateKey,
@@ -1155,8 +1090,6 @@ class UniversalCacheManager {
           params,
         );
         totalInvalidated += await this.invalidate(operation, "asiakas", params);
-          keysInvalidated: totalInvalidated,
-        });
         break;
 
       case "PALKKI_UPDATE":
@@ -1205,11 +1138,6 @@ class UniversalCacheManager {
             palkkiPatterns.map((p) => this.invalidateByPattern(p)),
           );
           palkkiListCount = palkkiResults.reduce((sum, c) => sum + c, 0);
-
-            yyyymmdd: cacheInvalidation.yyyymmdd,
-            customerCount: customersToInvalidate.size,
-            keysInvalidated: palkkiListCount,
-          });
         } else if (params.asiakasId) {
           // Fallback: broad invalidation if no invalidation data provided
           palkkiListCount = await this.invalidateByPattern(
@@ -1229,11 +1157,6 @@ class UniversalCacheManager {
           gridRoleCount +
           palkkiListCount +
           palkkiVehicleCount;
-          operation,
-          keysInvalidated: totalInvalidated,
-          palkkiListCount,
-          gridRoleCount,
-        });
         break;
       }
 
@@ -1244,8 +1167,6 @@ class UniversalCacheManager {
           params.body || {},
           params,
         );
-          keysInvalidated: totalInvalidated,
-        });
         break;
 
       case "VEHICLE_DATE_DISMISS":
@@ -1260,9 +1181,6 @@ class UniversalCacheManager {
           this.invalidateGridSmart(operation, params.body || {}, params),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
-          operation,
-          keysInvalidated: totalInvalidated,
-        });
         break;
       }
 
@@ -1280,9 +1198,6 @@ class UniversalCacheManager {
           this.invalidate(operation, "keikka", params),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
-          operation,
-          keysInvalidated: totalInvalidated,
-        });
         break;
       }
 
@@ -1300,9 +1215,6 @@ class UniversalCacheManager {
           this.invalidate(operation, "keikka", params),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
-          operation,
-          keysInvalidated: totalInvalidated,
-        });
         break;
       }
 
@@ -1318,9 +1230,6 @@ class UniversalCacheManager {
           this.invalidateGridSmart(operation, params.body || {}, params),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
-          operation,
-          keysInvalidated: totalInvalidated,
-        });
         break;
       }
 
@@ -1328,10 +1237,6 @@ class UniversalCacheManager {
       case "ASIAKAS_UPDATE":
       case "ASIAKAS_CREATE":
       case "ASIAKAS_DELETE": {
-          operation,
-          params,
-        });
-
         // Basic asiakas cache invalidation
         const asiakasOpCount = await this.invalidate(
           operation,
@@ -1369,9 +1274,6 @@ class UniversalCacheManager {
         const gridCount = await this.invalidate(operation, "grid", params);
         totalInvalidated += gridCount;
 
-          operation,
-          keysInvalidated: totalInvalidated,
-        });
         break;
       }
 
@@ -1389,9 +1291,6 @@ class UniversalCacheManager {
           this.invalidateByPattern(`grid:v7tenant:${datePattern}:*`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
-          operation,
-          keysInvalidated: totalInvalidated,
-        });
         break;
       }
 
@@ -1443,11 +1342,6 @@ class UniversalCacheManager {
           totalInvalidated += keikkaCount + gridCount;
         }
 
-          entityType,
-          entityId,
-          asiakasId,
-          keysInvalidated: totalInvalidated,
-        });
         break;
       }
 
@@ -1457,8 +1351,6 @@ class UniversalCacheManager {
         totalInvalidated += await this.invalidate(operation, "keikka", params);
         totalInvalidated += await this.invalidate(operation, "lasku", params);
         totalInvalidated += await this.invalidate(operation, "stat", params);
-          keysInvalidated: totalInvalidated,
-        });
         break;
 
       case "HOLIDAY_SYNC":
@@ -1470,16 +1362,12 @@ class UniversalCacheManager {
           params,
         );
         totalInvalidated += await this.invalidate(operation, "grid", params);
-          keysInvalidated: totalInvalidated,
-        });
         break;
 
       case "CLEANUP_ALL":
         // SQL cleanup job - invalidate stat and log caches
         totalInvalidated += await this.invalidate(operation, "stat", params);
         totalInvalidated += await this.invalidate(operation, "stepLog", params);
-          keysInvalidated: totalInvalidated,
-        });
         break;
 
       // Betoni operations - keys use 'betoni:' prefix, NOT 'betoniLaatu:'
@@ -1510,10 +1398,6 @@ class UniversalCacheManager {
           betoniLaatuFilterCount +
           betoniLaatuGetCount +
           betoniListCount;
-          operation,
-          betoniToimittajaAsiakasId,
-          keysInvalidated: totalInvalidated,
-        });
         break;
       }
 
@@ -1526,9 +1410,6 @@ class UniversalCacheManager {
           : `betoniShortcut:list:*`;
         const shortcutCount = await this.invalidateByPattern(shortcutPattern);
         totalInvalidated += shortcutCount;
-          pattern: shortcutPattern,
-          keysInvalidated: shortcutCount,
-        });
         break;
       }
 
@@ -1553,16 +1434,12 @@ class UniversalCacheManager {
           this.invalidateByPattern("auth:*"),
         ]);
         totalInvalidated = counts.reduce((sum, c) => sum + c, 0);
-          keysInvalidated: totalInvalidated,
-        });
         break;
       }
 
       case "PERSON_TENANT_UPDATE": {
         // Lightweight person update (e.g. tenant selection change)
         // Does not affect grid, keikkas, or other entities
-          params,
-        });
         totalInvalidated += await this.invalidate(operation, "person", params);
         break;
       }
@@ -1582,8 +1459,6 @@ class UniversalCacheManager {
           this.invalidateByPattern("grid:v7tenant:*"),
         ]);
         totalInvalidated = counts.reduce((sum, c) => sum + c, 0);
-          keysInvalidated: totalInvalidated,
-        });
         break;
       }
 
@@ -1602,8 +1477,6 @@ class UniversalCacheManager {
           this.invalidateByPattern("grid:v7tenant:*"),
         ]);
         totalInvalidated = counts.reduce((sum, c) => sum + c, 0);
-          keysInvalidated: totalInvalidated,
-        });
         break;
       }
 
@@ -1622,9 +1495,6 @@ class UniversalCacheManager {
           this.invalidateByPattern(`ecofleet:vehicleDayRoute:*:${today}`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
-          operation,
-          keysInvalidated: totalInvalidated,
-        });
         break;
       }
 
@@ -1642,9 +1512,6 @@ class UniversalCacheManager {
           this.invalidateByPattern(`ecofleet:vehicleDayRoute:*:${today}`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
-          operation,
-          keysInvalidated: totalInvalidated,
-        });
         break;
       }
 
@@ -1661,9 +1528,6 @@ class UniversalCacheManager {
           this.invalidateByPattern(`grid:v7tenant:${dateKey}:*`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
-          operation,
-          keysInvalidated: totalInvalidated,
-        });
         break;
       }
 
@@ -1672,13 +1536,6 @@ class UniversalCacheManager {
       case "VEHICLE_VISIBILITY_TOGGLE":
       case "VEHICLE_VISIBILITY_APPLY_DEFAULTS":
       case "VEHICLE_VISIBILITY_CLEAR": {
-          "VEHICLE_VISIBILITY operation invalidation starting",
-          {
-            operation,
-            params,
-          },
-        );
-
         // Extract asiakasIds from params - visibility affects both owner and target companies
         const ownerAsiakasId = params.ownerAsiakasId || params.asiakasId;
         const targetAsiakasId = params.targetAsiakasId;
@@ -1708,16 +1565,6 @@ class UniversalCacheManager {
 
         totalInvalidated +=
           ownerVehicleCount + targetVehicleCount + gridVisibilityCount;
-
-          "VEHICLE_VISIBILITY operation invalidation completed",
-          {
-            operation,
-            ownerAsiakasId,
-            targetAsiakasId,
-            yyyymmdd,
-            keysInvalidated: totalInvalidated,
-          },
-        );
         break;
       }
 
@@ -1731,9 +1578,6 @@ class UniversalCacheManager {
           this.invalidate(operation, "keikka", params),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
-          operation,
-          keysInvalidated: totalInvalidated,
-        });
         break;
       }
 
@@ -1748,11 +1592,6 @@ class UniversalCacheManager {
             `notifications:history:${asiakasId}:${personId}:*`,
           );
         }
-          operation,
-          asiakasId,
-          personId,
-          keysInvalidated: totalInvalidated,
-        });
         break;
       }
 
@@ -1764,10 +1603,6 @@ class UniversalCacheManager {
             `notifications:history:${asiakasId}:*`,
           );
         }
-          operation,
-          asiakasId,
-          keysInvalidated: totalInvalidated,
-        });
         break;
       }
 
@@ -1789,15 +1624,7 @@ class UniversalCacheManager {
           totalInvalidated += await this.invalidateByPattern(
             `auth:permissions:${personId}:*`,
           );
-            operation,
-            personId,
-          });
         }
-
-          operation,
-          personId,
-          keysInvalidated: totalInvalidated,
-        });
         break;
       }
 
@@ -1831,12 +1658,6 @@ class UniversalCacheManager {
           patterns.map((p) => this.invalidateByPattern(p)),
         );
         totalInvalidated = counts.reduce((sum, count) => sum + count, 0);
-
-          operation,
-          laskupohjaId,
-          laskupohjaRiviId,
-          keysInvalidated: totalInvalidated,
-        });
         break;
       }
 
@@ -1849,10 +1670,6 @@ class UniversalCacheManager {
           this.invalidate(operation, "stat", params),
         ]);
         totalInvalidated = laskuCount + statCount;
-
-          operation,
-          keysInvalidated: totalInvalidated,
-        });
         break;
       }
 

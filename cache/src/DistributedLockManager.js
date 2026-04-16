@@ -102,11 +102,6 @@ class DistributedLockManager {
       }
 
       if (acquired) {
-          resource,
-          lockKey,
-          ttlMs,
-          durationMs: duration,
-        });
         const lock = new DistributedLock(
           this.redis,
           lockKey,
@@ -118,13 +113,6 @@ class DistributedLockManager {
         return lock;
       }
 
-        "Lock acquisition failed - already held by another process",
-        {
-          resource,
-          lockKey,
-          durationMs: duration,
-        },
-      );
       return null;
     } catch (error) {
       const duration = Date.now() - startTime;
@@ -191,11 +179,7 @@ class DistributedLock {
         this.metrics.recordLockRelease(this.lockKey, wasOwner, holdDuration);
       }
 
-      if (wasOwner) {
-          lockKey: this.lockKey,
-          holdDurationMs: holdDuration,
-        });
-      } else {
+      if (!wasOwner) {
         console.log(
           "Lock release failed - no longer owner (likely TTL expired)",
           {

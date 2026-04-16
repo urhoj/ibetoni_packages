@@ -61,11 +61,6 @@ class GoogleAuth {
       }
 
       this.client = new OAuth2Client(googleClientId);
-
-      if (this.logger?.info) {
-          clientIdLength: googleClientId.length
-        });
-      }
     }
     return this.client;
   }
@@ -90,12 +85,6 @@ class GoogleAuth {
 
       const googleClientId = await getGoogleClientId(this.getEnvVar);
 
-      if (this.logger?.info) {
-          tokenLength: token.length,
-          hasClient: !!oauthClient
-        });
-      }
-
       const ticket = await oauthClient.verifyIdToken({
         idToken: token,
         audience: googleClientId,
@@ -115,12 +104,6 @@ class GoogleAuth {
       //   iat: 1234567890,
       //   exp: 1234567890
       // }
-
-      if (this.logger?.info) {
-          email: payload.email,
-          emailVerified: payload.email_verified,
-        });
-      }
 
       return payload;
     } catch (error) {

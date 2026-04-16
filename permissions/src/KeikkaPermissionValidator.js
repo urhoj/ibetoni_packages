@@ -89,10 +89,6 @@ class KeikkaPermissionValidator {
         permissions,
         timestamp: Date.now(),
       });
-
-        cacheKey,
-        permissions,
-      });
       return permissions;
     } catch (error) {
       console.error("Failed to load permissions", {
@@ -131,12 +127,6 @@ class KeikkaPermissionValidator {
     const permissions = await this.getUserPermissions(user);
     const ownerAsiakasId = user.ownerAsiakasId || user.asiakasId;
 
-      personId: user.personId,
-      ownerAsiakasId,
-      keikkaId: keikka.keikkaId || keikka.id,
-      permissions,
-    });
-
     // Admin access: see all keikkas for their tenant
     if (
       permissions.isAsiakasAdmin &&
@@ -154,8 +144,6 @@ class KeikkaPermissionValidator {
         user,
         keikka,
       );
-        isAssigned,
-      });
       return isAssigned;
     }
 
@@ -195,8 +183,6 @@ class KeikkaPermissionValidator {
         keikka,
         "read",
       );
-      hasContactAccess,
-    });
     return hasContactAccess;
   }
 
@@ -219,13 +205,6 @@ class KeikkaPermissionValidator {
     const ownerAsiakasId = user.ownerAsiakasId || user.asiakasId;
     const tilaId = keikka.keikkaTilaId || keikka.tilaId;
 
-      personId: user.personId,
-      ownerAsiakasId,
-      keikkaId: keikka.keikkaId || keikka.id,
-      tilaId,
-      permissions,
-    });
-
     // System/Customer Admin: Full access until laskutettu (tilaId < 7)
     if (
       permissions.isAsiakasAdmin &&
@@ -235,8 +214,6 @@ class KeikkaPermissionValidator {
         keikka.betoniAsiakasId === ownerAsiakasId ||
         keikka.pumppuAsiakasId === ownerAsiakasId)
     ) {
-        "Edit permission granted: AsiakasAdmin access (tilaId < 7)",
-      );
       return true;
     }
 
@@ -249,8 +226,6 @@ class KeikkaPermissionValidator {
         keikka.betoniAsiakasId === ownerAsiakasId ||
         keikka.pumppuAsiakasId === ownerAsiakasId)
     ) {
-        "Edit permission granted: LaskuAdmin access (tilaId === 7)",
-      );
       return true;
     }
 
@@ -268,8 +243,6 @@ class KeikkaPermissionValidator {
         keikka.betoniAsiakasId === ownerAsiakasId ||
         keikka.pumppuAsiakasId === ownerAsiakasId)
     ) {
-        "Edit permission granted: KeikkaHandler access (tilaId < 7)",
-      );
       return true;
     }
 
@@ -280,8 +253,6 @@ class KeikkaPermissionValidator {
       (keikka.sourceAsiakasId === ownerAsiakasId ||
         keikka.betoniAsiakasId === ownerAsiakasId)
     ) {
-        "Edit permission granted: BetoniHandler access (tilaId < 7)",
-      );
       return true;
     }
 
@@ -292,8 +263,6 @@ class KeikkaPermissionValidator {
       (keikka.sourceAsiakasId === ownerAsiakasId ||
         keikka.pumppuAsiakasId === ownerAsiakasId)
     ) {
-        "Edit permission granted: PumppuHandler access (tilaId < 7)",
-      );
       return true;
     }
 
@@ -305,9 +274,6 @@ class KeikkaPermissionValidator {
           keikka,
           "edit",
         );
-        "Edit permission check: Contact person access (tilaId === 1)",
-        { hasContactAccess },
-      );
       return hasContactAccess;
     }
 
@@ -323,9 +289,6 @@ class KeikkaPermissionValidator {
     if (personId && asiakasId) {
       const cacheKey = `${personId}-${asiakasId}`;
       this.permissionCache.delete(cacheKey);
-        personId,
-        asiakasId,
-      });
     } else if (personId) {
       // Clear all cache entries for this person
       let clearedCount = 0;
@@ -335,15 +298,9 @@ class KeikkaPermissionValidator {
           clearedCount++;
         }
       }
-        personId,
-        clearedCount,
-      });
     } else {
       // Clear entire cache
-      const cacheSize = this.permissionCache.size;
       this.permissionCache.clear();
-        previousSize: cacheSize,
-      });
     }
   }
 
