@@ -1,6 +1,8 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-const { ROLE_NAME_TO_KEY_MAP: roleNameToKeyMap } = require("@ibetoni/constants");
+const {
+  ROLE_NAME_TO_KEY_MAP: roleNameToKeyMap,
+} = require("@ibetoni/constants");
 
 /**
  * JWT Utilities for betoni.online platform
@@ -64,7 +66,9 @@ const deriveCompanyRoles = (asiakasesWithTypes, ownerAsiakasId) => {
   }
 
   // Find the current company in asiakasesWithTypes
-  const currentAsiakas = asiakasesWithTypes.find((a) => a.asiakasId === ownerAsiakasId);
+  const currentAsiakas = asiakasesWithTypes.find(
+    (a) => a.asiakasId === ownerAsiakasId,
+  );
 
   if (currentAsiakas?.roles) {
     // Convert role name strings to boolean flags
@@ -101,14 +105,16 @@ const createVerifyTokenMiddleware = (options = {}) => {
 
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
         if (logger?.warn) {
-          logger.warn(
+          console.log(
             "Authentication failed: Missing token in both cookie and Authorization header",
             {
               path: req.path,
-            }
+            },
           );
         } else {
-          log.log("Authentication failed: Missing token in both cookie and Authorization header");
+          log.log(
+            "Authentication failed: Missing token in both cookie and Authorization header",
+          );
         }
         return res.status(403).json({
           success: false,
@@ -123,7 +129,7 @@ const createVerifyTokenMiddleware = (options = {}) => {
 
     if (!token || token === "undefined") {
       if (logger?.warn) {
-        logger.warn("Authentication failed: Empty token", {
+        console.log("Authentication failed: Empty token", {
           path: req.path,
           tokenSource,
         });
@@ -139,12 +145,14 @@ const createVerifyTokenMiddleware = (options = {}) => {
 
     try {
       const jwtKey = await getJwtKey(options);
-      const decoded = /** @type {import('jsonwebtoken').JwtPayload} */ (jwt.verify(token, jwtKey));
+      const decoded = /** @type {import('jsonwebtoken').JwtPayload} */ (
+        jwt.verify(token, jwtKey)
+      );
 
       // Validate required claims
       if (!decoded.personId && !decoded.email) {
         if (logger?.warn) {
-          logger.warn("JWT missing required claims", {
+          console.log("JWT missing required claims", {
             path: req.path,
             hasPersonId: !!decoded.personId,
             hasEmail: !!decoded.email,
@@ -161,10 +169,14 @@ const createVerifyTokenMiddleware = (options = {}) => {
 
       // Derive companyRoles from asiakasesWithTypes if not already present
       // This provides backward compatibility - JWT no longer stores companyRoles directly
-      if (!decoded.companyRoles && decoded.asiakasesWithTypes && decoded.ownerAsiakasId) {
+      if (
+        !decoded.companyRoles &&
+        decoded.asiakasesWithTypes &&
+        decoded.ownerAsiakasId
+      ) {
         decoded.companyRoles = deriveCompanyRoles(
           decoded.asiakasesWithTypes,
-          decoded.ownerAsiakasId
+          decoded.ownerAsiakasId,
         );
       }
 
@@ -174,7 +186,7 @@ const createVerifyTokenMiddleware = (options = {}) => {
       return next();
     } catch (error) {
       if (logger?.warn) {
-        logger.warn("JWT verification failed", {
+        console.log("JWT verification failed", {
           error: error.message,
           path: req.path,
           tokenSource,
@@ -203,7 +215,12 @@ const createVerifyTokenMiddleware = (options = {}) => {
  * @param {string} [options.expiresIn] - Optional token expiry (e.g. '60d'), defaults to '7d'
  * @returns {Promise<string>} JWT token
  */
-const createToken = async (email, personId, additionalClaims = {}, options = {}) => {
+const createToken = async (
+  email,
+  personId,
+  additionalClaims = {},
+  options = {},
+) => {
   const jwtKey = await getJwtKey(options);
   const logger = options.logger;
 
@@ -247,7 +264,9 @@ const createToken = async (email, personId, additionalClaims = {}, options = {})
  */
 const getTokenData = async (token, options = {}) => {
   const jwtKey = await getJwtKey(options);
-  const decoded = /** @type {import('jsonwebtoken').JwtPayload} */ (jwt.verify(token, jwtKey));
+  const decoded = /** @type {import('jsonwebtoken').JwtPayload} */ (
+    jwt.verify(token, jwtKey)
+  );
   return decoded;
 };
 
@@ -287,7 +306,8 @@ const isTokenExpiringSoon = async (token, options = {}) => {
     const decoded = await getTokenData(token, options);
     const expiresAt = new Date(decoded.exp * 1000);
     const now = new Date();
-    const hoursUntilExpiry = (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60);
+    const hoursUntilExpiry =
+      (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60);
 
     return {
       isExpiringSoon: hoursUntilExpiry <= hoursBeforeExpiry,
@@ -316,10 +336,21 @@ const refreshToken = async (token, options = {}) => {
   const decoded = await getTokenData(token, options);
 
   // Extract relevant claims (excluding JWT standard claims like exp, iat)
-  const { email, personId, exp: _exp, iat: _iat, ...additionalClaims } = decoded;
+  const {
+    email,
+    personId,
+    exp: _exp,
+    iat: _iat,
+    ...additionalClaims
+  } = decoded;
 
   // Issue new token with same claims but fresh expiration
-  const newToken = await createToken(email, personId, additionalClaims, options);
+  const newToken = await createToken(
+    email,
+    personId,
+    additionalClaims,
+    options,
+  );
   return newToken;
 };
 

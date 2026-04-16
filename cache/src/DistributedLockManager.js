@@ -46,7 +46,9 @@ const RELEASE_LOCK_SCRIPT = `
 async function releaseAllLocks() {
   if (activeLocks.size === 0) return;
 
-  console.log(`[LOCK] Releasing ${activeLocks.size} active lock(s) on shutdown...`);
+  console.log(
+    `[LOCK] Releasing ${activeLocks.size} active lock(s) on shutdown...`,
+  );
   await Promise.allSettled([...activeLocks].map((lock) => lock.release()));
   activeLocks.clear();
 }
@@ -85,7 +87,13 @@ class DistributedLockManager {
     const startTime = Date.now();
 
     try {
-      const result = await this.redis.set(lockKey, lockValue, "PX", ttlMs, "NX");
+      const result = await this.redis.set(
+        lockKey,
+        lockValue,
+        "PX",
+        ttlMs,
+        "NX",
+      );
       const duration = Date.now() - startTime;
       const acquired = result === "OK";
 
@@ -94,23 +102,40 @@ class DistributedLockManager {
       }
 
       if (acquired) {
-        this.logger.info("Distributed lock acquired", { resource, lockKey, ttlMs, durationMs: duration });
-        const lock = new DistributedLock(this.redis, lockKey, lockValue, this.logger, this.metrics);
+          resource,
+          lockKey,
+          ttlMs,
+          durationMs: duration,
+        });
+        const lock = new DistributedLock(
+          this.redis,
+          lockKey,
+          lockValue,
+          this.logger,
+          this.metrics,
+        );
         activeLocks.add(lock);
         return lock;
       }
 
-      this.logger.info("Lock acquisition failed - already held by another process", {
-        resource, lockKey, durationMs: duration,
-      });
+        "Lock acquisition failed - already held by another process",
+        {
+          resource,
+          lockKey,
+          durationMs: duration,
+        },
+      );
       return null;
     } catch (error) {
       const duration = Date.now() - startTime;
       if (this.metrics) {
         this.metrics.recordLockAcquisition(resource, false, duration);
       }
-      this.logger.error("Lock acquisition error", {
-        error: error.message, resource, lockKey, durationMs: duration,
+      console.error("Lock acquisition error", {
+        error: error.message,
+        resource,
+        lockKey,
+        durationMs: duration,
       });
       return null;
     }
@@ -145,14 +170,19 @@ class DistributedLock {
    */
   async release() {
     if (this.released) {
-      this.logger.warn("Lock already released", { lockKey: this.lockKey });
+      console.log("Lock already released", { lockKey: this.lockKey });
       return false;
     }
 
     const holdDuration = Date.now() - this.acquiredAt;
 
     try {
-      const result = await this.redis.eval(RELEASE_LOCK_SCRIPT, 1, this.lockKey, this.lockValue);
+      const result = await this.redis.eval(
+        RELEASE_LOCK_SCRIPT,
+        1,
+        this.lockKey,
+        this.lockValue,
+      );
       const wasOwner = result === 1;
       this.released = true;
       activeLocks.delete(this);
@@ -162,11 +192,17 @@ class DistributedLock {
       }
 
       if (wasOwner) {
-        this.logger.info("Distributed lock released", { lockKey: this.lockKey, holdDurationMs: holdDuration });
-      } else {
-        this.logger.warn("Lock release failed - no longer owner (likely TTL expired)", {
-          lockKey: this.lockKey, holdDurationMs: holdDuration,
+          lockKey: this.lockKey,
+          holdDurationMs: holdDuration,
         });
+      } else {
+        console.log(
+          "Lock release failed - no longer owner (likely TTL expired)",
+          {
+            lockKey: this.lockKey,
+            holdDurationMs: holdDuration,
+          },
+        );
       }
 
       return wasOwner;
@@ -174,8 +210,10 @@ class DistributedLock {
       if (this.metrics) {
         this.metrics.recordLockRelease(this.lockKey, false, holdDuration);
       }
-      this.logger.error("Lock release error", {
-        error: error.message, lockKey: this.lockKey, holdDurationMs: holdDuration,
+      console.error("Lock release error", {
+        error: error.message,
+        lockKey: this.lockKey,
+        holdDurationMs: holdDuration,
       });
       this.released = true;
       return false;

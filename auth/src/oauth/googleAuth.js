@@ -53,7 +53,7 @@ class GoogleAuth {
       if (!googleClientId) {
         const error = new Error("GOOGLE_CLIENT_ID is not set or returned undefined");
         if (this.logger?.error) {
-          this.logger.error("Failed to initialize Google OAuth2 client", {
+          console.error("Failed to initialize Google OAuth2 client", {
             error: error.message
           });
         }
@@ -63,7 +63,6 @@ class GoogleAuth {
       this.client = new OAuth2Client(googleClientId);
 
       if (this.logger?.info) {
-        this.logger.info("Google OAuth2 client initialized", {
           clientIdLength: googleClientId.length
         });
       }
@@ -92,7 +91,6 @@ class GoogleAuth {
       const googleClientId = await getGoogleClientId(this.getEnvVar);
 
       if (this.logger?.info) {
-        this.logger.info("Verifying Google ID token", {
           tokenLength: token.length,
           hasClient: !!oauthClient
         });
@@ -119,7 +117,6 @@ class GoogleAuth {
       // }
 
       if (this.logger?.info) {
-        this.logger.info("Google token verified successfully", {
           email: payload.email,
           emailVerified: payload.email_verified,
         });
@@ -128,7 +125,7 @@ class GoogleAuth {
       return payload;
     } catch (error) {
       if (this.logger?.error) {
-        this.logger.error("Google token verification failed", {
+        console.error("Google token verification failed", {
           error: error.message,
           stack: error.stack,
         });

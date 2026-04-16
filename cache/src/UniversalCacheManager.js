@@ -138,7 +138,6 @@ class UniversalCacheManager {
     // Apply TTL multiplier to generate effective TTLs
     this.TTL = this._applyTtlMultiplier(this.BASE_TTL);
 
-    this.logger.debug("TTL multiplier applied", {
       multiplier: this.ttlMultiplier,
       excluded: Array.from(TTL_MULTIPLIER_EXCLUDED),
       maxTtl: MAX_TTL_SECONDS,
@@ -285,7 +284,6 @@ class UniversalCacheManager {
       (process.env.NODE_ENV === "production" &&
         process.env.REDIS_CACHE_ENABLED !== "true")
     ) {
-      this.logger.info("Redis cache disabled via environment configuration");
       return null;
     }
 
@@ -321,7 +319,7 @@ class UniversalCacheManager {
 
       return this.client;
     } catch (error) {
-      this.logger.error("Client initialization failed", {
+      console.error("Client initialization failed", {
         error: error.message,
         stack: error.stack,
       });
@@ -341,7 +339,6 @@ class UniversalCacheManager {
     // Set up event handlers to prevent memory leaks
     const onReady = () => {
       this.isConnected = true;
-      this.logger.info("Redis connected", {
         host: config.host,
         port: config.port,
       });
@@ -349,7 +346,7 @@ class UniversalCacheManager {
 
     const onError = (err) => {
       this.isConnected = false;
-      this.logger.error("Redis error", {
+      console.error("Redis error", {
         error: err.message,
         stack: err.stack,
       });
@@ -358,16 +355,13 @@ class UniversalCacheManager {
 
     const onClose = () => {
       this.isConnected = false;
-      this.logger.info("Redis disconnected");
       if (!this.isShuttingDown) {
         // Auto-reconnect will be handled by ioredis
-        this.logger.debug("Auto-reconnect will attempt");
       }
     };
 
     const onEnd = () => {
       this.isConnected = false;
-      this.logger.info("Redis connection ended");
       // Clean up event listeners to prevent memory leaks
       this._removeEventListeners(client);
     };
@@ -412,7 +406,6 @@ class UniversalCacheManager {
     try {
       const redis = await this.getClient();
       if (!redis) {
-        this.logger.debug("Redis unavailable, skipping operation", {
           operationType,
         });
         return fallback;
@@ -426,7 +419,7 @@ class UniversalCacheManager {
 
       return result;
     } catch (error) {
-      this.logger.error("Operation failed", {
+      console.error("Operation failed", {
         operationType,
         error: error.message,
       });
@@ -572,7 +565,6 @@ class UniversalCacheManager {
         if (this.L1_ENTITY_TYPES.has(entityType)) {
           this.l1Cache.set(key, data);
         }
-        this.logger.debug("Cache set successful", {
           entityType,
           key,
           baseTtl,
@@ -597,7 +589,6 @@ class UniversalCacheManager {
     if (this.L1_ENTITY_TYPES.has(entityType)) {
       const l1Data = this.l1Cache.get(key);
       if (l1Data !== undefined) {
-        this.logger.debug("L1 cache hit", { entityType, key });
         this.cacheMetrics.recordL1Hit(entityType);
         return JSON.parse(JSON.stringify(l1Data));
       }
@@ -608,7 +599,6 @@ class UniversalCacheManager {
         const data = await redis.get(key);
 
         if (data) {
-          this.logger.debug("Cache hit", { entityType, key });
           this.cacheMetrics.recordHit(entityType);
           try {
             const parsed = JSON.parse(data);
@@ -618,13 +608,15 @@ class UniversalCacheManager {
             }
             return parsed;
           } catch {
-            this.logger.warn("Corrupt cache data, deleting key", { key, entityType });
+            console.log("Corrupt cache data, deleting key", {
+              key,
+              entityType,
+            });
             await redis.del(key);
             return null;
           }
         }
 
-        this.logger.debug("Cache miss", { entityType, key });
         this.cacheMetrics.recordMiss(entityType);
         return null;
       },
@@ -664,14 +656,14 @@ class UniversalCacheManager {
 
             // Circuit breaker for runaway scans
             if (iterations > maxIterations) {
-              this.logger.warn("Scan iteration limit reached", {
+              console.log("Scan iteration limit reached", {
                 pattern,
                 maxIterations,
               });
               break;
             }
           } catch (scanError) {
-            this.logger.error("Scan error", {
+            console.error("Scan error", {
               pattern,
               iteration: iterations,
               error: scanError.message,
@@ -681,7 +673,6 @@ class UniversalCacheManager {
           }
         } while (cursor !== "0");
 
-        this.logger.debug("Scan completed", {
           pattern,
           keysFound: keys.length,
           iterations,
@@ -710,7 +701,7 @@ class UniversalCacheManager {
             await redis.del(...batch);
             deletedCount += batch.length;
           } catch (deleteError) {
-            this.logger.error("Batch delete error", {
+            console.error("Batch delete error", {
               error: deleteError.message,
               batchSize: batch.length,
             });
@@ -718,7 +709,6 @@ class UniversalCacheManager {
           }
         }
 
-        this.logger.debug("Batch delete completed", {
           deletedCount,
           batches: Math.ceil(keys.length / batchSize),
         });
@@ -746,13 +736,15 @@ class UniversalCacheManager {
         this.l1Cache.delete(pattern);
       }
     } catch (l1Error) {
-      this.logger.warn("L1 cache pattern clear failed, continuing with Redis", { pattern, error: l1Error.message });
+      console.log("L1 cache pattern clear failed, continuing with Redis", {
+        pattern,
+        error: l1Error.message,
+      });
     }
 
     const keys = await this.scanKeys(pattern);
     if (keys.length > 0) {
       const deletedCount = await this.batchDelete(keys);
-      this.logger.info("Pattern invalidation completed", {
         pattern,
         keysDeleted: deletedCount,
       });
@@ -774,7 +766,6 @@ class UniversalCacheManager {
     const size = this.l1Cache.size;
     this.l1Cache.clear();
     if (size > 0) {
-      this.logger.info("L1 cache cleared", { entriesCleared: size });
     }
   }
 
@@ -883,9 +874,7 @@ class UniversalCacheManager {
         const dateKey = pumppuAika ? this.formatGridDate(pumppuAika) : null;
         const datePattern = dateKey || "*";
 
-        const patterns = [
-          `grid:v7tenant:${datePattern}:*`,
-        ];
+        const patterns = [`grid:v7tenant:${datePattern}:*`];
 
         // Invalidate all patterns and return combined count
         const results = await Promise.all(
@@ -894,7 +883,6 @@ class UniversalCacheManager {
         const totalDeleted = results.reduce((sum, c) => sum + c, 0);
 
         if (totalDeleted > 0) {
-          this.logger.info("Grid cache invalidated", {
             entityType,
             operation,
             keysDeleted: totalDeleted,
@@ -955,7 +943,10 @@ class UniversalCacheManager {
           this.l1Cache.delete(pattern);
         }
       } catch (l1Error) {
-        this.logger.warn("L1 cache clear failed in invalidate", { pattern, error: l1Error.message });
+        console.log("L1 cache clear failed in invalidate", {
+          pattern,
+          error: l1Error.message,
+        });
       }
     }
 
@@ -963,7 +954,6 @@ class UniversalCacheManager {
 
     if (keys.length > 0) {
       const deletedCount = await this.batchDelete(keys);
-      this.logger.info("Entity cache invalidated", {
         entityType,
         operation,
         keysDeleted: deletedCount,
@@ -994,7 +984,6 @@ class UniversalCacheManager {
     const effectivePersonId = personId || creatorPersonId;
     const asiakasId = params.asiakasId;
 
-    this.logger.debug("Grid smart invalidation", {
       operation,
       pumppuAika,
       newDate,
@@ -1007,7 +996,6 @@ class UniversalCacheManager {
         let totalInvalidated = 0;
 
         if (newDate) {
-          this.logger.debug(
             "Copy operation detected - invalidating ONLY target date",
             {
               newDate,
@@ -1037,7 +1025,6 @@ class UniversalCacheManager {
 
       case "KEIKKA_COPY":
         if (newDate) {
-          this.logger.debug("KEIKKA_COPY - invalidating target date only", {
             newDate,
             asiakasId,
           });
@@ -1046,7 +1033,7 @@ class UniversalCacheManager {
             pumppuAika: newDate,
           });
         } else {
-          this.logger.warn("KEIKKA_COPY without newDate - no invalidation", {
+          console.log("KEIKKA_COPY without newDate - no invalidation", {
             operation,
           });
           return 0;
@@ -1082,7 +1069,6 @@ class UniversalCacheManager {
 
         if (palkkiDate) {
           const dateKey = this.formatGridDate(palkkiDate);
-          this.logger.debug(
             "PALKKI operation - date-specific grid invalidation",
             {
               operation,
@@ -1098,7 +1084,7 @@ class UniversalCacheManager {
         }
 
         // Fallback: no date available
-        this.logger.warn("PALKKI operation without date - broad invalidation", {
+        console.log("PALKKI operation without date - broad invalidation", {
           operation,
           asiakasId,
         });
@@ -1126,7 +1112,7 @@ class UniversalCacheManager {
       }
 
       default:
-        this.logger.warn("Unknown grid operation, using broad invalidation", {
+        console.log("Unknown grid operation, using broad invalidation", {
           operation,
           asiakasId,
         });
@@ -1169,7 +1155,6 @@ class UniversalCacheManager {
           params,
         );
         totalInvalidated += await this.invalidate(operation, "asiakas", params);
-        this.logger.debug("KEIKKA_BULK_UPDATE completed", {
           keysInvalidated: totalInvalidated,
         });
         break;
@@ -1221,7 +1206,6 @@ class UniversalCacheManager {
           );
           palkkiListCount = palkkiResults.reduce((sum, c) => sum + c, 0);
 
-          this.logger.debug("PALKKI date-specific invalidation", {
             yyyymmdd: cacheInvalidation.yyyymmdd,
             customerCount: customersToInvalidate.size,
             keysInvalidated: palkkiListCount,
@@ -1245,7 +1229,6 @@ class UniversalCacheManager {
           gridRoleCount +
           palkkiListCount +
           palkkiVehicleCount;
-        this.logger.debug("PALKKI operation completed", {
           operation,
           keysInvalidated: totalInvalidated,
           palkkiListCount,
@@ -1261,7 +1244,6 @@ class UniversalCacheManager {
           params.body || {},
           params,
         );
-        this.logger.debug("GRID_UPDATE completed", {
           keysInvalidated: totalInvalidated,
         });
         break;
@@ -1278,7 +1260,9 @@ class UniversalCacheManager {
           this.invalidateGridSmart(operation, params.body || {}, params),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
-        this.logger.debug("VEHICLE_DATE operation completed", { operation, keysInvalidated: totalInvalidated });
+          operation,
+          keysInvalidated: totalInvalidated,
+        });
         break;
       }
 
@@ -1296,7 +1280,9 @@ class UniversalCacheManager {
           this.invalidate(operation, "keikka", params),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
-        this.logger.debug("PERSON_DATE operation completed", { operation, keysInvalidated: totalInvalidated });
+          operation,
+          keysInvalidated: totalInvalidated,
+        });
         break;
       }
 
@@ -1314,7 +1300,9 @@ class UniversalCacheManager {
           this.invalidate(operation, "keikka", params),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
-        this.logger.debug("TYOMAA_DATE operation completed", { operation, keysInvalidated: totalInvalidated });
+          operation,
+          keysInvalidated: totalInvalidated,
+        });
         break;
       }
 
@@ -1330,7 +1318,9 @@ class UniversalCacheManager {
           this.invalidateGridSmart(operation, params.body || {}, params),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
-        this.logger.debug("ASIAKAS_DATE operation completed", { operation, keysInvalidated: totalInvalidated });
+          operation,
+          keysInvalidated: totalInvalidated,
+        });
         break;
       }
 
@@ -1338,7 +1328,6 @@ class UniversalCacheManager {
       case "ASIAKAS_UPDATE":
       case "ASIAKAS_CREATE":
       case "ASIAKAS_DELETE": {
-        this.logger.debug("ASIAKAS operation starting", {
           operation,
           params,
         });
@@ -1377,14 +1366,9 @@ class UniversalCacheManager {
 
         // Invalidate grid cache - asiakas settings affect grid visibility
         // (e.g., setting 33 controls betoni manufacturer visibility)
-        const gridCount = await this.invalidate(
-          operation,
-          "grid",
-          params,
-        );
+        const gridCount = await this.invalidate(operation, "grid", params);
         totalInvalidated += gridCount;
 
-        this.logger.debug("ASIAKAS operation completed", {
           operation,
           keysInvalidated: totalInvalidated,
         });
@@ -1405,7 +1389,9 @@ class UniversalCacheManager {
           this.invalidateByPattern(`grid:v7tenant:${datePattern}:*`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
-        this.logger.debug("PERSON_PVM operation completed", { operation, keysInvalidated: totalInvalidated });
+          operation,
+          keysInvalidated: totalInvalidated,
+        });
         break;
       }
 
@@ -1457,7 +1443,6 @@ class UniversalCacheManager {
           totalInvalidated += keikkaCount + gridCount;
         }
 
-        this.logger.debug("Targeted attachment invalidation", {
           entityType,
           entityId,
           asiakasId,
@@ -1472,7 +1457,6 @@ class UniversalCacheManager {
         totalInvalidated += await this.invalidate(operation, "keikka", params);
         totalInvalidated += await this.invalidate(operation, "lasku", params);
         totalInvalidated += await this.invalidate(operation, "stat", params);
-        this.logger.info("LASKU_SYNC invalidation completed", {
           keysInvalidated: totalInvalidated,
         });
         break;
@@ -1486,7 +1470,6 @@ class UniversalCacheManager {
           params,
         );
         totalInvalidated += await this.invalidate(operation, "grid", params);
-        this.logger.info("HOLIDAY_SYNC invalidation completed", {
           keysInvalidated: totalInvalidated,
         });
         break;
@@ -1495,7 +1478,6 @@ class UniversalCacheManager {
         // SQL cleanup job - invalidate stat and log caches
         totalInvalidated += await this.invalidate(operation, "stat", params);
         totalInvalidated += await this.invalidate(operation, "stepLog", params);
-        this.logger.info("CLEANUP_ALL invalidation completed", {
           keysInvalidated: totalInvalidated,
         });
         break;
@@ -1508,20 +1490,26 @@ class UniversalCacheManager {
         // Default pattern would incorrectly use 'betoniLaatu:*' which never matches
         const betoniToimittajaAsiakasId =
           params.betoniToimittajaAsiakasId || params.asiakasId;
-        const [betoniLaatuListCount, betoniLaatuFilterCount, betoniLaatuGetCount, betoniListCount] =
-          await Promise.all([
-            this.invalidateByPattern(
-              `betoni:laatu:list:${betoniToimittajaAsiakasId || "*"}`,
-            ),
-            this.invalidateByPattern(
-              `betoni:laatu:filter:${betoniToimittajaAsiakasId || "*"}`,
-            ),
-            this.invalidateByPattern(`betoni:laatu:get:*`),
-            this.invalidateByPattern(`betoni:list:filter:*`), // Also invalidate search results
-          ]);
+        const [
+          betoniLaatuListCount,
+          betoniLaatuFilterCount,
+          betoniLaatuGetCount,
+          betoniListCount,
+        ] = await Promise.all([
+          this.invalidateByPattern(
+            `betoni:laatu:list:${betoniToimittajaAsiakasId || "*"}`,
+          ),
+          this.invalidateByPattern(
+            `betoni:laatu:filter:${betoniToimittajaAsiakasId || "*"}`,
+          ),
+          this.invalidateByPattern(`betoni:laatu:get:*`),
+          this.invalidateByPattern(`betoni:list:filter:*`), // Also invalidate search results
+        ]);
         totalInvalidated +=
-          betoniLaatuListCount + betoniLaatuFilterCount + betoniLaatuGetCount + betoniListCount;
-        this.logger.info("BETONI_LAATU invalidation completed", {
+          betoniLaatuListCount +
+          betoniLaatuFilterCount +
+          betoniLaatuGetCount +
+          betoniListCount;
           operation,
           betoniToimittajaAsiakasId,
           keysInvalidated: totalInvalidated,
@@ -1538,7 +1526,6 @@ class UniversalCacheManager {
           : `betoniShortcut:list:*`;
         const shortcutCount = await this.invalidateByPattern(shortcutPattern);
         totalInvalidated += shortcutCount;
-        this.logger.info("BETONI_SHORTCUT invalidation completed", {
           pattern: shortcutPattern,
           keysInvalidated: shortcutCount,
         });
@@ -1548,7 +1535,6 @@ class UniversalCacheManager {
       // Person operations - cross-entity invalidation for person data changes
       case "PERSON_MERGE": {
         // Person merge affects 34 tables - comprehensive invalidation required
-        this.logger.info("PERSON_MERGE invalidation starting", { params });
 
         const counts = await Promise.all([
           this.invalidate(operation, "person", params),
@@ -1567,14 +1553,14 @@ class UniversalCacheManager {
           this.invalidateByPattern("auth:*"),
         ]);
         totalInvalidated = counts.reduce((sum, c) => sum + c, 0);
-        this.logger.info("PERSON_MERGE invalidation completed", { keysInvalidated: totalInvalidated });
+          keysInvalidated: totalInvalidated,
+        });
         break;
       }
 
       case "PERSON_TENANT_UPDATE": {
         // Lightweight person update (e.g. tenant selection change)
         // Does not affect grid, keikkas, or other entities
-        this.logger.debug("PERSON_TENANT_UPDATE - lightweight invalidation", {
           params,
         });
         totalInvalidated += await this.invalidate(operation, "person", params);
@@ -1596,7 +1582,8 @@ class UniversalCacheManager {
           this.invalidateByPattern("grid:v7tenant:*"),
         ]);
         totalInvalidated = counts.reduce((sum, c) => sum + c, 0);
-        this.logger.debug("PERSON_UPDATE invalidation completed", { keysInvalidated: totalInvalidated });
+          keysInvalidated: totalInvalidated,
+        });
         break;
       }
 
@@ -1615,7 +1602,8 @@ class UniversalCacheManager {
           this.invalidateByPattern("grid:v7tenant:*"),
         ]);
         totalInvalidated = counts.reduce((sum, c) => sum + c, 0);
-        this.logger.debug("PERSON_DELETE invalidation completed", { keysInvalidated: totalInvalidated });
+          keysInvalidated: totalInvalidated,
+        });
         break;
       }
 
@@ -1634,7 +1622,9 @@ class UniversalCacheManager {
           this.invalidateByPattern(`ecofleet:vehicleDayRoute:*:${today}`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
-        this.logger.info("SIJAINTI operation invalidation completed", { operation, keysInvalidated: totalInvalidated });
+          operation,
+          keysInvalidated: totalInvalidated,
+        });
         break;
       }
 
@@ -1652,7 +1642,9 @@ class UniversalCacheManager {
           this.invalidateByPattern(`ecofleet:vehicleDayRoute:*:${today}`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
-        this.logger.info("TYOMAA operation invalidation completed", { operation, keysInvalidated: totalInvalidated });
+          operation,
+          keysInvalidated: totalInvalidated,
+        });
         break;
       }
 
@@ -1669,7 +1661,9 @@ class UniversalCacheManager {
           this.invalidateByPattern(`grid:v7tenant:${dateKey}:*`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
-        this.logger.info("VEHICLE operation invalidation completed", { operation, keysInvalidated: totalInvalidated });
+          operation,
+          keysInvalidated: totalInvalidated,
+        });
         break;
       }
 
@@ -1678,7 +1672,6 @@ class UniversalCacheManager {
       case "VEHICLE_VISIBILITY_TOGGLE":
       case "VEHICLE_VISIBILITY_APPLY_DEFAULTS":
       case "VEHICLE_VISIBILITY_CLEAR": {
-        this.logger.debug(
           "VEHICLE_VISIBILITY operation invalidation starting",
           {
             operation,
@@ -1714,11 +1707,8 @@ class UniversalCacheManager {
           : await this.invalidate(operation, "grid", params);
 
         totalInvalidated +=
-          ownerVehicleCount +
-          targetVehicleCount +
-          gridVisibilityCount;
+          ownerVehicleCount + targetVehicleCount + gridVisibilityCount;
 
-        this.logger.info(
           "VEHICLE_VISIBILITY operation invalidation completed",
           {
             operation,
@@ -1741,7 +1731,9 @@ class UniversalCacheManager {
           this.invalidate(operation, "keikka", params),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
-        this.logger.info("TUOTE operation invalidation completed", { operation, keysInvalidated: totalInvalidated });
+          operation,
+          keysInvalidated: totalInvalidated,
+        });
         break;
       }
 
@@ -1756,7 +1748,6 @@ class UniversalCacheManager {
             `notifications:history:${asiakasId}:${personId}:*`,
           );
         }
-        this.logger.debug("NOTIFICATION operation completed", {
           operation,
           asiakasId,
           personId,
@@ -1773,7 +1764,6 @@ class UniversalCacheManager {
             `notifications:history:${asiakasId}:*`,
           );
         }
-        this.logger.debug("NOTIFICATION_BROADCAST completed", {
           operation,
           asiakasId,
           keysInvalidated: totalInvalidated,
@@ -1799,13 +1789,11 @@ class UniversalCacheManager {
           totalInvalidated += await this.invalidateByPattern(
             `auth:permissions:${personId}:*`,
           );
-          this.logger.debug("Auth cache invalidated for role change", {
             operation,
             personId,
           });
         }
 
-        this.logger.debug("ASIAKAS_PERSON_SETTING invalidation completed", {
           operation,
           personId,
           keysInvalidated: totalInvalidated,
@@ -1822,10 +1810,7 @@ class UniversalCacheManager {
       case "LASKUPOHJA_RIVI_CREATE":
       case "LASKUPOHJA_RIVI_DELETE":
       case "LASKUPOHJA_COPY": {
-        const {
-          laskupohjaId,
-          laskupohjaRiviId,
-        } = params;
+        const { laskupohjaId, laskupohjaRiviId } = params;
         const patterns = [];
 
         // Invalidate ALL laskupohja caches (includes get, list, listByAsiakas)
@@ -1847,7 +1832,6 @@ class UniversalCacheManager {
         );
         totalInvalidated = counts.reduce((sum, count) => sum + count, 0);
 
-        this.logger.info("LASKUPOHJA operation invalidation completed", {
           operation,
           laskupohjaId,
           laskupohjaRiviId,
@@ -1866,7 +1850,6 @@ class UniversalCacheManager {
         ]);
         totalInvalidated = laskuCount + statCount;
 
-        this.logger.info("LASKU operation invalidation completed", {
           operation,
           keysInvalidated: totalInvalidated,
         });
@@ -1896,15 +1879,14 @@ class UniversalCacheManager {
       try {
         this._removeEventListeners(this.client);
         await this.client.quit();
-        this.logger.info("Connection closed gracefully");
       } catch (error) {
-        this.logger.warn("Close warning", {
+        console.log("Close warning", {
           error: error.message,
         });
         try {
           this.client.disconnect();
         } catch (disconnectError) {
-          this.logger.warn("Force disconnect warning", {
+          console.log("Force disconnect warning", {
             error: disconnectError.message,
           });
         }
