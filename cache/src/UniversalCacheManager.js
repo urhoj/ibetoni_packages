@@ -526,7 +526,7 @@ class UniversalCacheManager {
   }
 
   /**
-   * Extract yyyymmdd from params for v6role invalidation
+   * Extract yyyymmdd from params for grid cache invalidation
    * Returns "*" if no date available (fallback to full invalidation)
    *
    * @param {Object} params - Invalidation parameters
@@ -812,10 +812,7 @@ class UniversalCacheManager {
    * Entity-specific behaviors:
    * - keikka: Targets individual keikka + list caches by date/personId
    * - asiakas: Pattern-based by asiakasId
-   * - grid: Invalidates both active formats:
-   *         1. v6role: grid:v6role:{dateKey}:* (list_v6role endpoint)
-   *         2. v7tenant: grid:v7tenant:{dateKey}:* (list_v7tenant endpoint)
-   *         (only v6role and v7tenant formats are active)
+   * - grid: Invalidates grid:v7tenant:{dateKey}:* (list_v7tenant endpoint)
    * - stat: Clears all stat caches (varying segment counts)
    * - attachment: Multiple patterns for different attachment key formats
    * - default: Pattern-based `{entityType}:*:{asiakasId}*` for all other types
@@ -858,24 +855,7 @@ class UniversalCacheManager {
           ? `keikka:get:${keikkaIdValue}:*`
           : `keikka:get:*`;
 
-        // List pattern: keikka:list:asiakasId:personId:yyyymmdd[:deleted]
-        let listPattern;
-        if (yyyymmddValue) {
-          listPattern = `keikka:list:*:*:${yyyymmddValue}*`;
-        } else if (targetDate) {
-          const yyyymmdd = targetDate.substring(0, 10).replace(/-/g, "");
-          listPattern = `keikka:list:*:*:${yyyymmdd}*`;
-        } else if (personIdValue) {
-          listPattern = `keikka:list:*:${personIdValue}:*`;
-        } else {
-          listPattern = `keikka:list:*`;
-        }
-
-        const results = await Promise.all([
-          this.invalidateByPattern(individualPattern),
-          this.invalidateByPattern(listPattern),
-        ]);
-        return results.reduce((sum, c) => sum + c, 0);
+        return await this.invalidateByPattern(individualPattern);
       }
       case "asiakas":
         pattern = `asiakas:*:${asiakasId || "*"}*`;
@@ -899,14 +879,11 @@ class UniversalCacheManager {
         // Use simple prefix pattern to catch all stat keys
         return await this.invalidateByPattern(`stat:*`);
       case "grid": {
-        // Grid has two active key formats:
-        // 1. v6role format: grid:v6role:{dateKey}:{sortedCompanies} (used by list_v6role)
-        // 2. v7tenant format: grid:v7tenant:{dateKey}:{sortedAsiakasIds}:{outputMode} (used by list_v7tenant)
+        // Grid key format: grid:v7tenant:{dateKey}:{sortedAsiakasIds}:{outputMode}
         const dateKey = pumppuAika ? this.formatGridDate(pumppuAika) : null;
         const datePattern = dateKey || "*";
 
         const patterns = [
-          `grid:v6role:${datePattern}:*`,
           `grid:v7tenant:${datePattern}:*`,
         ];
 
@@ -1168,7 +1145,7 @@ class UniversalCacheManager {
       case "KEIKKA_UPDATE":
       case "KEIKKA_DELETE":
       case "KEIKKA_CREATE": {
-        // invalidateGridSmart already handles grid:v6role and grid:v7tenant patterns
+        // invalidateGridSmart handles grid:v7tenant patterns
         const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
         const counts = await Promise.all([
           this.invalidate(operation, "keikka", params),
@@ -1211,11 +1188,7 @@ class UniversalCacheManager {
               asiakasId: params.asiakasId,
               pumppuAika: params.pumppuAika || params.body?.pumppuAika,
             }),
-            // Invalidate both v6role and v7tenant caches (date-scoped) - palkki changes affect grid visibility
-            Promise.all([
-              this.invalidateByPattern(`grid:v6role:${datePattern}:*`),
-              this.invalidateByPattern(`grid:v7tenant:${datePattern}:*`),
-            ]).then((counts) => counts.reduce((sum, c) => sum + c, 0)),
+            this.invalidateByPattern(`grid:v7tenant:${datePattern}:*`),
           ]);
 
         // Invalidate palkki list cache - DATE-SPECIFIC when frontend provides data
@@ -1429,7 +1402,6 @@ class UniversalCacheManager {
           params.vehicleId
             ? this.invalidate(operation, "vehicle", params)
             : Promise.resolve(0),
-          this.invalidateByPattern(`grid:v6role:${datePattern}:*`),
           this.invalidateByPattern(`grid:v7tenant:${datePattern}:*`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
@@ -1621,7 +1593,6 @@ class UniversalCacheManager {
           personEntityId
             ? this.invalidateByPattern(`auth:*:${personEntityId}*`)
             : Promise.resolve(0),
-          this.invalidateByPattern("grid:v6role:*"),
           this.invalidateByPattern("grid:v7tenant:*"),
         ]);
         totalInvalidated = counts.reduce((sum, c) => sum + c, 0);
@@ -1641,7 +1612,6 @@ class UniversalCacheManager {
           deletedPersonId
             ? this.invalidateByPattern(`auth:*:${deletedPersonId}*`)
             : Promise.resolve(0),
-          this.invalidateByPattern("grid:v6role:*"),
           this.invalidateByPattern("grid:v7tenant:*"),
         ]);
         totalInvalidated = counts.reduce((sum, c) => sum + c, 0);
@@ -1696,7 +1666,6 @@ class UniversalCacheManager {
           this.invalidate(operation, "keikka", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
           this.invalidate(operation, "person", params),
-          this.invalidateByPattern(`grid:v6role:${dateKey}:*`),
           this.invalidateByPattern(`grid:v7tenant:${dateKey}:*`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
@@ -1744,16 +1713,10 @@ class UniversalCacheManager {
             })
           : await this.invalidate(operation, "grid", params);
 
-        // Invalidate v6role cache - visibility changes affect which vehicles companies can see
-        const v6roleVisibilityCount = await this.invalidateByPattern(
-          `grid:v6role:${yyyymmdd || "*"}:*`,
-        );
-
         totalInvalidated +=
           ownerVehicleCount +
           targetVehicleCount +
-          gridVisibilityCount +
-          v6roleVisibilityCount;
+          gridVisibilityCount;
 
         this.logger.info(
           "VEHICLE_VISIBILITY operation invalidation completed",
