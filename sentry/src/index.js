@@ -96,6 +96,48 @@ function captureException(error, context = {}) {
   });
 }
 
+function safeStringify(value) {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+/**
+ * Report a swallowed error to Sentry with `console.error` logging.
+ *
+ * Use in catch blocks that return null/false/[]/{success:false} or swallow
+ * the error — those failures are invisible in production without this.
+ *
+ * Enrichment applied automatically:
+ * - level = "warning" (distinguishes swallowed errors from unhandled crashes)
+ * - fingerprint = [feature, op] when both tags are present (stable grouping)
+ * - non-Error values are wrapped in `new Error(...)` so stack traces survive
+ */
+function captureError(error, context = {}) {
+  console.error(error);
+  if (!enabled) return;
+
+  const normalized =
+    error instanceof Error
+      ? error
+      : new Error(typeof error === "string" ? error : safeStringify(error));
+
+  const { tags, extra, user } = context;
+
+  Sentry.withScope((scope) => {
+    scope.setLevel("warning");
+    if (user) scope.setUser(user);
+    if (tags) Object.keys(tags).forEach((k) => scope.setTag(k, tags[k]));
+    if (extra) Object.keys(extra).forEach((k) => scope.setExtra(k, extra[k]));
+    if (tags?.feature && tags?.op) {
+      scope.setFingerprint([tags.feature, tags.op]);
+    }
+    Sentry.captureException(normalized);
+  });
+}
+
 function captureMessage(message, level = "info", context = {}) {
   if (!enabled) return;
   Sentry.withScope((scope) => {
@@ -123,6 +165,7 @@ module.exports = {
   Sentry,
   init,
   captureException,
+  captureError,
   captureMessage,
   addBreadcrumb,
   setUser,
