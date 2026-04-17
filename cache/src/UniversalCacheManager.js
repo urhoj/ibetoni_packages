@@ -733,10 +733,7 @@ class UniversalCacheManager {
    * Called by memoryManager during memory pressure cleanup
    */
   clearL1Cache() {
-    const size = this.l1Cache.size;
     this.l1Cache.clear();
-    if (size > 0) {
-    }
   }
 
   /**
@@ -802,16 +799,9 @@ class UniversalCacheManager {
     let pattern = "";
     switch (entityType) {
       case "keikka": {
-        const newDateValue = params.body?.newDate || params.newDate;
-        const pumppuAikaValue =
-          params.body?.pumppuAika || params.pumppuAika || params.date;
-        const targetDate = newDateValue || pumppuAikaValue;
-        const personIdValue = params.body?.personId || params.personId;
-        const yyyymmddValue = params.yyyymmdd;
         const keikkaIdValue =
           params.body?.keikkaId || params.keikkaId || params.entityId;
 
-        // Individual keikka keys: keikka:get:{keikkaId}:{personId}
         const individualPattern = keikkaIdValue
           ? `keikka:get:${keikkaIdValue}:*`
           : `keikka:get:*`;
@@ -939,8 +929,7 @@ class UniversalCacheManager {
    * @returns {Promise<number>} Number of cache keys invalidated
    */
   async invalidateGridSmart(operation, body = {}, params = {}) {
-    const { pumppuAika, personId, creatorPersonId, newDate } = body;
-    const effectivePersonId = personId || creatorPersonId;
+    const { pumppuAika, newDate } = body;
     const asiakasId = params.asiakasId;
 
     switch (operation) {

@@ -12,7 +12,9 @@ function readReleaseFile() {
       const sha = fs.readFileSync(filePath, "utf8").trim();
       if (sha) return sha;
     }
-  } catch {}
+  } catch {
+    // ignore — release file is optional
+  }
   return null;
 }
 

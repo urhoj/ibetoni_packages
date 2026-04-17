@@ -290,12 +290,9 @@ class KeikkaPermissionValidator {
       const cacheKey = `${personId}-${asiakasId}`;
       this.permissionCache.delete(cacheKey);
     } else if (personId) {
-      // Clear all cache entries for this person
-      let clearedCount = 0;
       for (const key of this.permissionCache.keys()) {
         if (key.startsWith(`${personId}-`)) {
           this.permissionCache.delete(key);
-          clearedCount++;
         }
       }
     } else {
