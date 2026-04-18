@@ -36,6 +36,10 @@
     "./fennoa": {
       "import": "./src/fennoa.js",
       "require": "./src/fennoa.cjs"
+    },
+    "./sentry": {
+      "import": "./src/sentry.js",
+      "require": "./src/sentry.cjs"
     }
   },
   "keywords": [
@@ -46,7 +50,8 @@
     "http",
     "errors",
     "cache",
-    "security"
+    "security",
+    "sentry"
   ],
   "author": "betoni.online",
   "license": "UNLICENSED",

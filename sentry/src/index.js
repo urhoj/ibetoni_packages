@@ -2,8 +2,37 @@ const Sentry = require("@sentry/node");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const { SENTRY_REDACT_FIELDS, SENTRY_REDACTED_PLACEHOLDER } = require("@ibetoni/constants/sentry");
 
 let enabled = false;
+
+/**
+ * Recursively walk `value` and replace any field whose (lowercased) name
+ * contains a substring from SENTRY_REDACT_FIELDS with a placeholder.
+ * Mutates in place and also returns the value for chaining.
+ *
+ * Guards against cycles via a WeakSet; primitives are returned as-is.
+ */
+function redactSensitiveFields(value, seen = new WeakSet()) {
+  if (!value || typeof value !== "object") return value;
+  if (seen.has(value)) return value;
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    value.forEach((item) => redactSensitiveFields(item, seen));
+    return value;
+  }
+
+  for (const key of Object.keys(value)) {
+    const lower = key.toLowerCase();
+    if (SENTRY_REDACT_FIELDS.some((field) => lower.includes(field))) {
+      value[key] = SENTRY_REDACTED_PLACEHOLDER;
+    } else {
+      redactSensitiveFields(value[key], seen);
+    }
+  }
+  return value;
+}
 
 function readReleaseFile() {
   try {
@@ -71,6 +100,9 @@ function init(options = {}) {
         const error = event.exception.values[0];
         if (error && error.type === "ValidationError") return null;
       }
+      redactSensitiveFields(event.request);
+      redactSensitiveFields(event.extra);
+      redactSensitiveFields(event.contexts);
       if (config.beforeSend) return config.beforeSend(event);
       return event;
     },
@@ -131,8 +163,9 @@ function captureError(error, context = {}) {
     if (user) scope.setUser(user);
     if (tags) Object.keys(tags).forEach((k) => scope.setTag(k, tags[k]));
     if (extra) Object.keys(extra).forEach((k) => scope.setExtra(k, extra[k]));
-    if (tags?.feature && tags?.op) {
-      scope.setFingerprint([tags.feature, tags.op]);
+    const operation = tags?.operation ?? tags?.op;
+    if (tags?.feature && operation) {
+      scope.setFingerprint([tags.feature, operation]);
     }
     Sentry.captureException(normalized);
   });

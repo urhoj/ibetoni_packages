@@ -8,6 +8,7 @@
   "keywords": ["sentry", "error-tracking", "betoni"],
   "author": "betoni.online",
   "dependencies": {
+    "@ibetoni/constants": "file:../constants",
     "@sentry/node": "^10.48.0"
   }
 }
