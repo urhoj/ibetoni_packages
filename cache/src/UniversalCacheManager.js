@@ -1266,6 +1266,43 @@ class UniversalCacheManager {
         break;
       }
 
+      case "ASIAKAS_MERGE": {
+        // Customer merge rewrites FKs across ~100 columns and soft-deletes the
+        // secondary customer. Every tenant-scoped cache that could reference
+        // either customer must be cleared, so we invalidate broadly.
+        const affectedEntities = params.affectedEntities || [
+          "asiakas",
+          "keikka",
+          "tyomaa",
+          "person",
+          "sijainti",
+          "grid",
+          "stat",
+          "lasku",
+          "laskupohja",
+          "attachment",
+          "personpvm",
+          "keikkaBetoni",
+          "betoniLaatu",
+          "asiakasDate",
+          "tyomaaDate",
+          "personDate",
+          "vehicleDate",
+        ];
+
+        const counts = await Promise.all([
+          ...affectedEntities.map((entityType) =>
+            this.invalidate(operation, entityType, params),
+          ),
+          this.invalidateByPattern("keikka:listByAsiakases:*"),
+          this.invalidateByPattern("asiakas:list:*"),
+          this.invalidateByPattern("grid:v7tenant:*:*"),
+          this.invalidateByPattern("grid:palkki:list:*"),
+        ]);
+        totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
+        break;
+      }
+
       case "PERSON_PVM_UPDATE":
       case "PERSON_PVM_DELETE":
       case "PERSON_PVM_CREATE": {
