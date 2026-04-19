@@ -34,6 +34,7 @@ module.exports = {
   isTokenExpiringSoon: jwtUtils.isTokenExpiringSoon,
   refreshToken: jwtUtils.refreshToken,
   roleNameToKeyMap: jwtUtils.roleNameToKeyMap,
+  deriveAsiakasList: jwtUtils.deriveAsiakasList,
 
   // Google OAuth
   GoogleAuth,
