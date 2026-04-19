@@ -4,6 +4,18 @@ const {
   ROLE_NAME_TO_KEY_MAP: roleNameToKeyMap,
 } = require("@ibetoni/constants");
 
+const ROLE_KEYS = Object.values(roleNameToKeyMap);
+
+const buildCompanyRoles = (roles) => {
+  const out = Object.fromEntries(ROLE_KEYS.map((k) => [k, false]));
+  if (!Array.isArray(roles)) return out;
+  for (const name of roles) {
+    const key = roleNameToKeyMap[name];
+    if (key) out[key] = true;
+  }
+  return out;
+};
+
 /**
  * JWT Utilities for betoni.online platform
  *
@@ -41,48 +53,10 @@ const getJwtKey = async (options = {}) => {
  * @returns {object} companyRoles object with boolean flags
  */
 const deriveCompanyRoles = (asiakasesWithTypes, ownerAsiakasId) => {
-  const companyRoles = {
-    ownerAsiakasId: ownerAsiakasId,
-    isAsiakasAdmin: false,
-    isKeikkaHandler: false,
-    isKeikkaViewer: false,
-    isLaskupohjaAdmin: false,
-    isPumppari: false,
-    isAsiakasEditor: false,
-    isLaskuAdmin: false,
-    isAttachmentHandler: false,
-    isAssignee: false,
-    isTyösuhteessa: false,
-    isSijaintiHandler: false,
-    isVehicleHandler: false,
-    isTuoteHandler: false,
-    isLomaseurannassa: false,
-    isAsiakasOwner: false,
-    isHRAdmin: false,
-    isBetoniHandler: false,
-    isBetoniViewer: false,
-  };
-
-  if (!asiakasesWithTypes || !ownerAsiakasId) {
-    return companyRoles;
-  }
-
-  // Find the current company in asiakasesWithTypes
-  const currentAsiakas = asiakasesWithTypes.find(
-    (a) => a.asiakasId === ownerAsiakasId,
-  );
-
-  if (currentAsiakas?.roles) {
-    // Convert role name strings to boolean flags
-    for (const roleName of currentAsiakas.roles) {
-      const roleKey = roleNameToKeyMap[roleName];
-      if (roleKey && roleKey in companyRoles) {
-        companyRoles[roleKey] = true;
-      }
-    }
-  }
-
-  return companyRoles;
+  const currentAsiakas = Array.isArray(asiakasesWithTypes)
+    ? asiakasesWithTypes.find((a) => a.asiakasId === ownerAsiakasId)
+    : null;
+  return { ownerAsiakasId, ...buildCompanyRoles(currentAsiakas?.roles) };
 };
 
 /**
@@ -100,41 +74,10 @@ const deriveCompanyRoles = (asiakasesWithTypes, ownerAsiakasId) => {
  */
 const deriveAsiakasList = (asiakasesWithTypes) => {
   if (!Array.isArray(asiakasesWithTypes)) return [];
-
-  return asiakasesWithTypes.map((entry) => {
-    const { roles = [], ...rest } = entry;
-    const companyRoles = {
-      isAsiakasAdmin: false,
-      isKeikkaHandler: false,
-      isKeikkaViewer: false,
-      isLaskupohjaAdmin: false,
-      isPumppari: false,
-      isAsiakasEditor: false,
-      isLaskuAdmin: false,
-      isAttachmentHandler: false,
-      isAssignee: false,
-      isTyösuhteessa: false,
-      isSijaintiHandler: false,
-      isVehicleHandler: false,
-      isTuoteHandler: false,
-      isLomaseurannassa: false,
-      isAsiakasOwner: false,
-      isHRAdmin: false,
-      isBetoniHandler: false,
-      isBetoniViewer: false,
-    };
-
-    if (Array.isArray(roles)) {
-      for (const roleName of roles) {
-        const key = roleNameToKeyMap[roleName];
-        if (key && key in companyRoles) {
-          companyRoles[key] = true;
-        }
-      }
-    }
-
-    return { ...rest, companyRoles };
-  });
+  return asiakasesWithTypes.map(({ roles, ...rest }) => ({
+    ...rest,
+    companyRoles: buildCompanyRoles(roles),
+  }));
 };
 
 /**
@@ -420,7 +363,7 @@ module.exports = {
   comparePassword,
   isTokenExpiringSoon,
   refreshToken,
-  deriveCompanyRoles, // Export for use in other modules if needed
+  deriveCompanyRoles,
   deriveAsiakasList,
-  roleNameToKeyMap, // Re-exported from @ibetoni/constants for convenience
+  roleNameToKeyMap,
 };
