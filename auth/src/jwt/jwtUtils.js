@@ -86,6 +86,58 @@ const deriveCompanyRoles = (asiakasesWithTypes, ownerAsiakasId) => {
 };
 
 /**
+ * Build a normalized asiakasList from JWT asiakasesWithTypes.
+ *
+ * Mirrors the frontend `user.asiakasList` shape so backend and frontend
+ * code can use identical access patterns: `entry.companyRoles.isXxx`.
+ *
+ * Pure function. Never throws. Returns [] for any non-array input.
+ * The legacy `roles: string[]` field is intentionally dropped from the
+ * output — consumers should read `companyRoles` instead.
+ *
+ * @param {Array} asiakasesWithTypes - JWT field, array of {asiakasId, ownerAsiakasId, roles, isPumppuToimittaja, ...}
+ * @returns {Array} array of {asiakasId, ownerAsiakasId, companyRoles: {isXxx: boolean}, isPumppuToimittaja, ...}
+ */
+const deriveAsiakasList = (asiakasesWithTypes) => {
+  if (!Array.isArray(asiakasesWithTypes)) return [];
+
+  return asiakasesWithTypes.map((entry) => {
+    const { roles = [], ...rest } = entry;
+    const companyRoles = {
+      isAsiakasAdmin: false,
+      isKeikkaHandler: false,
+      isKeikkaViewer: false,
+      isLaskupohjaAdmin: false,
+      isPumppari: false,
+      isAsiakasEditor: false,
+      isLaskuAdmin: false,
+      isAttachmentHandler: false,
+      isAssignee: false,
+      isTyösuhteessa: false,
+      isSijaintiHandler: false,
+      isVehicleHandler: false,
+      isTuoteHandler: false,
+      isLomaseurannassa: false,
+      isAsiakasOwner: false,
+      isHRAdmin: false,
+      isBetoniHandler: false,
+      isBetoniViewer: false,
+    };
+
+    if (Array.isArray(roles)) {
+      for (const roleName of roles) {
+        const key = roleNameToKeyMap[roleName];
+        if (key && key in companyRoles) {
+          companyRoles[key] = true;
+        }
+      }
+    }
+
+    return { ...rest, companyRoles };
+  });
+};
+
+/**
  * Create Express middleware to verify JWT tokens
  * @param {object} [options] - Middleware options
  * @param {object} [options.logger] - Optional logger instance
@@ -365,5 +417,6 @@ module.exports = {
   isTokenExpiringSoon,
   refreshToken,
   deriveCompanyRoles, // Export for use in other modules if needed
+  deriveAsiakasList,
   roleNameToKeyMap, // Re-exported from @ibetoni/constants for convenience
 };
