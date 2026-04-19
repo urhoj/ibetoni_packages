@@ -59,6 +59,8 @@ const deriveCompanyRoles = (asiakasesWithTypes, ownerAsiakasId) => {
     isLomaseurannassa: false,
     isAsiakasOwner: false,
     isHRAdmin: false,
+    isBetoniHandler: false,
+    isBetoniViewer: false,
   };
 
   if (!asiakasesWithTypes || !ownerAsiakasId) {
