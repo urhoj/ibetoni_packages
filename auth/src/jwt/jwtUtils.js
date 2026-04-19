@@ -234,6 +234,10 @@ const createVerifyTokenMiddleware = (options = {}) => {
         );
       }
 
+      // Normalized per-company shape mirroring the frontend `user.asiakasList`.
+      // Always present (defaults to []), so consumers can iterate without guards.
+      decoded.asiakasList = deriveAsiakasList(decoded.asiakasesWithTypes);
+
       // Attach user data to request
       req.user = decoded;
 
