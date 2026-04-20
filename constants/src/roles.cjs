@@ -47,6 +47,18 @@ const ROLE_NAME_TO_KEY_MAP = {
   hrAdmin: "isHRAdmin",
 };
 
+const ROLE_KEYS = Object.values(ROLE_NAME_TO_KEY_MAP);
+
+function buildCompanyRoles(roles) {
+  const out = Object.fromEntries(ROLE_KEYS.map((k) => [k, false]));
+  if (!Array.isArray(roles)) return out;
+  for (const name of roles) {
+    const key = ROLE_NAME_TO_KEY_MAP[name];
+    if (key) out[key] = true;
+  }
+  return out;
+}
+
 const TYPE_ID_TO_ROLE_NAME = {
   1: "Laskupohja Admin",
   2: "Asiakas Admin",
@@ -168,6 +180,7 @@ module.exports = {
   COMPANY_ROLE_TO_TYPE_ID,
   ROLE_NAME_TO_KEY_MAP,
   TYPE_ID_TO_ROLE_NAME,
+  buildCompanyRoles,
   ADMIN_COMPANY_ROLE_TYPE_IDS,
   ASIAKAS_EDITOR_ROLE_TYPE_ID,
   ASIAKAS_WORKING_HOURS_ROLE_TYPE_ID,

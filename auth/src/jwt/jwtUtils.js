@@ -2,19 +2,8 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const {
   ROLE_NAME_TO_KEY_MAP: roleNameToKeyMap,
+  buildCompanyRoles,
 } = require("@ibetoni/constants");
-
-const ROLE_KEYS = Object.values(roleNameToKeyMap);
-
-const buildCompanyRoles = (roles) => {
-  const out = Object.fromEntries(ROLE_KEYS.map((k) => [k, false]));
-  if (!Array.isArray(roles)) return out;
-  for (const name of roles) {
-    const key = roleNameToKeyMap[name];
-    if (key) out[key] = true;
-  }
-  return out;
-};
 
 /**
  * JWT Utilities for betoni.online platform

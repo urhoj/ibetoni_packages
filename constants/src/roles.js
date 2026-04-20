@@ -78,7 +78,7 @@ export const COMPANY_ROLE_TO_TYPE_ID = {
 
 /**
  * Maps JWT role name strings (from asiakasesWithTypes.roles) to companyRoles boolean keys.
- * Used by deriveCompanyRoles to convert role arrays to boolean flags.
+ * Used by buildCompanyRoles to convert role arrays to boolean flags.
  *
  * @constant {Object.<string, string>} ROLE_NAME_TO_KEY_MAP
  */
@@ -102,6 +102,28 @@ export const ROLE_NAME_TO_KEY_MAP = {
   asiakasOwner: "isAsiakasOwner",
   hrAdmin: "isHRAdmin",
 };
+
+const ROLE_KEYS = Object.values(ROLE_NAME_TO_KEY_MAP);
+
+/**
+ * Build a fresh `companyRoles` flag object from a list of role name strings.
+ *
+ * Pure function. Driven entirely by ROLE_NAME_TO_KEY_MAP so adding a role to
+ * the map immediately wires it through to all consumers (FE + BE).
+ * Unknown role names are silently ignored.
+ *
+ * @param {string[]|null|undefined} roles - Role names (e.g. ["asiakasAdmin", "keikkaHandler"])
+ * @returns {Object.<string, boolean>} Flag object: { isAsiakasAdmin: bool, isKeikkaHandler: bool, ... }
+ */
+export function buildCompanyRoles(roles) {
+  const out = Object.fromEntries(ROLE_KEYS.map((k) => [k, false]));
+  if (!Array.isArray(roles)) return out;
+  for (const name of roles) {
+    const key = ROLE_NAME_TO_KEY_MAP[name];
+    if (key) out[key] = true;
+  }
+  return out;
+}
 
 /**
  * Reverse mapping: Type ID to role name
