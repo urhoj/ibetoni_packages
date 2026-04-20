@@ -668,7 +668,8 @@ class UniversalCacheManager {
               iteration: iterations,
               error: scanError.message,
             });
-            this._emitError(scanError, { operationType: 'scan', pattern });
+            // Error swallowed here (not rethrown), so withRedis outer catch will not also emit.
+            this._emitError(scanError, { operationType: 'scan keys', pattern });
             // Continue with partial results rather than failing completely
             break;
           }
@@ -702,7 +703,8 @@ class UniversalCacheManager {
               error: deleteError.message,
               batchSize: batch.length,
             });
-            this._emitError(deleteError, { operationType: 'batchDelete' });
+            // Error swallowed here (not rethrown), so withRedis outer catch will not also emit.
+            this._emitError(deleteError, { operationType: 'batch delete' });
             continue;
           }
         }
