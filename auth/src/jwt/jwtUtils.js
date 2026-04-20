@@ -186,12 +186,7 @@ const createToken = async (
   const jwtKey = await getJwtKey(options);
 
   // Default token expiration: 7 days; callers can override via options.expiresIn
-  let expiresIn = options.expiresIn || "7d";
-
-  // Temporary access tokens for specific use cases expire quickly
-  if (email === "tempAccessToken@ibetoni.fi" && personId === null) {
-    expiresIn = "3m";
-  }
+  const expiresIn = options.expiresIn || "7d";
 
   // Base claims that are always included
   const user = {
