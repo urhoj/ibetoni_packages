@@ -17,7 +17,7 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
-    "@ibetoni/sentry": "*",
+    "@ibetoni/sentry": "file:../sentry",
     "ioredis": "^5.10.0",
     "lru-cache": "^11.3.2"
   },
