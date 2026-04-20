@@ -29,7 +29,6 @@ Centralized authentication logic used across multiple services, eliminating dupl
 
 ```javascript
 const { createVerifyTokenMiddleware } = require('@ibetoni/auth');
-const logger = require('./logger');
 
 // Simple usage (uses process.env.JWT_KEY)
 const verifyToken = createVerifyTokenMiddleware();
@@ -38,12 +37,8 @@ app.use('/api/protected', verifyToken, (req, res) => {
   res.json({ user: req.user });
 });
 
-// With logger
-const verifyToken = createVerifyTokenMiddleware({ logger: logger.categories.AUTH });
-
 // With async Key Vault retrieval
 const verifyToken = createVerifyTokenMiddleware({
-  logger: logger.categories.AUTH,
   getEnvVar: environmentHelper.getEnvVar
 });
 ```
@@ -65,9 +60,8 @@ const token = await createToken('user@example.com', 123, {
   ]
 });
 
-// With logger and async config
+// With async Key Vault retrieval
 const token = await createToken('user@example.com', 123, additionalClaims, {
-  logger: logger.categories.AUTH,
   getEnvVar: environmentHelper.getEnvVar
 });
 ```
@@ -168,7 +162,6 @@ if (status.isExpiringSoon) {
 **`createVerifyTokenMiddleware(options)`**
 - Creates Express middleware to verify JWT tokens
 - Options:
-  - `logger`: Optional logger instance
   - `getEnvVar`: Optional async function for env var retrieval
 - Returns: Express middleware function
 

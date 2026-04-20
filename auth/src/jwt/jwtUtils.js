@@ -69,14 +69,10 @@ const deriveAsiakasList = (asiakasesWithTypes) => {
 /**
  * Create Express middleware to verify JWT tokens
  * @param {object} [options] - Middleware options
- * @param {object} [options.logger] - Optional logger instance
  * @param {function} [options.getEnvVar] - Optional async function to get env vars
  * @returns {function} Express middleware function
  */
 const createVerifyTokenMiddleware = (options = {}) => {
-  const logger = options.logger;
-  const log = logger || console;
-
   return async (req, res, next) => {
     // Extract token from cookie (server-side navigation) or Authorization header (API calls)
     let token = req.cookies?.auth_token;
@@ -87,18 +83,10 @@ const createVerifyTokenMiddleware = (options = {}) => {
       const authHeader = req.headers.authorization;
 
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        if (logger?.warn) {
-          console.log(
-            "Authentication failed: Missing token in both cookie and Authorization header",
-            {
-              path: req.path,
-            },
-          );
-        } else {
-          log.log(
-            "Authentication failed: Missing token in both cookie and Authorization header",
-          );
-        }
+        console.error(
+          "Authentication failed: Missing token in both cookie and Authorization header",
+          { path: req.path },
+        );
         return res.status(403).json({
           success: false,
           message: "A token is required for authentication",
@@ -111,14 +99,10 @@ const createVerifyTokenMiddleware = (options = {}) => {
     }
 
     if (!token || token === "undefined") {
-      if (logger?.warn) {
-        console.log("Authentication failed: Empty token", {
-          path: req.path,
-          tokenSource,
-        });
-      } else {
-        log.log("Authentication failed: Empty token");
-      }
+      console.error("Authentication failed: Empty token", {
+        path: req.path,
+        tokenSource,
+      });
       return res.status(403).json({
         success: false,
         message: "A token is required for authentication",
@@ -134,15 +118,11 @@ const createVerifyTokenMiddleware = (options = {}) => {
 
       // Validate required claims
       if (!decoded.personId && !decoded.email) {
-        if (logger?.warn) {
-          console.log("JWT missing required claims", {
-            path: req.path,
-            hasPersonId: !!decoded.personId,
-            hasEmail: !!decoded.email,
-          });
-        } else {
-          log.error("JWT missing required claims");
-        }
+        console.error("JWT missing required claims", {
+          path: req.path,
+          hasPersonId: !!decoded.personId,
+          hasEmail: !!decoded.email,
+        });
         return res.status(401).json({
           success: false,
           message: "Invalid Token",
@@ -172,15 +152,11 @@ const createVerifyTokenMiddleware = (options = {}) => {
 
       return next();
     } catch (error) {
-      if (logger?.warn) {
-        console.log("JWT verification failed", {
-          error: error.message,
-          path: req.path,
-          tokenSource,
-        });
-      } else {
-        log.error("JWT verification failed:", error.message);
-      }
+      console.error("JWT verification failed", {
+        error: error.message,
+        path: req.path,
+        tokenSource,
+      });
 
       return res.status(401).json({
         success: false,
@@ -198,7 +174,6 @@ const createVerifyTokenMiddleware = (options = {}) => {
  * @param {object} additionalClaims - Additional claims to include in token
  * @param {object} [options] - Token creation options
  * @param {function} [options.getEnvVar] - Optional async function to get env vars
- * @param {object} [options.logger] - Optional logger instance
  * @param {string} [options.expiresIn] - Optional token expiry (e.g. '60d'), defaults to '7d'
  * @returns {Promise<string>} JWT token
  */
@@ -209,7 +184,6 @@ const createToken = async (
   options = {},
 ) => {
   const jwtKey = await getJwtKey(options);
-  const logger = options.logger;
 
   // Default token expiration: 7 days; callers can override via options.expiresIn
   let expiresIn = options.expiresIn || "7d";
@@ -229,15 +203,6 @@ const createToken = async (
   const token = jwt.sign(user, jwtKey, {
     expiresIn: /** @type {any} */ (expiresIn),
   });
-
-  if (logger?.info) {
-    logger.info("JWT created", {
-      email,
-      personId,
-      expiresIn,
-      additionalClaimsCount: Object.keys(additionalClaims).length,
-    });
-  }
 
   return token;
 };
@@ -316,7 +281,6 @@ const isTokenExpiringSoon = async (token, options = {}) => {
  * @param {string} token - Current JWT token
  * @param {object} [options] - Refresh options
  * @param {function} [options.getEnvVar] - Optional async function to get env vars
- * @param {object} [options.logger] - Optional logger instance
  * @returns {Promise<string>} New JWT token with refreshed expiration
  */
 const refreshToken = async (token, options = {}) => {
