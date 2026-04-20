@@ -47,10 +47,12 @@ const ROLE_NAME_TO_KEY_MAP = {
   hrAdmin: "isHRAdmin",
 };
 
-const ROLE_KEYS = Object.values(ROLE_NAME_TO_KEY_MAP);
+const ALL_FALSE_ROLES = Object.freeze(
+  Object.fromEntries(Object.values(ROLE_NAME_TO_KEY_MAP).map((k) => [k, false])),
+);
 
 function buildCompanyRoles(roles) {
-  const out = Object.fromEntries(ROLE_KEYS.map((k) => [k, false]));
+  const out = { ...ALL_FALSE_ROLES };
   if (!Array.isArray(roles)) return out;
   for (const name of roles) {
     const key = ROLE_NAME_TO_KEY_MAP[name];
