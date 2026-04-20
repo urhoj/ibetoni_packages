@@ -1,9 +1,6 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-const {
-  ROLE_NAME_TO_KEY_MAP: roleNameToKeyMap,
-  buildCompanyRoles,
-} = require("@ibetoni/constants");
+const { buildCompanyRoles } = require("@ibetoni/constants");
 
 /**
  * JWT Utilities for betoni.online platform
@@ -37,7 +34,7 @@ const getJwtKey = async (options = {}) => {
  * This provides backward compatibility - companyRoles is no longer stored in JWT
  * but derived from asiakasesWithTypes + ownerAsiakasId
  *
- * @param {Array} asiakasesWithTypes - Array of {asiakasId, companyType, roles}
+ * @param {Array} asiakasesWithTypes - Array of {asiakasId, roles}
  * @param {number} ownerAsiakasId - Current company ID
  * @returns {object} companyRoles object with boolean flags
  */
@@ -354,5 +351,4 @@ module.exports = {
   refreshToken,
   deriveCompanyRoles,
   deriveAsiakasList,
-  roleNameToKeyMap,
 };
