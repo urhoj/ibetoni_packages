@@ -5,6 +5,7 @@
  */
 
 const ContactPersonAdapter = require('../adapters/ContactPersonAdapter');
+const { captureError } = require('@ibetoni/sentry');
 
 class BackendContactPersonAdapter extends ContactPersonAdapter {
   constructor(dbConnection) {
@@ -129,7 +130,16 @@ class BackendContactPersonAdapter extends ContactPersonAdapter {
       return false;
 
     } catch (error) {
-      console.error("Error checking contact person access:", error);
+      captureError(error, {
+        tags: { feature: "permissions", operation: "contact-person-access" },
+        extra: {
+          personId,
+          keikkaId: keikka.keikkaId,
+          asiakasId: keikka.asiakasId,
+          tyomaaId: keikka.tyomaaId,
+          accessType,
+        },
+      });
       return false;
     }
   }

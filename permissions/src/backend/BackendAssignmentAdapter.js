@@ -5,6 +5,7 @@
  */
 
 const AssignmentAdapter = require('../adapters/AssignmentAdapter');
+const { captureError } = require('@ibetoni/sentry');
 
 class BackendAssignmentAdapter extends AssignmentAdapter {
   constructor(dbConnection) {
@@ -46,7 +47,10 @@ class BackendAssignmentAdapter extends AssignmentAdapter {
 
       return result.recordset.length > 0;
     } catch (error) {
-      console.error("Error checking person keikka assignment:", error);
+      captureError(error, {
+        tags: { feature: "permissions", operation: "assignment-check" },
+        extra: { personId: user.personId, keikkaId: keikka.keikkaId },
+      });
       return false;
     }
   }

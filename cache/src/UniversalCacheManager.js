@@ -17,6 +17,7 @@
 const crypto = require("crypto");
 const Redis = require("ioredis");
 const { LRUCache } = require("lru-cache");
+const { captureError } = require("@ibetoni/sentry");
 
 /**
  * TTL Multiplier - Global scaling factor for all cache TTL values
@@ -310,9 +311,8 @@ class UniversalCacheManager {
 
       return this.client;
     } catch (error) {
-      console.error("Client initialization failed", {
-        error: error.message,
-        stack: error.stack,
+      captureError(error, {
+        tags: { feature: "cache", operation: "client-init" },
       });
       this.connectionPromise = null;
       return null;

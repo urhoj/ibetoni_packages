@@ -24,6 +24,8 @@
  * ```
  */
 
+const { captureError } = require("@ibetoni/sentry");
+
 /** @type {Set<DistributedLock>} Track all active locks for graceful shutdown */
 const activeLocks = new Set();
 
@@ -119,11 +121,9 @@ class DistributedLockManager {
       if (this.metrics) {
         this.metrics.recordLockAcquisition(resource, false, duration);
       }
-      console.error("Lock acquisition error", {
-        error: error.message,
-        resource,
-        lockKey,
-        durationMs: duration,
+      captureError(error, {
+        tags: { feature: "distributed-lock", operation: "acquire" },
+        extra: { resource, lockKey, durationMs: duration, ttlMs },
       });
       return null;
     }
@@ -194,10 +194,9 @@ class DistributedLock {
       if (this.metrics) {
         this.metrics.recordLockRelease(this.lockKey, false, holdDuration);
       }
-      console.error("Lock release error", {
-        error: error.message,
-        lockKey: this.lockKey,
-        holdDurationMs: holdDuration,
+      captureError(error, {
+        tags: { feature: "distributed-lock", operation: "release" },
+        extra: { lockKey: this.lockKey, holdDurationMs: holdDuration },
       });
       this.released = true;
       return false;

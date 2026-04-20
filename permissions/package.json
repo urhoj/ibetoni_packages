@@ -20,7 +20,9 @@
   ],
   "author": "betoni.online",
   "license": "UNLICENSED",
-  "dependencies": {},
+  "dependencies": {
+    "@ibetoni/sentry": "*"
+  },
   "engines": {
     "node": ">=18.0.0"
   }
