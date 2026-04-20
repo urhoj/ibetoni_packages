@@ -4,7 +4,7 @@
   "description": "Shared Redis cache and invalidation system for betoni.online",
   "main": "src/index.js",
   "scripts": {
-    "test": "echo \"No tests yet\" && exit 0",
+    "test": "node scripts/test-onError.js",
     "type-check": "node scripts/type-check.js"
   },
   "keywords": [
