@@ -29,6 +29,7 @@ function createCacheManager(options = {}) {
     logger: options.logger,
     cacheMetrics: metrics,
     redisConfig: options.redisConfig,
+    onError: options.onError,
   });
 }
 

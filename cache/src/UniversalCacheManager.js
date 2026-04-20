@@ -63,6 +63,7 @@ class UniversalCacheManager {
     this.cacheMetrics = options.cacheMetrics || this._createDefaultMetrics();
     this.redisConfigOverride = options.redisConfig;
     this.ttlMultiplier = options.ttlMultiplier || TTL_MULTIPLIER;
+    this._onError = typeof options.onError === 'function' ? options.onError : null;
 
     this.client = null;
     this.isConnected = false;
@@ -409,7 +410,26 @@ class UniversalCacheManager {
         error: error.message,
       });
       this.cacheMetrics.recordError(operationType, "unknown", error);
+      this._emitError(error, { operationType });
       return fallback;
+    }
+  }
+
+  /**
+   * Register an error handler invoked on every swallowed Redis failure.
+   * Callback signature: (error, { operationType, pattern? })
+   * Handler exceptions are swallowed — never let reporting kill cache path.
+   */
+  setErrorHandler(fn) {
+    this._onError = typeof fn === 'function' ? fn : null;
+  }
+
+  _emitError(error, context) {
+    if (!this._onError) return;
+    try {
+      this._onError(error, context);
+    } catch (_handlerError) {
+      // Intentional: error-reporter must never throw back into cache path.
     }
   }
 
@@ -648,6 +668,7 @@ class UniversalCacheManager {
               iteration: iterations,
               error: scanError.message,
             });
+            this._emitError(scanError, { operationType: 'scan', pattern });
             // Continue with partial results rather than failing completely
             break;
           }
@@ -681,6 +702,7 @@ class UniversalCacheManager {
               error: deleteError.message,
               batchSize: batch.length,
             });
+            this._emitError(deleteError, { operationType: 'batchDelete' });
             continue;
           }
         }
