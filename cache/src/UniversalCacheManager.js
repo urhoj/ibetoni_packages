@@ -66,6 +66,9 @@ class UniversalCacheManager {
     this.ttlMultiplier = options.ttlMultiplier || TTL_MULTIPLIER;
     this._onError = typeof options.onError === 'function' ? options.onError : null;
 
+    /** @type {Map<string, Promise<any>>} In-process singleflight for getOrCompute */
+    this._inflight = new Map();
+
     this.client = null;
     this.isConnected = false;
     this.isShuttingDown = false;
@@ -623,6 +626,40 @@ class UniversalCacheManager {
       null,
       `get ${entityType}`,
     );
+  }
+
+  /**
+   * Read-through with in-process singleflight. Concurrent callers for the same key
+   * share a single producer call. On cache hit, producer is never invoked.
+   *
+   * @param {string} key           Full cache key (use generateKey to build)
+   * @param {string} entityType    TTL/L1 classification (e.g. 'betoniPrices', 'auth')
+   * @param {() => Promise<any>} producer   Async function to compute the value on miss
+   * @param {number} [ttlSeconds]  Override TTL; falls back to this.TTL[entityType]
+   * @returns {Promise<any>} cached or freshly computed value
+   */
+  async getOrCompute(key, entityType, producer, ttlSeconds) {
+    const cached = await this.get(key, entityType);
+    if (cached !== null && cached !== undefined) return cached;
+
+    const existing = this._inflight.get(key);
+    if (existing) return existing;
+
+    const promise = (async () => {
+      try {
+        const value = await producer();
+        if (value !== null && value !== undefined) {
+          const ttl = ttlSeconds || this.TTL[entityType] || this.TTL.default;
+          await this.set(key, value, ttl, entityType);
+        }
+        return value;
+      } finally {
+        this._inflight.delete(key);
+      }
+    })();
+
+    this._inflight.set(key, promise);
+    return promise;
   }
 
   /**
