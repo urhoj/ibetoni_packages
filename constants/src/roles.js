@@ -285,9 +285,7 @@ export const PERSON_SETTING_TYPE_IDS = {
  * @constant {Object.<string, number>}
  */
 export const ASIAKAS_SETTING_TYPE_IDS = {
-  HAS_PUMIFI: 1,
   HAS_NETVISOR: 2,
-  HAS_LEMONSOFT: 3,
   HAS_HENKILOT: 4,
   HAS_SIJAINNIT: 5,
   HAS_AJONEUVOT: 6,
