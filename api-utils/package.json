@@ -1,0 +1,13 @@
+{
+  "name": "@ibetoni/api-utils",
+  "version": "1.0.0",
+  "description": "Shared Express response helpers, route error handler, and request validators",
+  "main": "src/index.js",
+  "private": true,
+  "license": "UNLICENSED",
+  "keywords": ["express", "api", "validation", "error-handling", "betoni"],
+  "author": "betoni.online",
+  "dependencies": {
+    "@ibetoni/sentry": "file:../sentry"
+  }
+}
