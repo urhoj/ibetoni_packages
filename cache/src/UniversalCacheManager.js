@@ -816,19 +816,27 @@ class UniversalCacheManager {
    * namespaces used by the app that are not tied to a BASE_TTL entity, e.g.
    * combinator:duplicates:*, news:*, auth:permissions:*, toimitus:get:*).
    *
+   * Pattern sweeps run in parallel via Promise.all — Redis is single-threaded
+   * but ioredis pipelines the SCAN cursor RTTs across patterns, cutting wall
+   * time roughly proportional to the number of patterns.
+   *
    * @returns {Promise<number>} Total Redis keys cleared
    */
   async clearAllCache() {
-    let total = 0;
-    for (const entityType of Object.keys(this.BASE_TTL)) {
-      if (entityType === "default") continue;
-      const deleted = await this.invalidateByPattern(`${entityType}:*`);
-      if (typeof deleted === "number") total += deleted;
-    }
-    for (const pattern of this.ORPHAN_PREFIXES) {
-      const deleted = await this.invalidateByPattern(pattern);
-      if (typeof deleted === "number") total += deleted;
-    }
+    const baseTtlPatterns = Object.keys(this.BASE_TTL)
+      .filter((entityType) => entityType !== "default")
+      .map((entityType) => `${entityType}:*`);
+    const allPatterns = [...baseTtlPatterns, ...this.ORPHAN_PREFIXES];
+
+    const results = await Promise.all(
+      allPatterns.map((pattern) => this.invalidateByPattern(pattern)),
+    );
+
+    const total = results.reduce(
+      (sum, deleted) => sum + (typeof deleted === "number" ? deleted : 0),
+      0,
+    );
+
     this.clearL1Cache();
     return total;
   }
