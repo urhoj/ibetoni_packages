@@ -150,6 +150,17 @@ class UniversalCacheManager {
       "toimitus:*",   // toimitus:get:{keikkaId}
     ];
 
+    // Operational/non-cache key prefixes that clearAllCache() must NOT delete.
+    // grid:last-update is a SUBPREFIX of grid:* (which is in BASE_TTL), so it
+    // would otherwise be swept; the others sit outside BASE_TTL but are listed
+    // here for documentation and to survive future BASE_TTL additions.
+    this.EXCLUDE_PREFIXES = [
+      "grid:last-update:", // socket smart-reconnect timestamps (24h EX, rebuilt on next mutation)
+      "metrics:",          // baseline hit/miss + system metrics caches
+      "lock:",             // distributed locks (DistributedLockManager)
+      "api:perf:",         // per-day API perf metrics
+    ];
+
     // Apply TTL multiplier to generate effective TTLs
     this.TTL = this._applyTtlMultiplier(this.BASE_TTL);
 
@@ -812,15 +823,17 @@ class UniversalCacheManager {
    * Safer than flushdb — only clears cache keys, not socket sessions, metrics,
    * locks, or grid:last-update markers.
    *
-   * Sweeps every BASE_TTL entity prefix plus the ORPHAN_PREFIXES list (Redis
-   * namespaces used by the app that are not tied to a BASE_TTL entity, e.g.
-   * combinator:duplicates:*, news:*, auth:permissions:*, toimitus:get:*).
+   * Sweeps every BASE_TTL entity prefix plus the ORPHAN_PREFIXES list, then
+   * filters out any key whose prefix matches EXCLUDE_PREFIXES before deleting.
+   * Note that without the post-filter step, "grid:*" would sweep
+   * "grid:last-update:*" too — those are reconnect-timestamp keys that must
+   * survive an admin clear.
    *
-   * Pattern sweeps run in parallel via Promise.all — Redis is single-threaded
+   * Pattern SCANs run in parallel via Promise.all — Redis is single-threaded
    * but ioredis pipelines the SCAN cursor RTTs across patterns, cutting wall
    * time roughly proportional to the number of patterns.
    *
-   * @returns {Promise<number>} Total Redis keys cleared
+   * @returns {Promise<number>} Total Redis keys actually deleted (post-filter).
    */
   async clearAllCache() {
     const baseTtlPatterns = Object.keys(this.BASE_TTL)
@@ -828,17 +841,24 @@ class UniversalCacheManager {
       .map((entityType) => `${entityType}:*`);
     const allPatterns = [...baseTtlPatterns, ...this.ORPHAN_PREFIXES];
 
-    const results = await Promise.all(
-      allPatterns.map((pattern) => this.invalidateByPattern(pattern)),
+    const keyArrays = await Promise.all(
+      allPatterns.map((pattern) => this.scanKeys(pattern)),
     );
 
-    const total = results.reduce(
-      (sum, deleted) => sum + (typeof deleted === "number" ? deleted : 0),
-      0,
+    // Union, then drop anything in an excluded namespace.
+    const candidates = [...new Set(keyArrays.flat())];
+    const survivors = candidates.filter(
+      (key) => !this.EXCLUDE_PREFIXES.some((prefix) => key.startsWith(prefix)),
     );
+
+    const deleted = survivors.length > 0 ? await this.batchDelete(survivors) : 0;
+
+    if (deleted > 0) {
+      this.cacheMetrics.recordInvalidation("all", "clearAllCache", deleted);
+    }
 
     this.clearL1Cache();
-    return total;
+    return deleted;
   }
 
   /**
