@@ -5,7 +5,7 @@
  * to betoni.online backend services. Used by CORS middleware in both
  * puminet5api (main backend) and puminet7-functions-app (cron jobs).
  *
- * Last Updated: 2026-02-14
+ * Last Updated: 2026-04-28
  *
  * Maintenance:
  * - When adding new environment, add all domain variants
@@ -75,10 +75,12 @@ const allowedOrigins = [
   "http://localhost:3001", // BSG2 Vite dev server
   "http://localhost:3002", // kalleurho.fi Vite dev server
   "http://localhost:5173", // Vite dev server
+  "http://localhost:5174", // betonijerry Vite dev server
   "http://localhost:8080",
   "http://127.0.0.1:3000",
   "http://127.0.0.1:3001", // BSG2 Vite dev server
   "http://127.0.0.1:5173", // Vite dev server
+  "http://127.0.0.1:5174", // betonijerry Vite dev server
   "http://127.0.0.1:8080",
 ];
 
