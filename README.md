@@ -6,23 +6,33 @@ Shared business logic packages for the betoni.online concrete delivery managemen
 
 | Package | Version | Description | Documentation |
 |---------|---------|-------------|---------------|
+| [@ibetoni/api-utils](./api-utils/) | 1.0.0 | Express response helpers, route error handler, request validators | [README](./api-utils/README.md) |
 | [@ibetoni/auth](./auth/) | 1.0.0 | JWT tokens and Google OAuth authentication | [README](./auth/README.md) |
-| [@ibetoni/cache](./cache/) | 1.0.0 | Redis cache with invalidation patterns | [README](./cache/README.md) |
-| [@ibetoni/constants](./constants/) | 1.0.0 | Shared CORS origins and domain constants | [README](./constants/README.md) |
-| [@ibetoni/permissions](./permissions/) | 1.0.0 | Role-based permission validation | [README](./permissions/README.md) |
 | [@ibetoni/betoni-utils](./betoni-utils/) | 1.0.0 | Betoni string formatting and validation | [README](./betoni-utils/README.md) |
+| [@ibetoni/cache](./cache/) | 1.0.0 | Redis cache with invalidation patterns | [README](./cache/README.md) |
+| [@ibetoni/constants](./constants/) | 1.0.0 | Shared CORS origins, HTTP statuses, role/module constants | [README](./constants/README.md) |
 | [@ibetoni/fennoa-utils](./fennoa-utils/) | 1.0.0 | Fennoa invoice response parsing and payment status computation | [README](./fennoa-utils/README.md) |
+| [@ibetoni/health-monitor](./health-monitor/) | 1.0.0 | Deployment health checks and response-time monitoring | — |
+| [@ibetoni/ocr-utils](./ocr-utils/) | 1.0.0 | OCR document classification, confidence scoring, status transitions | — |
+| [@ibetoni/permissions](./permissions/) | 1.0.0 | Role-based permission validation | [README](./permissions/README.md) |
+| [@ibetoni/sentry](./sentry/) | 1.0.0 | Shared Sentry initialization, capture helpers, redaction | — |
+| [@ibetoni/utils](./utils/) | 1.0.0 | General-purpose shared utilities (HTML escaping) | — |
 
 ## 🎯 Purpose
 
 These packages encapsulate core business logic that needs to be shared across multiple applications:
 
+- **`@ibetoni/api-utils`** - Express response builders (`sendSuccess`, `sendError`, `sendValidationError`, `handleRouteError`) and request validators (`validateRequiredFields`, `asyncHandler`) — single source of truth for backend API shape across services
 - **`@ibetoni/auth`** - JWT token creation/verification and Google OAuth authentication (eliminates 270 lines of duplicate code)
-- **`@ibetoni/cache`** - Provides unified Redis caching with automatic invalidation patterns for data consistency
-- **`@ibetoni/constants`** - Centralized CORS allowed origins and domain constants (eliminates 90 lines of duplicate code)
-- **`@ibetoni/permissions`** - Centralizes role-based access control logic used by both frontend and backend
 - **`@ibetoni/betoni-utils`** - Common utilities for concrete specification formatting, validation, and string building
+- **`@ibetoni/cache`** - Provides unified Redis caching with automatic invalidation patterns for data consistency
+- **`@ibetoni/constants`** - Centralized CORS allowed origins, HTTP status codes, role/module constants (eliminates 90 lines of duplicate code)
 - **`@ibetoni/fennoa-utils`** - Fennoa API response parsing (`parseFennoaInvoiceResponse`) and payment status computation (`computePaymentStatus`)
+- **`@ibetoni/health-monitor`** - Deployment health checks, response-time monitoring, and shared status dashboard helpers
+- **`@ibetoni/ocr-utils`** - OCR document classification, confidence scoring, and field-validation/status-transition helpers
+- **`@ibetoni/permissions`** - Centralizes role-based access control logic used by both frontend and backend
+- **`@ibetoni/sentry`** - Shared `@sentry/node` initialization, `captureError`/`captureException` helpers, and PII redaction
+- **`@ibetoni/utils`** - General-purpose shared utilities (HTML escaping)
 
 ## 🚀 Usage
 
@@ -38,12 +48,17 @@ npm install  # Automatically links all packages via npm workspaces
 Packages are symlinked in `node_modules/@ibetoni/`:
 ```
 node_modules/
-├── @ibetoni/auth → ../../ibetoni_packages/auth
-├── @ibetoni/cache → ../../ibetoni_packages/cache
-├── @ibetoni/constants → ../../ibetoni_packages/constants
-├── @ibetoni/permissions → ../../ibetoni_packages/permissions
-├── @ibetoni/betoni-utils → ../../ibetoni_packages/betoni-utils
-└── @ibetoni/fennoa-utils → ../../ibetoni_packages/fennoa-utils
+├── @ibetoni/api-utils      → ../../ibetoni_packages/api-utils
+├── @ibetoni/auth           → ../../ibetoni_packages/auth
+├── @ibetoni/betoni-utils   → ../../ibetoni_packages/betoni-utils
+├── @ibetoni/cache          → ../../ibetoni_packages/cache
+├── @ibetoni/constants      → ../../ibetoni_packages/constants
+├── @ibetoni/fennoa-utils   → ../../ibetoni_packages/fennoa-utils
+├── @ibetoni/health-monitor → ../../ibetoni_packages/health-monitor
+├── @ibetoni/ocr-utils      → ../../ibetoni_packages/ocr-utils
+├── @ibetoni/permissions    → ../../ibetoni_packages/permissions
+├── @ibetoni/sentry         → ../../ibetoni_packages/sentry
+└── @ibetoni/utils          → ../../ibetoni_packages/utils
 ```
 
 ### In Individual Projects
@@ -175,7 +190,7 @@ app.use(cors({
 **Included Origins:**
 - Production domains: `betoni.online`, `ibetoni.fi`, `pumppukone.fi`
 - Staging domains: `latest`, `stable`, `staging` slots
-- Development: `localhost:5173`, `localhost:3000`, `127.0.0.1:*`
+- Development: `localhost:5173` (puminet4), `localhost:5174` (betonijerry), `localhost:3000`-`3002`, `127.0.0.1:*`
 - Azure environments: `*.azurewebsites.net`, `*.azurestaticapps.net`
 
 **Benefits:**
@@ -326,12 +341,11 @@ See [TODO.md](./TODO.md) for upcoming packages and improvements.
 
 Planned additions include:
 - `@ibetoni/pricing` - Invoice calculations (CRITICAL)
-- `@ibetoni/email-utils` - Email parsing and validation
-- `@ibetoni/validators` - Email, password, coordinate validation
+- `@ibetoni/email-utils` - Email parsing and validation (extends `@ibetoni/betoni-utils`)
+- `@ibetoni/validators` - Domain validators (Finnish phone, postal codes, coordinates, etc.) — generic request validators already shipped in `@ibetoni/api-utils`
 - `@ibetoni/formatters` - String/number formatting
 - `@ibetoni/date-utils` - Date business logic
 - `@ibetoni/strings` - Shared string constants
-- `@ibetoni/validation` - Shared validation logic
 
 ## 🔒 Security
 

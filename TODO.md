@@ -5,22 +5,35 @@
 ✅ **@ibetoni/permissions** - Permission validation logic (CRITICAL)
 ✅ **@ibetoni/betoni-utils** - Betoni string formatting, validation, and constants (2025-11-03)
 ✅ **@ibetoni/constants** - Shared CORS origins, domain constants (2025-11-10)
+✅ **@ibetoni/sentry** - Shared Sentry init, captureError/captureException, PII redaction
+✅ **@ibetoni/health-monitor** - Deployment health checks and response-time monitoring
+✅ **@ibetoni/ocr-utils** - OCR document classification, confidence scoring, status transitions
+✅ **@ibetoni/fennoa-utils** - Fennoa invoice parsing and payment status computation
+✅ **@ibetoni/utils** - General-purpose utilities (HTML escaping)
+✅ **@ibetoni/api-utils** - Express response helpers + request validators (2026-04-28)
 
 ## Planned Packages
 
 1. @ibetoni/pricing - Invoice calculations (CRITICAL)
-2. @ibetoni/email-utils - Email parsing and validation
-3. @ibetoni/validators - Email, password, coordinate validation
+2. @ibetoni/email-utils - Email parsing and validation (extends betoni-utils)
+3. @ibetoni/validators - Domain validators (Finnish phone, postal codes, coordinates) — note: generic request validators already shipped in api-utils
 4. @ibetoni/formatters - String/number formatting
 5. @ibetoni/date-utils - Date business logic
 6. @ibetoni/strings - Shared string constants
-7. @ibetoni/validation - Shared validation logic
 
 ## Notes
 
-- Consider renaming @ibetoni/validation vs @ibetoni/validators for clarity
+- The previously-planned @ibetoni/validation was superseded by @ibetoni/api-utils (validateRequiredFields, validateId, validateIntegerFields, validateDateFormat, asyncHandler).
 
 ### Recent Additions
+
+**@ibetoni/api-utils** (2026-04-28):
+- Express response builders: `sendSuccess`, `sendError`, `sendValidationError`, `sendNotFound`, `sendUnauthorized`, `sendForbidden`
+- Catch-block helper: `handleRouteError(res, err, operation, { _entity, ... })` reports to Sentry with user/asiakas tags + sends `{ success: false, message, error }` response
+- Pure validators: `validateRequiredFields`, `validateId`, `validateIntegerFields`, `validateDateFormat`
+- Async wrapper: `asyncHandler(fn)` for routes
+- Promoted from `puminet5api/utils/{apiResponseHandler,validation}.js`; original files now thin shims that re-export from this package — 148 puminet5api callers untouched
+- Used by: puminet5api (via shim), betonijerry-api (direct)
 
 **@ibetoni/constants** (2025-11-10):
 - Centralized CORS allowed origins (44+ domains)

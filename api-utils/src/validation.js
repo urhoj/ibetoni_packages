@@ -10,13 +10,9 @@
  * @returns {string[]} Array of missing field names (empty if all present)
  */
 function validateRequiredFields(body, requiredFields) {
-  const missingFields = [];
-  for (const field of requiredFields) {
-    if (body[field] === undefined || body[field] === null || body[field] === "") {
-      missingFields.push(field);
-    }
-  }
-  return missingFields;
+  return requiredFields.filter(
+    (field) => body[field] === undefined || body[field] === null || body[field] === ""
+  );
 }
 
 /**
@@ -43,13 +39,9 @@ function validateId(id, fieldName = "id") {
  * @returns {string[]} Array of field names that are not integers
  */
 function validateIntegerFields(body, fieldNames) {
-  const invalid = [];
-  for (const field of fieldNames) {
-    if (body[field] !== undefined && !Number.isInteger(body[field])) {
-      invalid.push(field);
-    }
-  }
-  return invalid;
+  return fieldNames.filter(
+    (field) => body[field] !== undefined && !Number.isInteger(body[field])
+  );
 }
 
 /**
