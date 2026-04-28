@@ -140,6 +140,16 @@ class UniversalCacheManager {
       default: 3600, // 1 hour fallback (same as keikka tier)
     };
 
+    // Redis key prefixes that are real cache namespaces but are not tied to a
+    // BASE_TTL entity (cached under entity 'default' or via raw redis.set).
+    // Listed here so clearAllCache() can sweep them too.
+    this.ORPHAN_PREFIXES = [
+      "combinator:*", // person/asiakas/tyomaa duplicate-pair caches
+      "news:*",       // RSS news article list
+      "auth:*",       // permission cache (auth:permissions, auth:person)
+      "toimitus:*",   // toimitus:get:{keikkaId}
+    ];
+
     // Apply TTL multiplier to generate effective TTLs
     this.TTL = this._applyTtlMultiplier(this.BASE_TTL);
 
@@ -799,7 +809,13 @@ class UniversalCacheManager {
 
   /**
    * Clear all cached data (all Redis entity types + L1 in-memory).
-   * Safer than flushdb — only clears cache keys, not socket sessions.
+   * Safer than flushdb — only clears cache keys, not socket sessions, metrics,
+   * locks, or grid:last-update markers.
+   *
+   * Sweeps every BASE_TTL entity prefix plus the ORPHAN_PREFIXES list (Redis
+   * namespaces used by the app that are not tied to a BASE_TTL entity, e.g.
+   * combinator:duplicates:*, news:*, auth:permissions:*, toimitus:get:*).
+   *
    * @returns {Promise<number>} Total Redis keys cleared
    */
   async clearAllCache() {
@@ -807,6 +823,10 @@ class UniversalCacheManager {
     for (const entityType of Object.keys(this.BASE_TTL)) {
       if (entityType === "default") continue;
       const deleted = await this.invalidateByPattern(`${entityType}:*`);
+      if (typeof deleted === "number") total += deleted;
+    }
+    for (const pattern of this.ORPHAN_PREFIXES) {
+      const deleted = await this.invalidateByPattern(pattern);
       if (typeof deleted === "number") total += deleted;
     }
     this.clearL1Cache();
