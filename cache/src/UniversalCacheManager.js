@@ -74,6 +74,11 @@ class UniversalCacheManager {
     this.isShuttingDown = false;
     this.connectionPromise = null; // Prevent multiple connection attempts
 
+    // Throttle for ping-during-reconnect failure reporting. getClient() runs
+    // on every cache op; during a Redis outage that's thousands of identical
+    // pings/min — we report at most once per PING_REPORT_THROTTLE_MS.
+    this._lastPingErrorReportAt = 0;
+
     // Track current Redis database (3 = production, 4 = development)
     const isProduction = process.env.NODE_ENV === "production";
     this.currentDb = isProduction ? 3 : 4;
@@ -327,7 +332,10 @@ class UniversalCacheManager {
         const pingPromise = this.client
           .ping()
           .then(() => this.client)
-          .catch(() => null);
+          .catch((pingError) => {
+            this._reportPingError(pingError);
+            return null;
+          });
         const result = await Promise.race([pingPromise, timeoutPromise]);
         clearTimeout(timer);
         return result;
@@ -341,6 +349,23 @@ class UniversalCacheManager {
       this.connectionPromise = null;
       return null;
     }
+  }
+
+  /**
+   * Report a ping-during-reconnect failure to Sentry, throttled to one event
+   * per 5 minutes per process. getClient() is on every cache hot path, so an
+   * unthrottled report would emit thousands of identical events during a
+   * Redis outage. The first event surfaces the problem; the throttle prevents
+   * the flood while the outage persists.
+   */
+  _reportPingError(error) {
+    const PING_REPORT_THROTTLE_MS = 5 * 60 * 1000;
+    const now = Date.now();
+    if (now - this._lastPingErrorReportAt < PING_REPORT_THROTTLE_MS) return;
+    this._lastPingErrorReportAt = now;
+    captureError(error, {
+      tags: { feature: "cache", operation: "client-ping-during-reconnect" },
+    });
   }
 
   /**
