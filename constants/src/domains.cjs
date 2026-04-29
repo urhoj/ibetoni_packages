@@ -49,6 +49,8 @@ const allowedOrigins = [
   "https://www.betoni.online",
   "https://ibetoni.fi",
   "https://www.ibetoni.fi",
+  "https://betonijerry.fi",
+  "https://www.betonijerry.fi",
 
   // api & data
   "https://data.betoni.online",
