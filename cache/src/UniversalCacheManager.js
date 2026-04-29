@@ -656,10 +656,13 @@ class UniversalCacheManager {
               this.l1Cache.set(key, parsed);
             }
             return parsed;
-          } catch {
-            console.log("Corrupt cache data, deleting key", {
-              key,
-              entityType,
+          } catch (parseError) {
+            // Corrupt JSON in Redis is a real bug — write race, non-JSON write,
+            // or stored value mutation. Recover by deleting the key, but surface
+            // the failure so the underlying write path can be fixed.
+            captureError(parseError, {
+              tags: { feature: "cache", operation: "corrupt-json-on-read" },
+              extra: { key, entityType, sample: typeof data === "string" ? data.slice(0, 200) : null },
             });
             await redis.del(key);
             return null;
