@@ -47,6 +47,7 @@ const {
 } = require("./src/roles.cjs");
 const { FENNOA_PAYMENT_STATUS, FENNOA_PAYMENT_STATUS_LABELS_FI, INVOICE_STATUS, INVOICE_STATUS_LABELS_FI } = require("./src/fennoa.cjs");
 const { SENTRY_REDACT_FIELDS, SENTRY_REDACTED_PLACEHOLDER } = require("./src/sentry.cjs");
+const { BETONIJERRY } = require("./src/betonijerry.cjs");
 
 module.exports = {
   // Step log type constants
@@ -103,4 +104,7 @@ module.exports = {
   // Sentry constants
   SENTRY_REDACT_FIELDS,
   SENTRY_REDACTED_PLACEHOLDER,
+
+  // BetoniJerry umbrella tenant
+  BETONIJERRY,
 };

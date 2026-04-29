@@ -40,6 +40,10 @@
     "./sentry": {
       "import": "./src/sentry.js",
       "require": "./src/sentry.cjs"
+    },
+    "./betonijerry": {
+      "import": "./src/betonijerry.js",
+      "require": "./src/betonijerry.cjs"
     }
   },
   "keywords": [

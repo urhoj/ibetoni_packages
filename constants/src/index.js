@@ -51,6 +51,7 @@ import {
 } from "./roles.js";
 import { FENNOA_PAYMENT_STATUS, FENNOA_PAYMENT_STATUS_LABELS_FI, FENNOA_PAYMENT_STATUS_SEVERITY, INVOICE_STATUS, INVOICE_STATUS_LABELS_FI } from "./fennoa.js";
 import { SENTRY_REDACT_FIELDS, SENTRY_REDACTED_PLACEHOLDER } from "./sentry.js";
+import { BETONIJERRY } from "./betonijerry.js";
 
 export {
   // Step log type constants
@@ -108,4 +109,7 @@ export {
   // Sentry constants
   SENTRY_REDACT_FIELDS,
   SENTRY_REDACTED_PLACEHOLDER,
+
+  // BetoniJerry umbrella tenant
+  BETONIJERRY,
 };
