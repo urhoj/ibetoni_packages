@@ -42,7 +42,7 @@ function readReleaseFile() {
       if (sha) return sha;
     }
   } catch {
-    // ignore — release file is optional
+    // audit:swallowed-errors-ignore: release file is optional — fall back to other release sources (env, package version, git sha).
   }
   return null;
 }
@@ -132,6 +132,7 @@ function safeStringify(value) {
   try {
     return JSON.stringify(value);
   } catch {
+    // audit:swallowed-errors-ignore: this util's literal job is to fall back to String(value) on circular refs / unsupported types.
     return String(value);
   }
 }
