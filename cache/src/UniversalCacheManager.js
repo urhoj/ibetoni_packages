@@ -1787,6 +1787,10 @@ class UniversalCacheManager {
           totalInvalidated += await this.invalidateByPattern(
             `auth:permissions:${personId}:*`,
           );
+          // /profile Asiakkaat role chips read asiakas:myRoles:* — must clear them on any role mutation.
+          totalInvalidated += await this.invalidateByPattern(
+            `asiakas:myRoles:*:${personId}`,
+          );
         }
         break;
       }
