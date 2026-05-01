@@ -443,6 +443,7 @@ TTLs are capped at **7 days** (604,800 seconds) regardless of multiplier to prev
 | vehicle | 2hr | **8hr** | Vehicles |
 | tyomaa | 2hr | **8hr** | Worksites |
 | betoni | 1hr | **4hr** | Concrete specifications |
+| betoniPrices | 5min | **~20min** | Concrete price lookups (SP-heavy) |
 | grid | 1hr | **4hr** | Grid keikka lists |
 | stepLog | 1hr | **4hr** | Keikka activity logs |
 | stat | 2hr | **8hr** | Statistics (updated by cron) |
@@ -451,6 +452,7 @@ TTLs are capped at **7 days** (604,800 seconds) regardless of multiplier to prev
 | legalDocument | 24hr | **96hr** | Legal documents |
 | holiday | 24hr | **96hr** | National holidays |
 | notifications | 2min | **8min** | Push notifications (time-sensitive) |
+| auth | 5min | **~20min** | Login permissions / role cache (jitter via cache()) |
 | ecofleet | 1min | **1min** | Real-time GPS (excluded from multiplier) |
 | ecofleet-daily | 4hr | **4hr** | Daily keikka check, cron smart fetch (excluded from multiplier) |
 | ecofleet-daily-today | 10min | **10min** | Today's GPS timeline/route (excluded from multiplier) |

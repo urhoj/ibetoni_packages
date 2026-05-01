@@ -142,7 +142,7 @@ class UniversalCacheManager {
       notifications: 120, // 2 minutes - time-sensitive push notifications
       reminder: 7200, // 2 hours - reminder rules, infrequently changed
       keikkaTila: 43200, // 12 hours - delivery status types (static reference data)
-      auth: 300, // 5 minutes - permission/role cache (multiplier-excluded, jitter via cache())
+      auth: 300, // 5 min base, multiplied to ~20 min effective; jitter via cache()
       default: 3600, // 1 hour fallback (same as keikka tier)
     };
 
