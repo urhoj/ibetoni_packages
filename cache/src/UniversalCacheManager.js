@@ -43,6 +43,8 @@ const TTL_MULTIPLIER_EXCLUDED = new Set([
   "ecofleet", // Real-time vehicle GPS positions - must stay at 1 minute
   "ecofleet-daily", // Keikka presence check - must stay at 4h
   "ecofleet-daily-today", // Today's timeline data - must stay at 10min
+  "auth", // Permission/role cache - 5 minutes is intentional, jitter handled by cache()
+  "betoniPrices", // SP-heavy pricing - 5 minutes is intentional for price freshness
 ]);
 
 /**
@@ -142,6 +144,7 @@ class UniversalCacheManager {
       notifications: 120, // 2 minutes - time-sensitive push notifications
       reminder: 7200, // 2 hours - reminder rules, infrequently changed
       keikkaTila: 43200, // 12 hours - delivery status types (static reference data)
+      auth: 300, // 5 minutes - permission/role cache (multiplier-excluded, jitter via cache())
       default: 3600, // 1 hour fallback (same as keikka tier)
     };
 
