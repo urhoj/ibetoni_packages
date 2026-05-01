@@ -43,8 +43,6 @@ const TTL_MULTIPLIER_EXCLUDED = new Set([
   "ecofleet", // Real-time vehicle GPS positions - must stay at 1 minute
   "ecofleet-daily", // Keikka presence check - must stay at 4h
   "ecofleet-daily-today", // Today's timeline data - must stay at 10min
-  "auth", // Permission/role cache - 5 minutes is intentional, jitter handled by cache()
-  "betoniPrices", // SP-heavy pricing - 5 minutes is intentional for price freshness
 ]);
 
 /**
