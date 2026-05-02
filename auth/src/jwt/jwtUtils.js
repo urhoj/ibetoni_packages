@@ -113,7 +113,7 @@ const createVerifyTokenMiddleware = (options = {}) => {
     try {
       const jwtKey = await getJwtKey(options);
       const decoded = /** @type {import('jsonwebtoken').JwtPayload} */ (
-        jwt.verify(token, jwtKey)
+        jwt.verify(token, jwtKey, { algorithms: ["HS256"] })
       );
 
       // Validate required claims
@@ -212,7 +212,7 @@ const createToken = async (
 const getTokenData = async (token, options = {}) => {
   const jwtKey = await getJwtKey(options);
   const decoded = /** @type {import('jsonwebtoken').JwtPayload} */ (
-    jwt.verify(token, jwtKey)
+    jwt.verify(token, jwtKey, { algorithms: ["HS256"] })
   );
   return decoded;
 };
@@ -234,7 +234,7 @@ const hashPassword = (password) => {
  * @returns {Promise<boolean>} True if password matches
  */
 const comparePassword = async (password, hashedPassword) => {
-  const result = await bcrypt.compareSync(password, hashedPassword);
+  const result = await bcrypt.compare(password, hashedPassword);
   return result;
 };
 
