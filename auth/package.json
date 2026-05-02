@@ -3,6 +3,16 @@
   "version": "1.0.0",
   "description": "Shared authentication utilities for betoni.online platform",
   "main": "src/index.js",
+  "exports": {
+    ".": {
+      "require": "./src/index.js",
+      "import": "./src/index.js"
+    },
+    "./codec": {
+      "require": "./src/jwt/jwtPayloadCodec.js",
+      "import": "./src/jwt/jwtPayloadCodec.js"
+    }
+  },
   "scripts": {
     "test": "vitest run"
   },
