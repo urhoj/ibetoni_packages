@@ -48,15 +48,16 @@ const verifyToken = createVerifyTokenMiddleware({
 ```javascript
 const { createToken } = require('@ibetoni/auth');
 
-// Simple usage with new JWT structure
-// Note: companyRoles is NOT stored in JWT - it's derived on frontend from asiakasesWithTypes
+// createToken emits v2 short shape when JWT_SHORT_KEYS=true env var is set,
+// otherwise emits v1 legacy shape. Both are accepted by verify middleware.
+// Note: companyRoles is NOT stored in JWT - derived on frontend from asiakasesWithTypes
 const token = await createToken('user@example.com', 123, {
   ownerAsiakasId: 456,
   tenantAsiakasId: 456,
   globalRoles: { isSystemAdmin: false, isDeveloper: false, /* ... */ },
   asiakasesWithTypes: [
-    { asiakasId: 456, companyType: "owner", roles: ["asiakasAdmin", "keikkaHandler"] },
-    { asiakasId: 789, companyType: "pumppu", roles: ["pumppari"] }
+    { asiakasId: 456, roles: ["asiakasAdmin", "keikkaHandler"] },
+    { asiakasId: 789, roles: ["pumppari"] }
   ]
 });
 
@@ -65,6 +66,27 @@ const token = await createToken('user@example.com', 123, additionalClaims, {
   getEnvVar: environmentHelper.getEnvVar
 });
 ```
+
+### Payload Codec (Frontend / FE consumers)
+
+The codec is exposed as a sub-export for use in frontend code and any context where only payload manipulation is needed (no signing/verifying):
+
+```javascript
+// @ibetoni/auth/codec — lightweight, no crypto dependencies at import time
+import { expandPayload, isShortShape } from '@ibetoni/auth/codec';
+
+// Decode an arbitrary JWT payload (does not verify signature)
+const raw = JSON.parse(atob(token.split('.')[1]));
+const payload = expandPayload(raw, { onUnknownRole: 'skip' }); // FE: forgiving
+// payload.personId, payload.ownerAsiakasId, payload.asiakasesWithTypes etc. — always expanded shape
+
+// Backend usage (fail-closed — throws on unknown typeId):
+const payload = expandPayload(raw); // default onUnknownRole: 'throw'
+```
+
+The codec exports: `compressPayload`, `expandPayload`, `isShortShape`, `PAYLOAD_VERSION`, `GLOBAL_ROLE_FLAGS`, `COMPANY_FLAGS`.
+
+Role integer ↔ name mapping source of truth is `@ibetoni/constants` (`ROLE_NAME_BY_TYPEID`, `ROLE_TYPEID_BY_NAME`).
 
 ### Google OAuth Verification
 
@@ -132,7 +154,7 @@ const { hashPassword, comparePassword } = require('@ibetoni/auth');
 // Hash a password
 const hashed = hashPassword('mySecurePassword123');
 
-// Compare password with hash
+// Compare password with hash (real async bcrypt.compare — always await)
 const isValid = await comparePassword('mySecurePassword123', hashed);
 ```
 
@@ -265,7 +287,8 @@ const token = await createToken(email, personId, additionalClaims, {
 
 - JWT tokens expire after 7 days by default
 - Temporary tokens (for special use cases) expire after 3 minutes
-- Passwords are hashed with bcrypt (10 rounds)
+- Passwords are hashed with bcrypt (10 rounds); `comparePassword` uses real async `bcrypt.compare`
+- `jwt.verify` pins the algorithm allowlist to `["HS256"]` — algorithm confusion attacks are blocked
 - All token verification requires valid `personId` or `email` claims
 - Google OAuth tokens are verified against configured `GOOGLE_CLIENT_ID`
 - **Microsoft OAuth Security** (Updated 2026-01-29):
