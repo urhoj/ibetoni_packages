@@ -1,6 +1,13 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { buildCompanyRoles } = require("@ibetoni/constants");
+const { compressPayload, expandPayload } = require("./jwtPayloadCodec");
+
+// Sign-side gate: when true, createToken emits the v2 short wire shape
+// (~50% smaller for typical multi-company users). Verify side accepts both
+// shapes unconditionally via expandPayload, so this flag can be flipped
+// independently per environment.
+const useShortShape = () => process.env.JWT_SHORT_KEYS === "true";
 
 /**
  * JWT Utilities for betoni.online platform
@@ -112,9 +119,12 @@ const createVerifyTokenMiddleware = (options = {}) => {
 
     try {
       const jwtKey = await getJwtKey(options);
-      const decoded = /** @type {import('jsonwebtoken').JwtPayload} */ (
+      const rawDecoded = /** @type {import('jsonwebtoken').JwtPayload} */ (
         jwt.verify(token, jwtKey, { algorithms: ["HS256"] })
       );
+      // Expand v2 short shape → canonical. Legacy/peli payloads pass through.
+      // Fail-closed on unknown role typeId (throws → caught below → 401).
+      const decoded = expandPayload(rawDecoded);
 
       // Validate required claims
       if (!decoded.personId && !decoded.email) {
@@ -195,8 +205,14 @@ const createToken = async (
     ...additionalClaims, // Allow additional claims (globalRoles, companyRoles, etc.)
   };
 
-  const token = jwt.sign(user, jwtKey, {
+  const short = useShortShape();
+  const payload = short ? compressPayload(user) : user;
+
+  const token = jwt.sign(payload, jwtKey, {
+    algorithm: "HS256",
     expiresIn: /** @type {any} */ (expiresIn),
+    // Drop iat in short shape — no source-code consumers; saves ~12 B/token.
+    ...(short ? { noTimestamp: true } : {}),
   });
 
   return token;
@@ -211,10 +227,11 @@ const createToken = async (
  */
 const getTokenData = async (token, options = {}) => {
   const jwtKey = await getJwtKey(options);
-  const decoded = /** @type {import('jsonwebtoken').JwtPayload} */ (
+  const rawDecoded = /** @type {import('jsonwebtoken').JwtPayload} */ (
     jwt.verify(token, jwtKey, { algorithms: ["HS256"] })
   );
-  return decoded;
+  // Expand v2 short shape → canonical. Fail-closed on unknown role typeId.
+  return expandPayload(rawDecoded);
 };
 
 /**
