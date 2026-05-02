@@ -43,6 +43,11 @@ const {
   ASIAKAS_SETTING_TYPE_IDS,
   ROLE_NAME_TO_KEY_MAP,
   TYPE_ID_TO_ROLE_NAME,
+  ROLE_NAME_BY_TYPEID,
+  ROLE_TYPEID_BY_NAME,
+  KNOWN_ROLE_TYPEIDS,
+  rolesNamesToTypeIds,
+  roleTypeIdsToNames,
   buildCompanyRoles,
 } = require("./src/roles.cjs");
 const { FENNOA_PAYMENT_STATUS, FENNOA_PAYMENT_STATUS_LABELS_FI, INVOICE_STATUS, INVOICE_STATUS_LABELS_FI } = require("./src/fennoa.cjs");
@@ -81,6 +86,11 @@ module.exports = {
   COMPANY_ROLE_TO_TYPE_ID,
   ROLE_NAME_TO_KEY_MAP,
   TYPE_ID_TO_ROLE_NAME,
+  ROLE_NAME_BY_TYPEID,
+  ROLE_TYPEID_BY_NAME,
+  KNOWN_ROLE_TYPEIDS,
+  rolesNamesToTypeIds,
+  roleTypeIdsToNames,
   buildCompanyRoles,
   ADMIN_COMPANY_ROLE_TYPE_IDS,
   ASIAKAS_EDITOR_ROLE_TYPE_ID,

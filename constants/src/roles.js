@@ -128,6 +128,104 @@ export function buildCompanyRoles(roles) {
 }
 
 /**
+ * Canonical mapping: asiakasPersonSettingTypeId → JWT codec role name string.
+ *
+ * This is the single source of truth for the role-name strings that appear
+ * in the JWT `asiakasesWithTypes[].roles` array (legacy shape) and that the
+ * v2 short-shape codec encodes/decodes via `roles.r` typeId arrays.
+ *
+ * Note: typeId 9 string is `typisSuhteessa` — preserved verbatim because
+ * existing JWTs and the FE buildCompanyRoles map already use that spelling.
+ * TypeIds 20/21 (pumppu*) are OBSOLETE but kept for legacy data round-trip.
+ *
+ * @constant {Object.<number, string>}
+ */
+export const ROLE_NAME_BY_TYPEID = Object.freeze({
+  1: "laskupohjaAdmin",
+  2: "asiakasAdmin",
+  5: "laskuAdmin",
+  6: "asiakasEditor",
+  8: "pumppari",
+  9: "typisSuhteessa",
+  10: "attachmentHandler",
+  11: "keikkaHandler",
+  12: "sijaintiHandler",
+  13: "vehicleHandler",
+  14: "tuoteHandler",
+  15: "lomaseurannassa",
+  16: "assignee",
+  17: "keikkaViewer",
+  18: "betoniHandler",
+  19: "betoniViewer",
+  20: "pumppuHandler",
+  21: "pumppuViewer",
+  22: "asiakasOwner",
+  24: "hrAdmin",
+});
+
+/**
+ * Inverse of ROLE_NAME_BY_TYPEID, auto-derived to prevent drift.
+ * @constant {Object.<string, number>}
+ */
+export const ROLE_TYPEID_BY_NAME = Object.freeze(
+  Object.fromEntries(
+    Object.entries(ROLE_NAME_BY_TYPEID).map(([id, name]) => [name, Number(id)]),
+  ),
+);
+
+/**
+ * Set of all known role typeIds. Used by the JWT codec to fail-closed
+ * on tokens containing unrecognised typeIds.
+ * @constant {Set<number>}
+ */
+export const KNOWN_ROLE_TYPEIDS = new Set(
+  Object.keys(ROLE_NAME_BY_TYPEID).map(Number),
+);
+
+/**
+ * Convert role-name strings → typeIds for compact JWT encoding.
+ * Unknown names are dropped silently (compress side trusts the producer).
+ *
+ * @param {string[]|null|undefined} names
+ * @returns {number[]} typeIds, deduped and ascending
+ */
+export function rolesNamesToTypeIds(names) {
+  if (!Array.isArray(names)) return [];
+  const ids = [];
+  for (const name of names) {
+    const id = ROLE_TYPEID_BY_NAME[name];
+    if (id !== undefined) ids.push(id);
+  }
+  return [...new Set(ids)].sort((a, b) => a - b);
+}
+
+/**
+ * Convert typeIds → role-name strings during JWT decode.
+ *
+ * @param {number[]|null|undefined} typeIds
+ * @param {object} [options]
+ * @param {"throw"|"skip"} [options.onUnknown="throw"] - Behaviour when a typeId
+ *   is not in KNOWN_ROLE_TYPEIDS. "throw" rejects the whole payload (BE/fail-closed).
+ *   "skip" drops the unknown id and continues (FE/forgiving).
+ * @returns {string[]} role names
+ * @throws {Error} when onUnknown="throw" and an unknown typeId is encountered
+ */
+export function roleTypeIdsToNames(typeIds, { onUnknown = "throw" } = {}) {
+  if (!Array.isArray(typeIds)) return [];
+  const names = [];
+  for (const id of typeIds) {
+    const name = ROLE_NAME_BY_TYPEID[id];
+    if (name !== undefined) {
+      names.push(name);
+    } else if (onUnknown === "throw") {
+      throw new Error(`Unknown role typeId: ${id}`);
+    }
+    // onUnknown === "skip": silently drop
+  }
+  return names;
+}
+
+/**
  * Reverse mapping: Type ID to role name
  * Useful for debugging and display purposes
  *

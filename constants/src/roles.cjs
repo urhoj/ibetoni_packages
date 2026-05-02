@@ -61,6 +61,63 @@ function buildCompanyRoles(roles) {
   return out;
 }
 
+const ROLE_NAME_BY_TYPEID = Object.freeze({
+  1: "laskupohjaAdmin",
+  2: "asiakasAdmin",
+  5: "laskuAdmin",
+  6: "asiakasEditor",
+  8: "pumppari",
+  9: "typisSuhteessa",
+  10: "attachmentHandler",
+  11: "keikkaHandler",
+  12: "sijaintiHandler",
+  13: "vehicleHandler",
+  14: "tuoteHandler",
+  15: "lomaseurannassa",
+  16: "assignee",
+  17: "keikkaViewer",
+  18: "betoniHandler",
+  19: "betoniViewer",
+  20: "pumppuHandler",
+  21: "pumppuViewer",
+  22: "asiakasOwner",
+  24: "hrAdmin",
+});
+
+const ROLE_TYPEID_BY_NAME = Object.freeze(
+  Object.fromEntries(
+    Object.entries(ROLE_NAME_BY_TYPEID).map(([id, name]) => [name, Number(id)]),
+  ),
+);
+
+const KNOWN_ROLE_TYPEIDS = new Set(
+  Object.keys(ROLE_NAME_BY_TYPEID).map(Number),
+);
+
+function rolesNamesToTypeIds(names) {
+  if (!Array.isArray(names)) return [];
+  const ids = [];
+  for (const name of names) {
+    const id = ROLE_TYPEID_BY_NAME[name];
+    if (id !== undefined) ids.push(id);
+  }
+  return [...new Set(ids)].sort((a, b) => a - b);
+}
+
+function roleTypeIdsToNames(typeIds, { onUnknown = "throw" } = {}) {
+  if (!Array.isArray(typeIds)) return [];
+  const names = [];
+  for (const id of typeIds) {
+    const name = ROLE_NAME_BY_TYPEID[id];
+    if (name !== undefined) {
+      names.push(name);
+    } else if (onUnknown === "throw") {
+      throw new Error(`Unknown role typeId: ${id}`);
+    }
+  }
+  return names;
+}
+
 const TYPE_ID_TO_ROLE_NAME = {
   1: "Laskupohja Admin",
   2: "Asiakas Admin",
@@ -181,6 +238,11 @@ module.exports = {
   COMPANY_ROLE_TO_TYPE_ID,
   ROLE_NAME_TO_KEY_MAP,
   TYPE_ID_TO_ROLE_NAME,
+  ROLE_NAME_BY_TYPEID,
+  ROLE_TYPEID_BY_NAME,
+  KNOWN_ROLE_TYPEIDS,
+  rolesNamesToTypeIds,
+  roleTypeIdsToNames,
   buildCompanyRoles,
   ADMIN_COMPANY_ROLE_TYPE_IDS,
   ASIAKAS_EDITOR_ROLE_TYPE_ID,

@@ -22,6 +22,7 @@
  */
 
 const jwtUtils = require("./jwt/jwtUtils");
+const jwtPayloadCodec = require("./jwt/jwtPayloadCodec");
 const { GoogleAuth, createGoogleAuth } = require("./oauth/googleAuth");
 
 module.exports = {
@@ -34,6 +35,14 @@ module.exports = {
   isTokenExpiringSoon: jwtUtils.isTokenExpiringSoon,
   refreshToken: jwtUtils.refreshToken,
   deriveAsiakasList: jwtUtils.deriveAsiakasList,
+
+  // JWT payload codec (v2 short shape)
+  compressPayload: jwtPayloadCodec.compressPayload,
+  expandPayload: jwtPayloadCodec.expandPayload,
+  isShortShape: jwtPayloadCodec.isShortShape,
+  PAYLOAD_VERSION: jwtPayloadCodec.PAYLOAD_VERSION,
+  GLOBAL_ROLE_FLAGS: jwtPayloadCodec.GLOBAL_ROLE_FLAGS,
+  COMPANY_FLAGS: jwtPayloadCodec.COMPANY_FLAGS,
 
   // Google OAuth
   GoogleAuth,
