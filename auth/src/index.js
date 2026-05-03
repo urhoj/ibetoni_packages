@@ -22,7 +22,7 @@
  */
 
 const jwtUtils = require("./jwt/jwtUtils");
-const jwtPayloadCodec = require("./jwt/jwtPayloadCodec");
+const jwtPayloadCodec = require("./jwt/jwtPayloadCodec.cjs");
 const { GoogleAuth, createGoogleAuth } = require("./oauth/googleAuth");
 
 module.exports = {

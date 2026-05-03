@@ -9,7 +9,7 @@
       "import": "./src/index.js"
     },
     "./codec": {
-      "require": "./src/jwt/jwtPayloadCodec.js",
+      "require": "./src/jwt/jwtPayloadCodec.cjs",
       "import": "./src/jwt/jwtPayloadCodec.js"
     }
   },

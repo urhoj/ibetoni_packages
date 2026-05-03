@@ -1,65 +1,26 @@
 /**
- * JWT Payload Codec — v2 short-shape compression for betoni.online
+ * JWT Payload Codec — v2 short-shape compression for betoni.online (CJS)
  *
- * Translates between the canonical claim shape used everywhere in the app
- * and a compact wire shape used for signing/verifying. Keeps the rest of
- * the codebase ignorant of the wire format: sign-side calls compressPayload,
- * verify-side calls expandPayload, consumers see canonical req.user.
- *
- * Wire shape (v: 2):
- *   {
- *     v: 2,
- *     sub: "12345",            // personId (string per JWT spec)
- *     email: "user@x.fi",
- *     o:  100,                 // ownerAsiakasId
- *     t:  100,                 // tenantAsiakasId (load-bearing for subscriptions)
- *     g:  2,                   // globalRoles bitflags
- *     a:  [                    // asiakasesWithTypes (tuple rows)
- *       [asiakasId, companyFlags, roleTypeIds[]],
- *     ],
- *     exp: 1770000000,
- *     scope: "peli",           // optional, peli passthrough
- *   }
- *
- * Global role flags (g):
- *   1 = isDeveloper
- *   2 = isRoleManager
- *   4 = isSystemAdmin
- *   8 = isGlobalSijaintiAdmin
- *
- * Company tuple slot 1 (companyFlags):
- *   1 = isTyomaaAsiakas
- *   2 = isPumppuToimittaja
- *   4 = isBetoniToimittaja
- *
- * Notes:
- *   - `companyType` is dropped entirely (zero runtime callers; was derived
- *     from pT/bT anyway). Not restored on expand.
- *   - `iat` is dropped on sign (use noTimestamp:true) and not restored.
- *   - Tokens without `v: 2` (legacy app tokens, peli scope tokens) pass
- *     through expand unchanged. Compress emits v:2 unconditionally.
- *   - Unknown role typeIds: BE callers pass {onUnknownRole:"throw"} (default,
- *     fail-closed). FE callers pass {onUnknownRole:"skip"} (forgiving).
- *
- * Module format: ESM. Backend Node `require()` callers resolve to the sibling
- * `jwtPayloadCodec.cjs` via package.json "exports"; FE/Vite resolves here.
+ * CommonJS build of jwtPayloadCodec.js. Kept in lockstep with the ESM source.
+ * Backend Node `require()` callers resolve here via package.json "exports"
+ * `./codec.require`; FE/Vite resolves the ESM `.js` sibling via `./codec.import`.
  */
 
-import {
+const {
   rolesNamesToTypeIds,
   roleTypeIdsToNames,
-} from "@ibetoni/constants";
+} = require("@ibetoni/constants");
 
-export const PAYLOAD_VERSION = 2;
+const PAYLOAD_VERSION = 2;
 
-export const GLOBAL_ROLE_FLAGS = Object.freeze({
+const GLOBAL_ROLE_FLAGS = Object.freeze({
   isDeveloper: 1,
   isRoleManager: 2,
   isSystemAdmin: 4,
   isGlobalSijaintiAdmin: 8,
 });
 
-export const COMPANY_FLAGS = Object.freeze({
+const COMPANY_FLAGS = Object.freeze({
   isTyomaaAsiakas: 1,
   isPumppuToimittaja: 2,
   isBetoniToimittaja: 4,
@@ -108,28 +69,11 @@ function expandCompanyRow(tuple, { onUnknownRole }) {
   };
 }
 
-/**
- * Detect whether a decoded JWT payload is in v2 short shape.
- * @param {object} decoded
- * @returns {boolean}
- */
-export function isShortShape(decoded) {
+function isShortShape(decoded) {
   return Boolean(decoded) && decoded.v === PAYLOAD_VERSION;
 }
 
-/**
- * Compress canonical payload → v2 short wire shape.
- *
- * Drops: companyType (everywhere), iat (caller signs with noTimestamp:true).
- * Preserves: scope (peli), email, exp.
- * Sub claim: personId is serialised as string per JWT RFC 7519 §4.1.2.
- *
- * Side-effect free.
- *
- * @param {object} canonical
- * @returns {object} short shape
- */
-export function compressPayload(canonical) {
+function compressPayload(canonical) {
   if (!canonical || typeof canonical !== "object") {
     throw new Error("compressPayload: canonical payload must be an object");
   }
@@ -154,21 +98,7 @@ export function compressPayload(canonical) {
   return short;
 }
 
-/**
- * Expand v2 short shape → canonical payload.
- *
- * Tokens without v:2 (legacy app tokens, peli scope tokens currently signed
- * via the legacy path) pass through unchanged so consumers keep working
- * during rollout and for non-app token types.
- *
- * @param {object} decoded - jwt.verify result
- * @param {object} [options]
- * @param {"throw"|"skip"} [options.onUnknownRole="throw"] - fail-closed (BE)
- *   vs forgiving (FE). On "throw", an unknown typeId rejects the entire
- *   payload — caller should treat this as INVALID_TOKEN and 401.
- * @returns {object} canonical shape
- */
-export function expandPayload(decoded, { onUnknownRole = "throw" } = {}) {
+function expandPayload(decoded, { onUnknownRole = "throw" } = {}) {
   if (!isShortShape(decoded)) return decoded;
 
   const out = {};
@@ -192,3 +122,12 @@ export function expandPayload(decoded, { onUnknownRole = "throw" } = {}) {
 
   return out;
 }
+
+module.exports = {
+  PAYLOAD_VERSION,
+  GLOBAL_ROLE_FLAGS,
+  COMPANY_FLAGS,
+  compressPayload,
+  expandPayload,
+  isShortShape,
+};

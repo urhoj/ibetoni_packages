@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { buildCompanyRoles } = require("@ibetoni/constants");
-const { compressPayload, expandPayload } = require("./jwtPayloadCodec");
+const { compressPayload, expandPayload } = require("./jwtPayloadCodec.cjs");
 
 // Sign-side gate: when true, createToken emits the v2 short wire shape
 // (~50% smaller for typical multi-company users). Verify side accepts both
