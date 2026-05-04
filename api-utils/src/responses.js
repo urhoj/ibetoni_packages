@@ -11,6 +11,18 @@ const sentry = require("@ibetoni/sentry");
 
 /**
  * Send raw data as JSON response.
+ *
+ * IMPORTANT: This helper does NOT wrap the payload — `data` is sent verbatim.
+ * Frontend consumers that check `if (result.success)` (e.g. validation hooks,
+ * mutation result handlers) require `success: true` to be present in the body.
+ * If your route's FE consumer does that check, include `success: true` in the
+ * literal: `sendSuccess(res, { success: true, ... })`.
+ *
+ * Regression caught 2026-05-04: `/api/fennoa/test-connection` was migrated
+ * from `res.status(200).json({success: true, ...})` to `sendSuccess({...})`
+ * and silently dropped `success: true`, breaking the FE for 3 days.
+ * Run `npm run audit:api-success-field` to surface similar cases.
+ *
  * @param {object} res - Express response object
  * @param {*} data - Data to send (sent as-is, no wrapping)
  * @param {number} statusCode - HTTP status code (default: 200)
