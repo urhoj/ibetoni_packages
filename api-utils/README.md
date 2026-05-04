@@ -16,7 +16,7 @@ Promoted from `puminet5api/utils/{apiResponseHandler,validation}.js` so all back
 | `sendNotFound(res, message?)` | `sendError` with status 404. |
 | `sendUnauthorized(res, message?)` | `sendError` with status 401. |
 | `sendForbidden(res, message?)` | `sendError` with status 403. |
-| `handleRouteError(res, error, operation, extra?)` | For catch blocks: reports to Sentry with user/asiakas tags + sends error response. Reads `error.statusCode` (default 500). |
+| `handleRouteError(res, error, operation, extra?)` | For catch blocks: reports to Sentry with user/asiakas tags + sends error response. Reads `error.statusCode` (default 500). `extra._entity` becomes the `entity` tag; `extra._tags` is merged into Sentry tags (use for queryable per-route diagnostics like `targetAsiakasId`); all other keys land in Sentry "extra". |
 
 ### Validators (from `./validation`)
 

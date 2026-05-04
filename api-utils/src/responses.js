@@ -65,13 +65,23 @@ function sendForbidden(res, message = "Forbidden") {
  * @param {object} res - Express response object
  * @param {Error} error - The caught error (set error.statusCode for non-500)
  * @param {string} operation - Short operation name (e.g. "person-set")
- * @param {object} extra - Additional context (_entity for Sentry tags)
+ * @param {object} extra - Additional context. Reserved keys:
+ *   - `_entity` → Sentry tag `entity` (default "unknown")
+ *   - `_tags`   → object merged into Sentry tags (string-coerced; null/undefined skipped).
+ *                 Built-in tags (entity, operation, method, path, asiakasId) win on conflict.
+ *   All other keys are forwarded as Sentry "extra" data.
  */
 function handleRouteError(res, error, operation, extra = {}) {
-  const { _entity = "unknown", ...sentryExtra } = extra;
+  const { _entity = "unknown", _tags = {}, ...sentryExtra } = extra;
   const req = res.req || {};
   const user = req.user || {};
   const asiakasId = user.ownerAsiakasId || user.asiakasId;
+
+  const customTags = {};
+  for (const [key, value] of Object.entries(_tags || {})) {
+    if (value === undefined || value === null) continue;
+    customTags[key] = String(value);
+  }
 
   sentry.captureException(error, {
     user: user.personId
@@ -82,6 +92,7 @@ function handleRouteError(res, error, operation, extra = {}) {
         }
       : undefined,
     tags: {
+      ...customTags,
       entity: _entity,
       operation,
       method: req.method,
