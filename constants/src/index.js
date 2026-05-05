@@ -57,10 +57,15 @@ import {
 import { FENNOA_PAYMENT_STATUS, FENNOA_PAYMENT_STATUS_LABELS_FI, FENNOA_PAYMENT_STATUS_SEVERITY, INVOICE_STATUS, INVOICE_STATUS_LABELS_FI } from "./fennoa.js";
 import { SENTRY_REDACT_FIELDS, SENTRY_REDACTED_PLACEHOLDER } from "./sentry.js";
 import { BETONIJERRY } from "./betonijerry.js";
+import { PERSON_LOG_TYPES, PERSON_LOG_TYPE_NAMES } from "./personLogTypes.js";
 
 export {
   // Step log type constants
   STEP_LOG_TYPE,
+
+  // PersonLog type constants
+  PERSON_LOG_TYPES,
+  PERSON_LOG_TYPE_NAMES,
 
   // Domain constants
   allowedOrigins,
