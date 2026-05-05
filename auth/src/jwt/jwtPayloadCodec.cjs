@@ -94,6 +94,8 @@ function compressPayload(canonical) {
     short.a = canonical.asiakasesWithTypes.map(compressCompanyRow);
   }
   if (canonical.scope !== undefined) short.scope = canonical.scope;
+  if (canonical.imp !== undefined && canonical.imp !== null) short.i = canonical.imp;
+  if (canonical.imp_sid !== undefined && canonical.imp_sid !== null) short.s = canonical.imp_sid;
 
   return short;
 }
@@ -119,6 +121,8 @@ function expandPayload(decoded, { onUnknownRole = "throw" } = {}) {
     );
   }
   if (decoded.scope !== undefined) out.scope = decoded.scope;
+  if (decoded.i !== undefined && decoded.i !== null) out.imp = decoded.i;
+  if (decoded.s !== undefined && decoded.s !== null) out.imp_sid = decoded.s;
 
   return out;
 }

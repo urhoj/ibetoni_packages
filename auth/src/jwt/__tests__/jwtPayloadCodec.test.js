@@ -416,3 +416,57 @@ describe("round-trip (compress → expand)", () => {
     }
   });
 });
+
+describe("impersonation claims (imp / imp_sid)", () => {
+  it("compress encodes imp and imp_sid into short keys i and s", () => {
+    const canonical = {
+      personId: 100,
+      email: "target@x.fi",
+      ownerAsiakasId: 8,
+      tenantAsiakasId: 8,
+      globalRoles: { isSystemAdmin: false, isRoleManager: false, isDeveloper: false, isGlobalSijaintiAdmin: false },
+      asiakasesWithTypes: [],
+      imp: 1,
+      imp_sid: "abc-123",
+      exp: 1770000000,
+    };
+    const short = compressPayload(canonical);
+    expect(short.i).toBe(1);
+    expect(short.s).toBe("abc-123");
+    expect(short.imp).toBeUndefined();
+    expect(short.imp_sid).toBeUndefined();
+  });
+
+  it("expand decodes i and s back into imp and imp_sid", () => {
+    const short = {
+      v: 2,
+      sub: "100",
+      email: "target@x.fi",
+      o: 8,
+      t: 8,
+      g: 0,
+      a: [],
+      i: 1,
+      s: "abc-123",
+      exp: 1770000000,
+    };
+    const canonical = expandPayload(short);
+    expect(canonical.imp).toBe(1);
+    expect(canonical.imp_sid).toBe("abc-123");
+  });
+
+  it("payload without imp claims is preserved unchanged on round-trip", () => {
+    const canonical = {
+      personId: 100,
+      email: "user@x.fi",
+      ownerAsiakasId: 8,
+      tenantAsiakasId: 8,
+      globalRoles: { isSystemAdmin: false, isRoleManager: false, isDeveloper: false, isGlobalSijaintiAdmin: false },
+      asiakasesWithTypes: [],
+      exp: 1770000000,
+    };
+    const round = expandPayload(compressPayload(canonical));
+    expect(round.imp).toBeUndefined();
+    expect(round.imp_sid).toBeUndefined();
+  });
+});
