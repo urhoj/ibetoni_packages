@@ -21,7 +21,6 @@ const sentry = require("@ibetoni/sentry");
  * Regression caught 2026-05-04: `/api/fennoa/test-connection` was migrated
  * from `res.status(200).json({success: true, ...})` to `sendSuccess({...})`
  * and silently dropped `success: true`, breaking the FE for 3 days.
- * Run `npm run audit:api-success-field` to surface similar cases.
  *
  * @param {object} res - Express response object
  * @param {*} data - Data to send (sent as-is, no wrapping)
