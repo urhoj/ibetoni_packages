@@ -43,6 +43,7 @@ const allowedOrigins = [
 
   // production (live)
   "https://wonderful-rock-08f826703.azurestaticapps.net",
+  "https://calm-beach-0d5380703.7.azurestaticapps.net", // jerry-swa default hostname
   "https://puminet7app.azurewebsites.net",
   "https://puminet7api.azurewebsites.net",
   "https://betoni.online",
