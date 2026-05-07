@@ -67,6 +67,20 @@ const token = await createToken('user@example.com', 123, additionalClaims, {
 });
 ```
 
+### JWT Helpers Sub-export (Node / CJS consumers)
+
+The `./jwt` sub-export exposes JWT derivation helpers for Node CJS consumers (e.g. puminet5api tests) without pulling in OAuth/jwks-rsa dependencies:
+
+```javascript
+// @ibetoni/auth/jwt — no OAuth deps at import time
+const { deriveCompanyRoles, deriveAsiakasList } = require('@ibetoni/auth/jwt');
+
+// Also re-exported from the main entry for convenience:
+const { deriveCompanyRoles, deriveAsiakasList } = require('@ibetoni/auth');
+```
+
+`deriveCompanyRoles` and `deriveAsiakasList` were previously internal-only. They are now re-exported from the main entry (added 2026-05-07, closes audit finding L2).
+
 ### Payload Codec (Frontend / FE consumers)
 
 The codec is exposed as a sub-export for use in frontend code and any context where only payload manipulation is needed (no signing/verifying):
