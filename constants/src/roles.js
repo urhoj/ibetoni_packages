@@ -174,12 +174,13 @@ export const ROLE_TYPEID_BY_NAME = Object.freeze(
 );
 
 /**
- * Set of all known role typeIds. Used by the JWT codec to fail-closed
- * on tokens containing unrecognised typeIds.
- * @constant {Set<number>}
+ * All known role typeIds, ascending. Used by the JWT codec to fail-closed
+ * on tokens containing unrecognised typeIds. Frozen array (not Set) so
+ * cross-realm equality holds for the ESM/CJS parity test.
+ * @constant {readonly number[]}
  */
-export const KNOWN_ROLE_TYPEIDS = new Set(
-  Object.keys(ROLE_NAME_BY_TYPEID).map(Number),
+export const KNOWN_ROLE_TYPEIDS = Object.freeze(
+  Object.keys(ROLE_NAME_BY_TYPEID).map(Number).sort((a, b) => a - b),
 );
 
 /**

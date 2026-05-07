@@ -90,8 +90,8 @@ const ROLE_TYPEID_BY_NAME = Object.freeze(
   ),
 );
 
-const KNOWN_ROLE_TYPEIDS = new Set(
-  Object.keys(ROLE_NAME_BY_TYPEID).map(Number),
+const KNOWN_ROLE_TYPEIDS = Object.freeze(
+  Object.keys(ROLE_NAME_BY_TYPEID).map(Number).sort((a, b) => a - b),
 );
 
 function rolesNamesToTypeIds(names) {

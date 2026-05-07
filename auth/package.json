@@ -11,6 +11,10 @@
     "./codec": {
       "require": "./src/jwt/jwtPayloadCodec.cjs",
       "import": "./src/jwt/jwtPayloadCodec.js"
+    },
+    "./jwt": {
+      "require": "./src/jwt/jwtUtils.js",
+      "import": "./src/jwt/jwtUtils.js"
     }
   },
   "scripts": {

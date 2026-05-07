@@ -35,6 +35,7 @@ module.exports = {
   isTokenExpiringSoon: jwtUtils.isTokenExpiringSoon,
   refreshToken: jwtUtils.refreshToken,
   deriveAsiakasList: jwtUtils.deriveAsiakasList,
+  deriveCompanyRoles: jwtUtils.deriveCompanyRoles,
 
   // JWT payload codec (v2 short shape)
   compressPayload: jwtPayloadCodec.compressPayload,
