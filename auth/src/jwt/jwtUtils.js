@@ -211,6 +211,12 @@ const createToken = async (
   const token = jwt.sign(payload, jwtKey, {
     algorithm: "HS256",
     expiresIn: /** @type {any} */ (expiresIn),
+    // iss claim binds tokens to the betoni.online environment so a token
+    // can't be replayed against an unrelated service that happens to share
+    // the JWT_KEY. Verify side is intentionally NOT enforcing yet — once
+    // all in-flight tokens carry iss (after token TTL), a follow-up commit
+    // adds { issuer: "betoni.online" } to jwt.verify to enforce strictly.
+    issuer: "betoni.online",
     // Drop iat in short shape — no source-code consumers; saves ~12 B/token.
     ...(short ? { noTimestamp: true } : {}),
   });

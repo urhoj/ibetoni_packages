@@ -68,6 +68,12 @@ describe("createToken + getTokenData integration", () => {
       expect(raw.asiakasesWithTypes).toBeDefined();
       expect(raw.v).toBeUndefined();
     });
+
+    it("emits iss=betoni.online (environment-binding claim)", async () => {
+      const token = await createToken("u@x.fi", 1, sampleClaims());
+      const raw = jwt.verify(token, TEST_KEY);
+      expect(raw.iss).toBe("betoni.online");
+    });
   });
 
   describe("v2 short shape (JWT_SHORT_KEYS=true)", () => {
