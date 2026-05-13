@@ -32,6 +32,9 @@ const ROLE_NAME_TO_KEY_MAP = {
   laskuAdmin: "isLaskuAdmin",
   asiakasEditor: "isAsiakasEditor",
   pumppari: "isPumppari",
+  tyosuhteessa: "isTyösuhteessa",
+  // Backward-compat alias for legacy v1 JWTs with the old typo. Drop after
+  // token TTL drain (~2026-06-20). See roles.js comment for details.
   typisSuhteessa: "isTyösuhteessa",
   attachmentHandler: "isAttachmentHandler",
   keikkaHandler: "isKeikkaHandler",
@@ -67,7 +70,7 @@ const ROLE_NAME_BY_TYPEID = Object.freeze({
   5: "laskuAdmin",
   6: "asiakasEditor",
   8: "pumppari",
-  9: "typisSuhteessa",
+  9: "tyosuhteessa",
   10: "attachmentHandler",
   11: "keikkaHandler",
   12: "sijaintiHandler",

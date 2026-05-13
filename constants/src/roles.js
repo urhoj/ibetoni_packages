@@ -88,6 +88,11 @@ export const ROLE_NAME_TO_KEY_MAP = {
   laskuAdmin: "isLaskuAdmin",
   asiakasEditor: "isAsiakasEditor",
   pumppari: "isPumppari",
+  tyosuhteessa: "isTyösuhteessa",
+  // Backward-compat alias for legacy v1 JWTs that still carry the typo
+  // "typisSuhteessa" string in their roles[] array. Safe to drop once all
+  // pre-2026-05-13 tokens have expired (i.e., 7 days after production
+  // production cycles to v2 short-shape — reminder routine 2026-06-13).
   typisSuhteessa: "isTyösuhteessa",
   attachmentHandler: "isAttachmentHandler",
   keikkaHandler: "isKeikkaHandler",
@@ -134,8 +139,10 @@ export function buildCompanyRoles(roles) {
  * in the JWT `asiakasesWithTypes[].roles` array (legacy shape) and that the
  * v2 short-shape codec encodes/decodes via `roles.r` typeId arrays.
  *
- * Note: typeId 9 string is `typisSuhteessa` — preserved verbatim because
- * existing JWTs and the FE buildCompanyRoles map already use that spelling.
+ * Note: typeId 9 is `tyosuhteessa` (Finnish: työsuhteessa, "in employment").
+ * Renamed from the typo `typisSuhteessa` on 2026-05-13. The typo lives on
+ * as a backward-compat alias in ROLE_NAME_TO_KEY_MAP for legacy v1 JWTs
+ * still in flight; can be dropped after token TTL drain (~2026-06-20).
  * TypeIds 20/21 (pumppu*) are OBSOLETE but kept for legacy data round-trip.
  *
  * @constant {Object.<number, string>}
@@ -146,7 +153,7 @@ export const ROLE_NAME_BY_TYPEID = Object.freeze({
   5: "laskuAdmin",
   6: "asiakasEditor",
   8: "pumppari",
-  9: "typisSuhteessa",
+  9: "tyosuhteessa",
   10: "attachmentHandler",
   11: "keikkaHandler",
   12: "sijaintiHandler",
