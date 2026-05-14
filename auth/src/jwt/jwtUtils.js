@@ -304,12 +304,15 @@ const isTokenExpiringSoon = async (token, options = {}) => {
 const refreshToken = async (token, options = {}) => {
   const decoded = await getTokenData(token, options);
 
-  // Extract relevant claims (excluding JWT standard claims like exp, iat)
+  // Extract relevant claims (excluding JWT standard claims like exp, iat, iss).
+  // iss must be dropped — createToken sets `issuer` in jwt.sign options and
+  // jsonwebtoken throws if the payload also carries an iss property.
   const {
     email,
     personId,
     exp: _exp,
     iat: _iat,
+    iss: _iss,
     ...additionalClaims
   } = decoded;
 
