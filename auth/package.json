@@ -25,7 +25,9 @@
     "authentication",
     "jwt",
     "oauth",
-    "google"
+    "google",
+    "microsoft",
+    "apple"
   ],
   "author": "betoni.online",
   "license": "UNLICENSED",

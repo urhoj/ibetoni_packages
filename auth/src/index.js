@@ -52,4 +52,8 @@ module.exports = {
   // Microsoft OAuth
   MicrosoftAuth: require("./oauth/microsoftAuth").MicrosoftAuth,
   createMicrosoftAuth: require("./oauth/microsoftAuth").createMicrosoftAuth,
+
+  // Apple OAuth
+  AppleAuth: require("./oauth/appleAuth").AppleAuth,
+  createAppleAuth: require("./oauth/appleAuth").createAppleAuth,
 };
