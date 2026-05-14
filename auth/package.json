@@ -27,7 +27,8 @@
     "oauth",
     "google",
     "microsoft",
-    "apple"
+    "apple",
+    "linkedin"
   ],
   "author": "betoni.online",
   "license": "UNLICENSED",

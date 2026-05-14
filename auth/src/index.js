@@ -58,4 +58,8 @@ module.exports = {
   // Apple OAuth
   AppleAuth: require("./oauth/appleAuth").AppleAuth,
   createAppleAuth: require("./oauth/appleAuth").createAppleAuth,
+
+  // LinkedIn OAuth
+  LinkedInAuth: require("./oauth/linkedinAuth").LinkedInAuth,
+  createLinkedInAuth: require("./oauth/linkedinAuth").createLinkedInAuth,
 };
