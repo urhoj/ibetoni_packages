@@ -26,8 +26,14 @@ const jwtVerify = promisify(jwt.verify);
  */
 
 const getAppleClientId = async (getEnvVar) => {
-  if (getEnvVar) return await getEnvVar("APPLE_CLIENT_ID");
-  return process.env.APPLE_CLIENT_ID;
+  if (getEnvVar) {
+    const clientId = await getEnvVar("APPLE_CLIENT_ID");
+    if (!clientId) throw new Error("APPLE_CLIENT_ID environment variable is not set");
+    return clientId;
+  }
+  const clientId = process.env.APPLE_CLIENT_ID;
+  if (!clientId) throw new Error("APPLE_CLIENT_ID environment variable is not set");
+  return clientId;
 };
 
 class AppleAuth {

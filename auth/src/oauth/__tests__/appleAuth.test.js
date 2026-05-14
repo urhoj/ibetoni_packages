@@ -87,8 +87,23 @@ describe("AppleAuth.verifyIdToken", () => {
   });
 
   it("rejects when no token is provided", async () => {
+    // No stub JWKS client needed — the empty-token guard fires before key resolution.
     const auth = createAppleAuth();
     await expect(auth.verifyIdToken("")).rejects.toThrow(/Token is required/);
+  });
+
+  it("throws a clear error when APPLE_CLIENT_ID is not set", async () => {
+    const original = process.env.APPLE_CLIENT_ID;
+    delete process.env.APPLE_CLIENT_ID;
+    try {
+      const { token, publicKey } = buildTestToken();
+      const { auth } = buildAuthWithStubJwks(publicKey);
+      await expect(auth.verifyIdToken(token)).rejects.toThrow(
+        /APPLE_CLIENT_ID environment variable is not set/
+      );
+    } finally {
+      if (original !== undefined) process.env.APPLE_CLIENT_ID = original;
+    }
   });
 });
 

@@ -6,11 +6,13 @@
  * This package provides centralized authentication logic including:
  * - JWT token creation, verification, and management
  * - Google OAuth verification
+ * - Microsoft OAuth verification
+ * - Apple OAuth verification
  * - Password hashing and comparison
  *
  * Usage:
  *   const { createVerifyTokenMiddleware, createToken } = require('@ibetoni/auth');
- *   const { createGoogleAuth } = require('@ibetoni/auth');
+ *   const { createGoogleAuth, createMicrosoftAuth, createAppleAuth } = require('@ibetoni/auth');
  *
  * Configuration:
  *   All functions support both sync (process.env) and async (Key Vault) configuration:
