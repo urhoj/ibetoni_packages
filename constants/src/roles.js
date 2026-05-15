@@ -326,6 +326,22 @@ export const ASIAKAS_ANY_VIEWER_ROLE_TYPE_IDS = [3, 4, 7, 17, 19, 21];
 export const ASIAKAS_LASKU_READ_ROLE_TYPE_IDS = [5, 7];
 
 /**
+ * Company setting type IDs that grant the right to issue a pumppaus quote
+ * request (tarjouspyyntö) on behalf of a company asiakas. Used by
+ * GET /api/me/asiakases to scope the Laskutus picker in the betonijerry
+ * /tilaa wizard.
+ *
+ * Superset of admin/editor + invoice + keikka-handler + owner + HR. Includes
+ * typeIds 3 and 4 (viewer-class roles present in asiakasPersonSettings data
+ * but not yet named in ROLE_NAME_BY_TYPEID — see ASIAKAS_ANY_VIEWER_ROLE_TYPE_IDS).
+ *
+ * Spec: docs/superpowers/specs/2026-05-15-betonijerry-laskutus-permission-filter-design.md
+ *
+ * @constant {number[]}
+ */
+export const ASIAKAS_REQUEST_OFFER_ROLE_TYPE_IDS = [1, 2, 3, 4, 5, 6, 7, 11, 22, 24];
+
+/**
  * Global person setting type IDs that indicate any admin rights in personSettingsClass.
  *
  * @constant {number[]}
