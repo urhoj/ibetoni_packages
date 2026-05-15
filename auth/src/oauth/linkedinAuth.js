@@ -21,6 +21,11 @@ const jwtVerify = promisify(jwt.verify);
  *  - given_name / family_name / name / picture are in the id_token — no
  *    first-sign-in name dance.
  *
+ * Constructor accepts `options.jwksClient` for tests to inject a stub
+ * getSigningKey (vitest 4.x cannot intercept CJS require() of jwks-rsa
+ * via vi.mock — mirrors the AppleAuth precedent). Production callers omit
+ * it; a real jwks-rsa client is lazy-created on first verify.
+ *
  * @module @ibetoni/auth/oauth/linkedinAuth
  * @see https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/sign-in-with-linkedin-v2
  */
