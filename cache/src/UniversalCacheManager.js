@@ -1657,6 +1657,7 @@ class UniversalCacheManager {
           this.invalidate(operation, "asiakas", params),
           this.invalidateByPattern(`ecofleet:vehicleDayTimeline:*:${today}`),
           this.invalidateByPattern(`ecofleet:vehicleDayRoute:*:${today}`),
+          this.invalidateByPattern("inventory:dashboard:*"), // sijainti.isVarasto feeds the Varasto dashboard
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         break;
