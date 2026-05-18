@@ -1481,6 +1481,12 @@ class UniversalCacheManager {
           patterns.push(`attachment:bulk:keikka:*`);
         }
 
+        // Tuote attachments affect the Varastosaldo list (primaryAttachmentId
+        // column comes from EntityPrimaryAttachment join in tuotteet_varastoList SP).
+        if (entityType === "tuote" && entityId) {
+          patterns.push(`inventory:varastoList:*`);
+        }
+
         const counts = await Promise.all(
           patterns.map((p) => this.invalidateByPattern(p)),
         );
