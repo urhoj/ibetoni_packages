@@ -59,6 +59,7 @@ import { FENNOA_PAYMENT_STATUS, FENNOA_PAYMENT_STATUS_LABELS_FI, FENNOA_PAYMENT_
 import { SENTRY_REDACT_FIELDS, SENTRY_REDACTED_PLACEHOLDER } from "./sentry.js";
 import { BETONIJERRY } from "./betonijerry.js";
 import { PERSON_LOG_TYPES, PERSON_LOG_TYPE_NAMES } from "./personLogTypes.js";
+import { TUOTE_CAT_TYPE_BY_ID, TUOTE_CAT_TYPE_BY_NAME, KNOWN_TUOTE_CAT_TYPE_IDS } from "./tuoteCatTypes.js";
 
 export {
   // Step log type constants
@@ -129,4 +130,9 @@ export {
 
   // BetoniJerry umbrella tenant
   BETONIJERRY,
+
+  // Tuote category type mapping
+  TUOTE_CAT_TYPE_BY_ID,
+  TUOTE_CAT_TYPE_BY_NAME,
+  KNOWN_TUOTE_CAT_TYPE_IDS,
 };
