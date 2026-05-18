@@ -1741,6 +1741,8 @@ class UniversalCacheManager {
           this.invalidate(operation, "tuote", params),
           this.invalidate(operation, "lasku", params),
           this.invalidate(operation, "keikka", params),
+          this.invalidateByPattern("inventory:dashboard:*"),
+          this.invalidateByPattern("inventory:varastoList:*"),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         break;
