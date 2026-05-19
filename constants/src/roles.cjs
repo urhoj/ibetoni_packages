@@ -236,6 +236,7 @@ const ASIAKAS_SETTING_TYPE_IDS = {
   SHARE_ORDERS_WITH_BETONI: 33,
   HAS_AI: 34,
   HAS_JERRY: 35,
+  HAS_BETONI_STORE: 36,
 };
 
 module.exports = {
