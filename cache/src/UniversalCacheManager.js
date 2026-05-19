@@ -1749,6 +1749,51 @@ class UniversalCacheManager {
           this.invalidate(operation, "keikka", params),
           this.invalidateByPattern("inventory:dashboard:*"),
           this.invalidateByPattern("inventory:varastoList:*"),
+          this.invalidateByPattern("store:catalog:*"),
+          this.invalidateByPattern("store:listing:*"),
+        ]);
+        totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
+        break;
+      }
+
+      // betoni.store — stock changes can flip listing visibility in public catalog
+      case "INVENTORY_STOCK_UPDATE": {
+        const counts = await Promise.all([
+          this.invalidateByPattern("store:catalog:*"),
+        ]);
+        totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
+        break;
+      }
+
+      // betoni.store — listing override changed (description, order, featured, condition)
+      case "STORE_LISTING_UPDATE": {
+        const counts = await Promise.all([
+          this.invalidateByPattern("store:catalog:*"),
+          this.invalidateByPattern("store:listing:*"),
+          this.invalidateByPattern("store:categories"),
+        ]);
+        totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
+        break;
+      }
+
+      // betoni.store — inquiry created or status changed
+      case "STORE_INQUIRY_UPDATE": {
+        const counts = await Promise.all([
+          this.invalidateByPattern("store:inquiry:owner:*"),
+          this.invalidateByPattern("store:inquiry:customer:*"),
+          this.invalidateByPattern("store:inquiry:detail:*"),
+        ]);
+        totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
+        break;
+      }
+
+      // betoni.store — broad sweep for tenant enable/disable or settings change
+      case "STORE_CATALOG_INVALIDATE": {
+        const counts = await Promise.all([
+          this.invalidateByPattern("store:catalog:*"),
+          this.invalidateByPattern("store:listing:*"),
+          this.invalidateByPattern("store:categories"),
+          this.invalidateByPattern("store:settings:*"),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         break;
