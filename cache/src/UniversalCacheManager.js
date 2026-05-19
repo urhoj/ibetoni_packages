@@ -1751,6 +1751,7 @@ class UniversalCacheManager {
           this.invalidateByPattern("inventory:varastoList:*"),
           this.invalidateByPattern("store:catalog:*"),
           this.invalidateByPattern("store:listing:*"),
+          this.invalidateByPattern("store:admin:listings:*"),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         break;
@@ -1760,6 +1761,7 @@ class UniversalCacheManager {
       case "INVENTORY_STOCK_UPDATE": {
         const counts = await Promise.all([
           this.invalidateByPattern("store:catalog:*"),
+          this.invalidateByPattern("store:admin:listings:*"),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         break;
@@ -1770,6 +1772,7 @@ class UniversalCacheManager {
         const counts = await Promise.all([
           this.invalidateByPattern("store:catalog:*"),
           this.invalidateByPattern("store:listing:*"),
+          this.invalidateByPattern("store:admin:listings:*"),
           this.invalidateByPattern("store:categories"),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
