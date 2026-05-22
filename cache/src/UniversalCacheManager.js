@@ -1306,6 +1306,8 @@ class UniversalCacheManager {
           this.invalidate(operation, "vehicle", params),
           this.invalidate(operation, "vehicleRequiredDateType", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
+          // /api/compliance/dashboard-summary aggregates across all *_DATE entities.
+          this.invalidateByPattern(`complianceDashboard:*`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         break;
@@ -1323,6 +1325,7 @@ class UniversalCacheManager {
           this.invalidate(operation, "personRequiredDateType", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
           this.invalidate(operation, "keikka", params),
+          this.invalidateByPattern(`complianceDashboard:*`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         break;
@@ -1340,6 +1343,7 @@ class UniversalCacheManager {
           this.invalidate(operation, "tyomaaRequiredDateType", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
           this.invalidate(operation, "keikka", params),
+          this.invalidateByPattern(`complianceDashboard:*`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         break;
@@ -1355,6 +1359,7 @@ class UniversalCacheManager {
           this.invalidate(operation, "asiakas", params),
           this.invalidate(operation, "asiakasRequiredDateType", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
+          this.invalidateByPattern(`complianceDashboard:*`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         break;
@@ -1631,6 +1636,11 @@ class UniversalCacheManager {
           personEntityId
             ? this.invalidateByPattern(`asiakas:myRoles:*:${personEntityId}`)
             : Promise.resolve(0),
+          // person:forKeikka:get:{keikkaId}[:{personId}] has no asiakasId slot —
+          // wildcard person:* won't match it. Sweep by keikkaId when known.
+          params.keikkaId
+            ? this.invalidateByPattern(`person:forKeikka:get:${params.keikkaId}*`)
+            : Promise.resolve(0),
           this.invalidateByPattern("grid:v7tenant:*"),
         ]);
         totalInvalidated = counts.reduce((sum, c) => sum + c, 0);
@@ -1651,6 +1661,10 @@ class UniversalCacheManager {
             : Promise.resolve(0),
           deletedPersonId
             ? this.invalidateByPattern(`asiakas:myRoles:*:${deletedPersonId}`)
+            : Promise.resolve(0),
+          // Person removed from a keikka — sweep keyless person:forKeikka entries.
+          params.keikkaId
+            ? this.invalidateByPattern(`person:forKeikka:get:${params.keikkaId}*`)
             : Promise.resolve(0),
           this.invalidateByPattern("grid:v7tenant:*"),
         ]);
@@ -1841,7 +1855,8 @@ class UniversalCacheManager {
       case "ASIAKAS_PERSON_SETTING_DELETE": {
         const personId = params.personId;
 
-        // Invalidate asiakasPersonSetting cache
+        // Invalidate asiakasPersonSetting cache (actor-scoped fallback —
+        // catches actor-tenant copies even when personId is unknown).
         totalInvalidated += await this.invalidate(
           operation,
           "asiakasPersonSetting",
@@ -1856,6 +1871,18 @@ class UniversalCacheManager {
           // /profile Asiakkaat role chips read asiakas:myRoles:* — must clear them on any role mutation.
           totalInvalidated += await this.invalidateByPattern(
             `asiakas:myRoles:*:${personId}`,
+          );
+          // asiakasPersonSetting reader keys are keyed by the VIEWER's
+          // ownerAsiakasId, not the mutator's, so wildcard the viewer slot
+          // to clear cross-tenant copies (same pattern as myRoles).
+          totalInvalidated += await this.invalidateByPattern(
+            `asiakasPersonSetting:asiakasList:*:*:${personId}`,
+          );
+          totalInvalidated += await this.invalidateByPattern(
+            `asiakasPersonSetting:get:*:*:${personId}`,
+          );
+          totalInvalidated += await this.invalidateByPattern(
+            `asiakasPersonSetting:asiakasIdsForPerson:*:${personId}`,
           );
         }
         break;
