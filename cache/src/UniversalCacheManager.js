@@ -1881,9 +1881,6 @@ class UniversalCacheManager {
           totalInvalidated += await this.invalidateByPattern(
             `asiakasPersonSetting:get:*:*:${personId}`,
           );
-          totalInvalidated += await this.invalidateByPattern(
-            `asiakasPersonSetting:asiakasIdsForPerson:*:${personId}`,
-          );
         }
         break;
       }
