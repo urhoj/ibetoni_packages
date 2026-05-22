@@ -1882,6 +1882,18 @@ class UniversalCacheManager {
             `asiakasPersonSetting:get:*:*:${personId}`,
           );
         }
+
+        // EditAsiakas Henkilöt list reads asiakas:personList:{actor}:{target}:{settingType}
+        // and asiakas:personLists:{actor}:{target}:{yyyymmdd}. Both embed person settings
+        // recordsets, so any setting mutation must clear them. Wildcard target when the
+        // mutation URL lacks it (DELETE /:asiakasPersonSettingId, PUT /saveDate/...).
+        const targetAsiakasId = params.targetAsiakasId || "*";
+        totalInvalidated += await this.invalidateByPattern(
+          `asiakas:personList:*:${targetAsiakasId}:*`,
+        );
+        totalInvalidated += await this.invalidateByPattern(
+          `asiakas:personLists:*:${targetAsiakasId}:*`,
+        );
         break;
       }
 
