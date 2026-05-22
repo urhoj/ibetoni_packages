@@ -1626,6 +1626,11 @@ class UniversalCacheManager {
           personEntityId
             ? this.invalidateByPattern(`auth:*:${personEntityId}*`)
             : Promise.resolve(0),
+          // /profile Asiakkaat role chips read asiakas:myRoles:* — wildcard the
+          // asiakas slot so cross-tenant cached entries for this person are cleared.
+          personEntityId
+            ? this.invalidateByPattern(`asiakas:myRoles:*:${personEntityId}`)
+            : Promise.resolve(0),
           this.invalidateByPattern("grid:v7tenant:*"),
         ]);
         totalInvalidated = counts.reduce((sum, c) => sum + c, 0);
@@ -1643,6 +1648,9 @@ class UniversalCacheManager {
           this.invalidate(operation, "grid", params),
           deletedPersonId
             ? this.invalidateByPattern(`auth:*:${deletedPersonId}*`)
+            : Promise.resolve(0),
+          deletedPersonId
+            ? this.invalidateByPattern(`asiakas:myRoles:*:${deletedPersonId}`)
             : Promise.resolve(0),
           this.invalidateByPattern("grid:v7tenant:*"),
         ]);
