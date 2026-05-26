@@ -632,6 +632,34 @@ class UniversalCacheManager {
   }
 
   /**
+   * Persist a value under an EXPLICIT TTL (seconds), unlike cache() which derives
+   * the TTL from entityType (+jitter). Falls back to the entity TTL when
+   * ttlSeconds is omitted. This is the write primitive getOrCompute() relies on
+   * (see line ~703). Populates L1 for eligible entity types, mirroring cache().
+   *
+   * @param {string} key
+   * @param {*} value                 Serialized as JSON.
+   * @param {number} [ttlSeconds]      Explicit TTL; falls back to TTL[entityType] || TTL.default.
+   * @param {string} [entityType="default"]
+   * @returns {Promise<boolean>}
+   */
+  async set(key, value, ttlSeconds, entityType = "default") {
+    return await this.withRedis(
+      async (redis) => {
+        const ttl = ttlSeconds || this.TTL[entityType] || this.TTL.default;
+        await redis.setex(key, ttl, JSON.stringify(value));
+        if (this.L1_ENTITY_TYPES.has(entityType)) {
+          this.l1Cache.set(key, value);
+        }
+        this.cacheMetrics.recordSet(entityType, key);
+        return true;
+      },
+      false,
+      `set ${entityType}`,
+    );
+  }
+
+  /**
    * Retrieve cached data. Checks L1 in-memory cache first for eligible entity types, then Redis.
    */
   async get(key, entityType = "data") {

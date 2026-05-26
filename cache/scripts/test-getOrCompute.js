@@ -12,12 +12,22 @@ function test(name, fn) {
 async function main() {
   console.log("getOrCompute singleflight tests:");
 
-  // Fake Redis: in-memory Map stand-in via monkey-patching get/set
+  // Stub the Redis LAYER (not get/set) so the real get()/set()/getOrCompute()
+  // code paths run against an in-memory store. This is deliberate: stubbing
+  // get/set directly would mask bugs like a missing set() method (which
+  // getOrCompute calls internally). withRedis(op, fallback) normally hands a
+  // redis client to `op`; here we hand it a Map-backed fake.
   function newMgr() {
     const mgr = new UniversalCacheManager();
     const store = new Map();
-    mgr.get = async (key) => (store.has(key) ? store.get(key) : null);
-    mgr.set = async (key, value) => { store.set(key, value); return true; };
+    const fakeRedis = {
+      get: async (k) => (store.has(k) ? store.get(k) : null),
+      setex: async (k, _ttl, v) => { store.set(k, v); return "OK"; },
+      del: async (k) => (store.delete(k) ? 1 : 0),
+    };
+    mgr.withRedis = async (op, fallback) => {
+      try { return await op(fakeRedis); } catch { return fallback; }
+    };
     return mgr;
   }
 
