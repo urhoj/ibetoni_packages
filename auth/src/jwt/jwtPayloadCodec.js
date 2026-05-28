@@ -152,6 +152,11 @@ export function compressPayload(canonical) {
   if (canonical.scope !== undefined) short.scope = canonical.scope;
   if (canonical.imp !== undefined && canonical.imp !== null) short.i = canonical.imp;
   if (canonical.imp_sid !== undefined && canonical.imp_sid !== null) short.s = canonical.imp_sid;
+  // issuedFor records WHO requested the token ("cli" | "mcp" | "web"). Surfaces
+  // downstream as the Sentry tag `tokenSource`. Threaded through OAuth /token.
+  if (canonical.issuedFor !== undefined && canonical.issuedFor !== null) {
+    short.f = canonical.issuedFor;
+  }
 
   return short;
 }
@@ -193,6 +198,7 @@ export function expandPayload(decoded, { onUnknownRole = "throw" } = {}) {
   if (decoded.scope !== undefined) out.scope = decoded.scope;
   if (decoded.i !== undefined && decoded.i !== null) out.imp = decoded.i;
   if (decoded.s !== undefined && decoded.s !== null) out.imp_sid = decoded.s;
+  if (decoded.f !== undefined && decoded.f !== null) out.issuedFor = decoded.f;
 
   return out;
 }
