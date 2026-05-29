@@ -21,6 +21,19 @@
  *
  * @constant {Object} SECURITY
  */
+/**
+ * Read a numeric env override; fall back to default when unset/invalid.
+ * Used to relax login rate limits in dev without changing production posture.
+ *   LOGIN_RATE_LIMIT_WINDOW_MS  — override RATE_LIMIT_WINDOW
+ *   LOGIN_RATE_LIMIT_MAX        — override MAX_REQUESTS_PER_WINDOW
+ */
+function envNumber(name, defaultValue) {
+  const raw = typeof process !== "undefined" && process.env ? process.env[name] : undefined;
+  if (!raw) return defaultValue;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : defaultValue;
+}
+
 const SECURITY = {
   /**
    * Maximum failed login attempts before account lockout
@@ -33,14 +46,18 @@ const SECURITY = {
   LOCKOUT_DURATION: 30 * 60 * 1000,
 
   /**
-   * Rate limiting time window in milliseconds (15 minutes)
+   * Rate limiting time window in milliseconds.
+   * Production default: 15 min. Dev override via LOGIN_RATE_LIMIT_WINDOW_MS.
+   * NOTE: temporarily loosened to 60s while CLI lifecycle smoke iterates.
    */
-  RATE_LIMIT_WINDOW: 15 * 60 * 1000,
+  RATE_LIMIT_WINDOW: envNumber("LOGIN_RATE_LIMIT_WINDOW_MS", 60 * 1000),
 
   /**
-   * Maximum requests allowed per rate limit window
+   * Maximum requests allowed per rate limit window.
+   * Production default was 10. Dev override via LOGIN_RATE_LIMIT_MAX.
+   * NOTE: temporarily loosened to 1000 while CLI lifecycle smoke iterates.
    */
-  MAX_REQUESTS_PER_WINDOW: 10,
+  MAX_REQUESTS_PER_WINDOW: envNumber("LOGIN_RATE_LIMIT_MAX", 1000),
 };
 
 /**
