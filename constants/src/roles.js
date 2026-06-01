@@ -15,7 +15,13 @@
  * import { COMPANY_ROLE_TO_TYPE_ID } from '@ibetoni/constants';
  */
 export const COMPANY_ROLE_TO_TYPE_ID = {
-  /** Laskupohja Admin - Invoice template administrator */
+  /**
+   * Laskupohja Admin (typeId 1). NAMING NOTE: this is ONE grant with two names —
+   * the JWT/code flag is `isLaskupohjaAdmin`, but `dbo.asiakasPersonSettingTypes`
+   * describes typeId 1 as `isTarjousAdmin` ("saa luoda, muokata ja lähettää
+   * tarjouksia"). They are the same role; **use `isLaskupohjaAdmin` in code**.
+   * Treated as edit-tier by hasCompanyRole (see puminet5api authUtils).
+   */
   isLaskupohjaAdmin: 1,
 
   /** Asiakas Admin - Customer administrator */
@@ -83,7 +89,7 @@ export const COMPANY_ROLE_TO_TYPE_ID = {
  * @constant {Object.<string, string>} ROLE_NAME_TO_KEY_MAP
  */
 export const ROLE_NAME_TO_KEY_MAP = {
-  laskupohjaAdmin: "isLaskupohjaAdmin",
+  laskupohjaAdmin: "isLaskupohjaAdmin", // typeId 1; DB asiakasPersonSettingTypes calls this isTarjousAdmin (same grant)
   asiakasAdmin: "isAsiakasAdmin",
   laskuAdmin: "isLaskuAdmin",
   asiakasEditor: "isAsiakasEditor",
@@ -148,7 +154,7 @@ export function buildCompanyRoles(roles) {
  * @constant {Object.<number, string>}
  */
 export const ROLE_NAME_BY_TYPEID = Object.freeze({
-  1: "laskupohjaAdmin",
+  1: "laskupohjaAdmin", // typeId 1; DB describes it as isTarjousAdmin (same grant; use laskupohjaAdmin in code)
   2: "asiakasAdmin",
   5: "laskuAdmin",
   6: "asiakasEditor",
