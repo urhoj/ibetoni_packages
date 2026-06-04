@@ -53,4 +53,12 @@ describe("createTarjouspyyntoApi", () => {
         expect(t.mutate).toHaveBeenNthCalledWith(2,
             "/api/jerry-provider-settings", { method: "PUT", body: { maintainsOrderInfo: true } });
     });
+    it("throws on missing ids instead of building /undefined/ paths", () => {
+        const t = mockTransport();
+        const api = createTarjouspyyntoApi(t);
+        expect(() => api.getProviderDetail(undefined)).toThrow(/pumppuRequestId/);
+        expect(() => api.sendOffer(42, null)).toThrow(/pumppuOfferId/);
+        expect(t.query).not.toHaveBeenCalled();
+        expect(t.mutate).not.toHaveBeenCalled();
+    });
 });
