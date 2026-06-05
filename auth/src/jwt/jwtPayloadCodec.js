@@ -31,6 +31,7 @@
  *   1 = isTyomaaAsiakas
  *   2 = isPumppuToimittaja
  *   4 = isBetoniToimittaja
+ *   8 = isLattiaToimittaja
  *
  * Notes:
  *   - `companyType` is dropped entirely (zero runtime callers; was derived
@@ -63,6 +64,7 @@ export const COMPANY_FLAGS = Object.freeze({
   isTyomaaAsiakas: 1,
   isPumppuToimittaja: 2,
   isBetoniToimittaja: 4,
+  isLattiaToimittaja: 8,
 });
 
 function encodeGlobalRoles(g) {
@@ -90,6 +92,7 @@ function compressCompanyRow(row) {
   if (row.isTyomaaAsiakas) flags |= COMPANY_FLAGS.isTyomaaAsiakas;
   if (row.isPumppuToimittaja) flags |= COMPANY_FLAGS.isPumppuToimittaja;
   if (row.isBetoniToimittaja) flags |= COMPANY_FLAGS.isBetoniToimittaja;
+  if (row.isLattiaToimittaja) flags |= COMPANY_FLAGS.isLattiaToimittaja;
   return [row.asiakasId, flags, rolesNamesToTypeIds(row.roles)];
 }
 
@@ -104,6 +107,7 @@ function expandCompanyRow(tuple, { onUnknownRole }) {
     isTyomaaAsiakas: Boolean(f & COMPANY_FLAGS.isTyomaaAsiakas),
     isPumppuToimittaja: Boolean(f & COMPANY_FLAGS.isPumppuToimittaja),
     isBetoniToimittaja: Boolean(f & COMPANY_FLAGS.isBetoniToimittaja),
+    isLattiaToimittaja: Boolean(f & COMPANY_FLAGS.isLattiaToimittaja),
     roles: roleTypeIdsToNames(typeIds, { onUnknown: onUnknownRole }),
   };
 }

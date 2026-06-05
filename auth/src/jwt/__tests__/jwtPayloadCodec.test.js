@@ -243,6 +243,7 @@ describe("expandPayload (short → canonical)", () => {
         isTyomaaAsiakas: false,
         isPumppuToimittaja: true,
         isBetoniToimittaja: false,
+        isLattiaToimittaja: false,
         roles: ["asiakasAdmin", "keikkaHandler"],
       },
       {
@@ -250,6 +251,7 @@ describe("expandPayload (short → canonical)", () => {
         isTyomaaAsiakas: true,
         isPumppuToimittaja: false,
         isBetoniToimittaja: true,
+        isLattiaToimittaja: false,
         roles: ["pumppari"],
       },
     ]);
@@ -364,6 +366,7 @@ describe("round-trip (compress → expand)", () => {
           isTyomaaAsiakas: false,
           isPumppuToimittaja: true,
           isBetoniToimittaja: false,
+          isLattiaToimittaja: false,
           // input was ["asiakasAdmin","keikkaHandler","attachmentHandler"]
           // → typeIds [2,11,10] sorted → [2,10,11] → names ["asiakasAdmin","attachmentHandler","keikkaHandler"]
           roles: ["asiakasAdmin", "attachmentHandler", "keikkaHandler"],
@@ -373,6 +376,7 @@ describe("round-trip (compress → expand)", () => {
           isTyomaaAsiakas: true,
           isPumppuToimittaja: false,
           isBetoniToimittaja: true,
+          isLattiaToimittaja: false,
           roles: ["pumppari"],
         },
       ],
@@ -395,8 +399,8 @@ describe("round-trip (compress → expand)", () => {
     }
   });
 
-  it("round-trip is idempotent across all 8 company flag combinations", () => {
-    for (let flags = 0; flags < 8; flags++) {
+  it("round-trip is idempotent across all 16 company flag combinations", () => {
+    for (let flags = 0; flags < 16; flags++) {
       const canonical = {
         personId: 1,
         asiakasesWithTypes: [
@@ -405,6 +409,7 @@ describe("round-trip (compress → expand)", () => {
             isTyomaaAsiakas: Boolean(flags & 1),
             isPumppuToimittaja: Boolean(flags & 2),
             isBetoniToimittaja: Boolean(flags & 4),
+            isLattiaToimittaja: Boolean(flags & 8),
             roles: [],
           },
         ],
@@ -413,7 +418,19 @@ describe("round-trip (compress → expand)", () => {
       expect(round.asiakasesWithTypes[0].isTyomaaAsiakas).toBe(Boolean(flags & 1));
       expect(round.asiakasesWithTypes[0].isPumppuToimittaja).toBe(Boolean(flags & 2));
       expect(round.asiakasesWithTypes[0].isBetoniToimittaja).toBe(Boolean(flags & 4));
+      expect(round.asiakasesWithTypes[0].isLattiaToimittaja).toBe(Boolean(flags & 8));
     }
+  });
+
+  it("legacy tuples without the isLattiaToimittaja bit expand it as false (backward compat)", () => {
+    const decoded = {
+      v: 2,
+      sub: "1",
+      a: [[101, COMPANY_FLAGS.isPumppuToimittaja, []]],
+    };
+    const out = expandPayload(decoded);
+    expect(out.asiakasesWithTypes[0].isPumppuToimittaja).toBe(true);
+    expect(out.asiakasesWithTypes[0].isLattiaToimittaja).toBe(false);
   });
 });
 

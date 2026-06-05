@@ -22,6 +22,7 @@ const sampleClaims = () => ({
       isTyomaaAsiakas: false,
       isPumppuToimittaja: true,
       isBetoniToimittaja: false,
+      isLattiaToimittaja: false,
       roles: ["asiakasAdmin", "keikkaHandler"],
     },
   ],
