@@ -89,7 +89,17 @@ export default function MessageThread({
             if (!res.ok) return;
             const newer = await res.json();
             if (Array.isArray(newer) && newer.length) {
-                setMessages((prev) => [...prev, ...newer]);
+                setMessages((prev) => {
+                    // Dedupe by messageId. The ?since= bookmark is millisecond-
+                    // truncated (JS Date / JSON) while message.createdAt is
+                    // DATETIME2(7), so `createdAt > @since` re-returns the last
+                    // message(s) on every poll. Without this filter the thread
+                    // grows by a duplicate each cycle (the socket path already
+                    // dedupes the same way).
+                    const seen = new Set(prev.map((m) => m.messageId));
+                    const fresh = newer.filter((m) => !seen.has(m.messageId));
+                    return fresh.length ? [...prev, ...fresh] : prev;
+                });
                 lastSeenIsoRef.current = newer[newer.length - 1].createdAt;
             }
         } catch {
