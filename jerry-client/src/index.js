@@ -6,4 +6,5 @@ export {
     deriveOfferLifecycle, isOfferDraft, isOfferLocked,
     MAX_PRICE_CENTS, eurosToCents, centsToEuros, isSubmittablePrice,
     defaultValidUntil, OFFER_STATE_LABELS_FI, offerStateLabel,
+    DEFAULT_PRICE_TERMS_FI,
 } from "./lifecycle.js";

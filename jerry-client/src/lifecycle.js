@@ -28,6 +28,13 @@ export function normalizeCounts(counts) {
 // Mirrors POST /:id/offers backend validation (1..99_999_900).
 export const MAX_PRICE_CENTS = 99_999_900;
 
+// Default "Hinta-arvion ehdot" text seeded into a fresh offer's price-terms
+// field on both operator forms (betonijerry.fi + betoni.online). The operator
+// can edit or clear it per offer; an existing saved value always wins on reload.
+export const DEFAULT_PRICE_TERMS_FI =
+    "Arvioitu hinta mikäli valu toteutuu tarkalleen tarjouspyynnön mukaisesti. "
+    + "Laskutus tapahtuu todellisen toimitetun betonin ja työajan mukaan. Hintaerittely liitteenä.";
+
 /** @param {number|string} euros — decimal separator must be "."; normalise Finnish "7,50" input with .replace(",", ".") before calling. */
 export function eurosToCents(euros) {
     return Math.round(Number(euros) * 100);
