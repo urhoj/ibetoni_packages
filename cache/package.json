@@ -1,10 +1,10 @@
 {
   "name": "@ibetoni/cache",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Shared Redis cache and invalidation system for betoni.online",
   "main": "src/index.js",
   "scripts": {
-    "test": "node scripts/test-onError.js && node scripts/test-getOrCompute.js",
+    "test": "node scripts/test-onError.js && node scripts/test-getOrCompute.js && node scripts/test-legal-invalidation.js",
     "type-check": "node scripts/type-check.js"
   },
   "keywords": [

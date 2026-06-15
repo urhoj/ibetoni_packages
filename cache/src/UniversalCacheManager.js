@@ -1970,6 +1970,19 @@ class UniversalCacheManager {
         break;
       }
 
+      // Legal document writes (save/activate/delete + type create/update).
+      // Legal docs are cached under GLOBAL keys with NO asiakasId segment
+      // (legalDocument:current:*, legalDocument:versions:*, legalDocument:types,
+      // legalDocument:get:*). The default branch builds an asiakasId-scoped
+      // pattern (legalDocument:*:<asiakasId>*) which matches none of them, so
+      // writes would invalidate nothing and reads stay stale until the 24h TTL.
+      // Sweep the whole legalDocument namespace instead.
+      case "LEGAL_DOCUMENT_UPDATE":
+      case "LEGAL_DOCUMENT_CREATE":
+      case "LEGAL_DOCUMENT_DELETE":
+        totalInvalidated += await this.invalidateByPattern("legalDocument:*");
+        break;
+
       default: {
         const entityType = params.entityType || "default";
         totalInvalidated += await this.invalidate(
