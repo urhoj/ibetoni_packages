@@ -1,11 +1,11 @@
-import { getDefaultValidationRulesSettings } from "./validationRuleDefinitions.js";
+const { getDefaultValidationRulesSettings } = require("./validationRuleDefinitions.js");
 
 /**
  * Merge saved validation-rule overrides over the default rule set.
  * Union of keys: every default rule plus every saved rule. Saved values win per rule;
  * saved-only rules are preserved (never dropped).
  */
-export function mergeValidationRules(defaultRules, savedRules) {
+function mergeValidationRules(defaultRules, savedRules) {
   const merged = { ...(defaultRules || {}) };
   Object.keys(savedRules || {}).forEach((ruleId) => {
     merged[ruleId] = { ...(defaultRules?.[ruleId] || {}), ...savedRules[ruleId] };
@@ -14,6 +14,8 @@ export function mergeValidationRules(defaultRules, savedRules) {
 }
 
 /** Single source of truth: the rule registry defaults. */
-export function getDefaultValidationRules() {
+function getDefaultValidationRules() {
   return getDefaultValidationRulesSettings();
 }
+
+module.exports = { mergeValidationRules, getDefaultValidationRules };

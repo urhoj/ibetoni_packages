@@ -2,12 +2,7 @@
   "name": "@ibetoni/keikka-validation",
   "version": "1.0.0",
   "description": "Shared keikka (delivery order) validation rule engine for betoni.online — single source of truth for the Grid reminders drawer and the ib CLI.",
-  "type": "module",
   "main": "src/index.js",
-  "module": "src/index.js",
-  "exports": {
-    ".": "./src/index.js"
-  },
   "files": ["src"],
   "scripts": {
     "test": "vitest run"

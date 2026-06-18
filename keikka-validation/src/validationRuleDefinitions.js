@@ -22,7 +22,7 @@ const LOCAL_PRIORITY_LEVELS = {
   NOTIFICATION: 1,
 };
 
-export const VALIDATION_RULE_DEFINITIONS = {
+const VALIDATION_RULE_DEFINITIONS = {
   INCOMPLETE_STATUS: {
     name: "Tila ei ole toimitusvalmis",
     description: "Tilauksen tila ei ole 'Toimitusvalmis' tai valmis",
@@ -221,7 +221,7 @@ export const VALIDATION_RULE_DEFINITIONS = {
   },
 };
 
-export const PRIORITY_LABELS = {
+const PRIORITY_LABELS = {
   [LOCAL_PRIORITY_LEVELS.CRITICAL]: "Kriittinen",
   [LOCAL_PRIORITY_LEVELS.HIGH]: "Korkea",
   [LOCAL_PRIORITY_LEVELS.MEDIUM]: "Keskitaso",
@@ -229,7 +229,7 @@ export const PRIORITY_LABELS = {
   [LOCAL_PRIORITY_LEVELS.NOTIFICATION]: "Huomautus",
 };
 
-export const CATEGORY_LABELS = {
+const CATEGORY_LABELS = {
   [LOCAL_CATEGORIES.BETONI]: "Betoni",
   [LOCAL_CATEGORIES.ASIAKAS]: "Asiakas",
   [LOCAL_CATEGORIES.TYOMAA]: "Työmaa",
@@ -242,7 +242,7 @@ export const CATEGORY_LABELS = {
 /**
  * Get validation rules grouped by category
  */
-export const getValidationRulesByCategory = () => {
+const getValidationRulesByCategory = () => {
   const grouped = {};
 
   Object.entries(VALIDATION_RULE_DEFINITIONS).forEach(([ruleType, definition]) => {
@@ -262,7 +262,7 @@ export const getValidationRulesByCategory = () => {
 /**
  * Get default validation rules settings
  */
-export const getDefaultValidationRulesSettings = () => {
+const getDefaultValidationRulesSettings = () => {
   const rules = {};
 
   Object.entries(VALIDATION_RULE_DEFINITIONS).forEach(([ruleType, definition]) => {
@@ -274,4 +274,12 @@ export const getDefaultValidationRulesSettings = () => {
   });
 
   return rules;
+};
+
+module.exports = {
+  VALIDATION_RULE_DEFINITIONS,
+  PRIORITY_LABELS,
+  CATEGORY_LABELS,
+  getValidationRulesByCategory,
+  getDefaultValidationRulesSettings,
 };

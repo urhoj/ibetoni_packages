@@ -26,13 +26,13 @@
  * @see puminet4/src/utils/keikkaValidator.test.js - Complete test coverage
  */
 
-import { isEmail as isValidEmail } from "@ibetoni/betoni-utils";
-import {
+const { isEmail: isValidEmail } = require("@ibetoni/betoni-utils");
+const {
   isSevereCold,
   SEVERE_COLD_THRESHOLD,
   isSevereHot,
   SEVERE_HOT_THRESHOLD,
-} from "./weatherThresholds.js";
+} = require("./weatherThresholds.js");
 
 /**
  * Keikka (delivery order) object for validation
@@ -235,7 +235,7 @@ import {
  * @property {Object<string, number>} categories - Issue count by category
  */
 
-export const PRIORITY_LEVELS = {
+const PRIORITY_LEVELS = {
   CRITICAL: 5, // Order cannot be processed
   HIGH: 4, // Significant issues requiring immediate attention
   MEDIUM: 3, // Important validation failures (current equivalent)
@@ -243,7 +243,7 @@ export const PRIORITY_LEVELS = {
   NOTIFICATION: 1, // Informational messages
 };
 
-export const CATEGORIES = {
+const CATEGORIES = {
   BETONI: "betoni", // Concrete specification validation
   ASIAKAS: "asiakas", // Customer information validation
   TYOMAA: "tyomaa", // Worksite and address validation
@@ -320,7 +320,7 @@ export const CATEGORIES = {
  * @see puminet4/src/utils/keikkaValidator.test.js:54 - Empty keikka validation
  * @see puminet4/src/utils/keikkaValidator.test.js:77 - Complete keikka validation
  */
-export const validateKeikka = (keikka, options = {}) => {
+const validateKeikka = (keikka, options = {}) => {
   if (!keikka || typeof keikka !== "object") {
     return {
       isValid: false,
@@ -2281,7 +2281,7 @@ function calculateSummary(issues) {
  * logger.category('keikkaValidator').info(getPriorityName(PRIORITY_LEVELS.CRITICAL)); // "Kriittinen"
  * logger.category('keikkaValidator').info(getPriorityName(99)); // "Tuntematon" (unknown)
  */
-export const getPriorityName = (priority) => {
+const getPriorityName = (priority) => {
   switch (priority) {
     case PRIORITY_LEVELS.CRITICAL:
       return "Kriittinen";
@@ -2319,7 +2319,7 @@ export const getPriorityName = (priority) => {
  * // Use in MUI component:
  * // <Chip color={color} label="Kriittinen" />
  */
-export const getPriorityColor = (priority) => {
+const getPriorityColor = (priority) => {
   switch (priority) {
     case PRIORITY_LEVELS.CRITICAL:
       return "error";
@@ -2355,7 +2355,7 @@ export const getPriorityColor = (priority) => {
  * logger.category('keikkaValidator').info(getCategoryName(CATEGORIES.BETONI)); // "Betoni"
  * logger.category('keikkaValidator').info(getCategoryName("unknown")); // "Tuntematon"
  */
-export const getCategoryName = (category) => {
+const getCategoryName = (category) => {
   switch (category) {
     case CATEGORIES.BETONI:
       return "Betoni";
@@ -2375,3 +2375,5 @@ export const getCategoryName = (category) => {
       return "Tuntematon";
   }
 };
+
+module.exports = { validateKeikka, PRIORITY_LEVELS, CATEGORIES, getPriorityName, getPriorityColor, getCategoryName };
