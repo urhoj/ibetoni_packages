@@ -23,7 +23,7 @@
  * - Single-pass validation with early returns
  * - Optimized for real-time grid validation
  *
- * @see ibetoni_packages/keikka-validation/src/keikkaValidator.test.js - Complete test coverage
+ * @see puminet4/src/utils/keikkaValidator.test.js - Complete test coverage
  */
 
 import { isEmail as isValidEmail } from "@ibetoni/betoni-utils";
@@ -317,8 +317,8 @@ export const CATEGORIES = {
  * });
  *
  * @performance O(n+m+k) where n=drivers, m=concrete specs, k=validation rules
- * @see ibetoni_packages/keikka-validation/src/keikkaValidator.test.js:54 - Empty keikka validation
- * @see ibetoni_packages/keikka-validation/src/keikkaValidator.test.js:77 - Complete keikka validation
+ * @see puminet4/src/utils/keikkaValidator.test.js:54 - Empty keikka validation
+ * @see puminet4/src/utils/keikkaValidator.test.js:77 - Complete keikka validation
  */
 export const validateKeikka = (keikka, options = {}) => {
   if (!keikka || typeof keikka !== "object") {
@@ -1084,7 +1084,7 @@ function validateDrivers(
  * logger.category('keikkaValidator').info(issues[0].message); // "Määrä / laatu varmistus"
  *
  * @performance O(n) where n=number of concrete specs
- * @see ibetoni_packages/keikka-validation/src/keikkaValidator.test.js:205 - Pump line validation tests
+ * @see puminet4/src/utils/keikkaValidator.test.js:205 - Pump line validation tests
  */
 function validateBetoni(keikka, issues, ownerAsiakasId, validationSettings, stepLogData) {
   // Early return for external orders
@@ -1351,6 +1351,46 @@ function checkForHkiPattern(keikka) {
  * @param {ValidationSettings|null} validationSettings - Settings configuration
  * @param {number|null} ownerAsiakasId - Current user's customer ID
  * @returns {void} Mutates issues array
+ *
+ * @example
+ * // Missing worksite
+ * const keikka = {
+ *   tyomaaId: null,
+ *   tyomaa: "",
+ *   tyomaaNimi: ""
+ * };
+ * const issues = [];
+ * validateTyomaa(keikka, issues, null, 100);
+ * logger.category('keikkaValidator').info(issues[0].type); // "MISSING_WORKSITE"
+ *
+ * @example
+ * // HKI in city field
+ * const keikka = {
+ *   tyomaaId: 1,
+ *   osoite: "Mannerheimintie 1",
+ *   postinumero: "00100",
+ *   kaupunki: "HKI" // Should be Helsinki
+ * };
+ * const issues = [];
+ * validateTyomaa(keikka, issues, null, 100);
+ * logger.category('keikkaValidator').info(issues[0].type); // "CITY_IS_HKI"
+ * logger.category('keikkaValidator').info(issues[0].actions.autoFix.action); // "convertHkiToHelsinki"
+ *
+ * @example
+ * // Missing city with HKI pattern detected
+ * const keikka = {
+ *   tyomaaId: 1,
+ *   osoite: "Address in HKI area",
+ *   postinumero: "00100",
+ *   kaupunki: "" // Missing
+ * };
+ * const issues = [];
+ * validateTyomaa(keikka, issues, null, 100);
+ * logger.category('keikkaValidator').info(issues[0].type); // "MISSING_WORKSITE_TOWN"
+ * logger.category('keikkaValidator').info(issues[0].message); // "Kaupunki puuttuu (kaupunki havaittu osoitteessa)"
+ * logger.category('keikkaValidator').info(issues[0].actions.autoFix.value); // "Helsinki"
+ *
+ * @performance O(1) - fixed field checks
  */
 function validateTyomaa(keikka, issues, validationSettings, ownerAsiakasId) {
   const k = /** @type {any} */ (keikka);
@@ -1565,12 +1605,64 @@ function validateTyomaa(keikka, issues, validationSettings, ownerAsiakasId) {
  * 2. Phone number must exist
  * 3. Email address must exist and be valid format
  *
+ * **Email Validation:**
+ * - Uses isValidEmail() from statics1
+ * - Checks format validity (not just presence)
+ * - Distinguishes: missing vs invalid email
+ *
+ * **Field Name Variations:**
+ * - Name: yhteyshenkiloNimi, personFirstName+personLastName, keikkaContactPersonId
+ * - Phone: yhteyshenkiloPuhelin, personPhone
+ * - Email: yhteyshenkiloEmail, personEmail, contactPersonEmail
+ *
+ * **Step Log Integration:**
+ * - stepLogTypeId=4,20: Contact email reminder dismissed
+ * - Skips email validation if dismissed
+ *
+ * **Early Return:** Skips phone validation if contact person missing
+ *
+ * **AutoFix:**
+ * - fetchContactPhone: Fetch from person master data
+ *
  * @param {Keikka} keikka - Order to validate
  * @param {Array<ValidationIssue>} issues - Issues array (mutated)
  * @param {ValidationSettings|null} validationSettings - Settings configuration
  * @param {number|null} ownerAsiakasId - Current user's customer ID
  * @param {Array<StepLog>} stepLogData - Step log entries
  * @returns {void} Mutates issues array
+ *
+ * @example
+ * // Missing contact person
+ * const keikka = { yhteyshenkiloNimi: "" };
+ * const issues = [];
+ * validateContact(keikka, issues, null, 100, []);
+ * logger.category('keikkaValidator').info(issues[0].type); // "MISSING_CONTACT_PERSON"
+ *
+ * @example
+ * // Invalid email format
+ * const keikka = {
+ *   yhteyshenkiloNimi: "Pekka Test",
+ *   yhteyshenkiloPuhelin: "050-1234567",
+ *   yhteyshenkiloEmail: "invalid-email" // Invalid format
+ * };
+ * const issues = [];
+ * validateContact(keikka, issues, null, 100, []);
+ * logger.category('keikkaValidator').info(issues[0].type); // "MISSING_CONTACT_EMAIL"
+ * logger.category('keikkaValidator').info(issues[0].message); // "Sähköpostiosoite ei ole kelvollinen"
+ *
+ * @example
+ * // Email reminder dismissed
+ * const keikka = {
+ *   keikkaId: 123,
+ *   yhteyshenkiloNimi: "Pekka Test",
+ *   yhteyshenkiloEmail: "" // Missing
+ * };
+ * const stepLogs = [{ keikkaId: 123, stepLogTypeId: 20 }]; // Dismissed
+ * const issues = [];
+ * validateContact(keikka, issues, null, 100, stepLogs);
+ * logger.category('keikkaValidator').info(issues.length); // 0 (validation skipped due to dismissal)
+ *
+ * @performance O(1) - fixed field checks
  */
 function validateContact(keikka, issues, validationSettings, ownerAsiakasId, stepLogData) {
   const k = /** @type {any} */ (keikka);
@@ -1693,12 +1785,42 @@ function validateContact(keikka, issues, validationSettings, ownerAsiakasId, ste
 /**
  * Validate vehicle equipment requirements
  *
+ * **Validation Rules:**
+ * 1. Vehicle boom must be long enough for required pump boom
+ *
+ * **Business Logic:**
+ * - requiredPuomi (pumppuPuomi): Pump boom length required by job
+ * - vehiclePuomi: Vehicle's actual boom length
+ * - Validation fails if: requiredPuomi > vehiclePuomi
+ *
+ * **Edge Cases:**
+ * - Skips validation if either value is 0 (undefined requirement)
+ * - Uses vehicleMap for O(1) lookup
+ *
+ * **AutoFix:** Can automatically select vehicle with longer boom
+ *
  * @param {Keikka} keikka - Order to validate
  * @param {Array<ValidationIssue>} issues - Issues array (mutated)
  * @param {Map<number,Vehicle>} vehicleMap - Vehicle lookup map
  * @param {ValidationSettings|null} validationSettings - Settings configuration
  * @param {number|null} ownerAsiakasId - Current user's customer ID
  * @returns {void} Mutates issues array
+ *
+ * @example
+ * // Boom too short
+ * const keikka = {
+ *   vehicleId: 1,
+ *   pumppuPuomi: 20 // Requires 20m
+ * };
+ * const vehicleMap = new Map([[1, { vehicleId: 1, vehiclePuomi: 15 }]]); // Only 15m
+ * const issues = [];
+ * validateVehicle(keikka, issues, vehicleMap, null, 100);
+ * logger.category('keikkaValidator').info(issues[0].type); // "VEHICLE_BOOM_TOO_SHORT"
+ * logger.category('keikkaValidator').info(issues[0].message); // "Puomi ei riitä (20m > 15m)"
+ * logger.category('keikkaValidator').info(issues[0].actions.autoFix.requiredPuomi); // 20
+ *
+ * @performance O(1) - single Map lookup
+ * @see puminet4/src/utils/keikkaValidator.test.js:152 - Boom validation test
  */
 function validateVehicle(keikka, issues, vehicleMap, validationSettings, ownerAsiakasId) {
   // Check if vehicle boom is too short
@@ -1806,12 +1928,53 @@ function validateVehicle(keikka, issues, vehicleMap, validationSettings, ownerAs
 /**
  * Validate miscellaneous requirements (order confirmation)
  *
+ * **Validation Rules:**
+ * 1. Order confirmation must be sent (if valid email exists)
+ *
+ * **Conditional Validation:**
+ * - Only validates if contact has valid email address
+ * - Skips if no email to send confirmation to
+ *
+ * **Step Log Integration:**
+ * - stepLogTypeId=4,20: Order confirmation dismissed or sent
+ * - Alternative to tilausvahvistusLahetetty flag
+ *
+ * **Email Validation:**
+ * - Checks multiple email fields (yhteyshenkiloEmail, personEmail, contactPersonEmail)
+ * - Uses isValidEmail() for format validation
+ *
+ * **AutoFix:** Can send order confirmation automatically
+ *
  * @param {Keikka} keikka - Order to validate
  * @param {Array<ValidationIssue>} issues - Issues array (mutated)
  * @param {ValidationSettings|null} validationSettings - Settings configuration
  * @param {Array<StepLog>} stepLogData - Step log entries
  * @param {number|null} ownerAsiakasId - Current user's customer ID
  * @returns {void} Mutates issues array
+ *
+ * @example
+ * // Order confirmation not sent (with valid email)
+ * const keikka = {
+ *   keikkaId: 123,
+ *   tilausvahvistusLahetetty: false,
+ *   yhteyshenkiloEmail: "pekka@example.com"
+ * };
+ * const issues = [];
+ * validateMuut(keikka, issues, null, [], 100);
+ * logger.category('keikkaValidator').info(issues[0].type); // "ORDER_CONFIRMATION_NOT_SENT"
+ * logger.category('keikkaValidator').info(issues[0].actions.autoFix.action); // "sendTilausvahvistus"
+ *
+ * @example
+ * // No email - no validation
+ * const keikka = {
+ *   tilausvahvistusLahetetty: false,
+ *   yhteyshenkiloEmail: "" // No email
+ * };
+ * const issues = [];
+ * validateMuut(keikka, issues, null, [], 100);
+ * logger.category('keikkaValidator').info(issues.length); // 0 (skipped, no email to send to)
+ *
+ * @performance O(1) - fixed field checks
  */
 function validateMuut(keikka, issues, validationSettings, stepLogData, ownerAsiakasId) {
   const k = /** @type {any} */ (keikka);
@@ -1863,12 +2026,33 @@ function validateMuut(keikka, issues, validationSettings, stepLogData, ownerAsia
 /**
  * Validate customer payment status
  *
+ * **Business Rule:** Warn when customer has unpaid invoices exceeding €1000
+ *
+ * **Prerequisites:**
+ * - customerPaymentData must be provided (Map<asiakasId, paymentStatus>)
+ * - Only validates own orders (sourceAsiakasId === ownerAsiakasId)
+ * - Caller must check Fennoa + Laskutus modules are enabled before passing data
+ *
+ * **Payment Status Object:**
+ * - unpaidInvoicesTotal: Total amount of unpaid invoices
+ * - unpaidInvoicesCount: Number of unpaid invoices
+ * - oldestOverdueDate: Date of oldest overdue invoice
+ *
  * @param {Keikka} keikka - Order to validate
  * @param {Array<ValidationIssue>} issues - Issues array (mutated)
  * @param {Map<number, Object>|null} customerPaymentData - Customer payment status map
  * @param {ValidationSettings|null} validationSettings - Settings configuration
  * @param {number|null} ownerAsiakasId - Current user's customer ID
  * @returns {void} Mutates issues array
+ *
+ * @example
+ * const paymentData = new Map([
+ *   [123, { unpaidInvoicesTotal: 1500, unpaidInvoicesCount: 3 }]
+ * ]);
+ * const keikka = { asiakasId: 123, sourceAsiakasId: 100 };
+ * const issues = [];
+ * validateCustomerPayments(keikka, issues, paymentData, null, 100);
+ * logger.category('keikkaValidator').info(issues[0].type); // "CUSTOMER_PAYMENTS_LATE"
  */
 function validateCustomerPayments(
   keikka,
@@ -1937,11 +2121,24 @@ function validateCustomerPayments(
 /**
  * Validate weather conditions for safe pumping
  *
+ * **Business Rule:** Pumping is prohibited below -15°C
+ * This is a safety constraint for concrete pumping operations.
+ *
+ * **Temperature Source Priority:**
+ * 1. weatherTemp (average temperature during pumping period)
+ * 2. Minimum of weatherStartTemp and weatherEndTemp (fallback)
+ *
  * @param {Keikka} keikka - Order to validate
  * @param {Array<ValidationIssue>} issues - Issues array (mutated)
  * @param {ValidationSettings|null} validationSettings - Settings configuration
  * @param {number|null} ownerAsiakasId - Current user's customer ID
  * @returns {void} Mutates issues array
+ *
+ * @example
+ * const keikka = { weatherTemp: -20 }; // Severe cold
+ * const issues = [];
+ * validateWeather(keikka, issues, null, 100);
+ * logger.category('keikkaValidator').info(issues[0].type); // "SEVERE_COLD_WARNING"
  */
 function validateWeather(keikka, issues, validationSettings, ownerAsiakasId) {
   const k = /** @type {any} */ (keikka);
@@ -1999,8 +2196,32 @@ function validateWeather(keikka, issues, validationSettings, ownerAsiakasId) {
 /**
  * Calculate validation summary statistics
  *
+ * Aggregates validation issues into summary object with:
+ * - Total issue count
+ * - Breakdown by priority level
+ * - Breakdown by category
+ *
+ * **Summary Structure:**
+ * - totalIssues: Total count
+ * - critical, high, medium, low, notification: Priority counts
+ * - categories: Object with category counts
+ *
  * @param {Array<ValidationIssue>} issues - Filtered validation issues
  * @returns {ValidationSummary} Summary statistics
+ *
+ * @example
+ * const issues = [
+ *   { priority: PRIORITY_LEVELS.CRITICAL, category: CATEGORIES.ASIAKAS },
+ *   { priority: PRIORITY_LEVELS.MEDIUM, category: CATEGORIES.BETONI },
+ *   { priority: PRIORITY_LEVELS.MEDIUM, category: CATEGORIES.BETONI }
+ * ];
+ * const summary = calculateSummary(issues);
+ * logger.category('keikkaValidator').info(summary.totalIssues); // 3
+ * logger.category('keikkaValidator').info(summary.critical); // 1
+ * logger.category('keikkaValidator').info(summary.medium); // 2
+ * logger.category('keikkaValidator').info(summary.categories.betoni); // 2
+ *
+ * @performance O(n) where n=number of issues
  */
 function calculateSummary(issues) {
   const summary = {
@@ -2046,8 +2267,19 @@ function calculateSummary(issues) {
 /**
  * Get Finnish display name for priority level
  *
+ * **Priority Names:**
+ * - CRITICAL (5): "Kriittinen"
+ * - HIGH (4): "Korkea"
+ * - MEDIUM (3): "Keskitaso"
+ * - LOW (2): "Matala"
+ * - NOTIFICATION (1): "Huomautus"
+ *
  * @param {number} priority - Priority level (1-5)
  * @returns {string} Finnish display name
+ *
+ * @example
+ * logger.category('keikkaValidator').info(getPriorityName(PRIORITY_LEVELS.CRITICAL)); // "Kriittinen"
+ * logger.category('keikkaValidator').info(getPriorityName(99)); // "Tuntematon" (unknown)
  */
 export const getPriorityName = (priority) => {
   switch (priority) {
@@ -2069,8 +2301,23 @@ export const getPriorityName = (priority) => {
 /**
  * Get Material-UI color for priority level
  *
+ * **Consistent UI Theming:** Used across all validation components
+ * for unified visual priority representation.
+ *
+ * **Color Mapping:**
+ * - CRITICAL (5): "error" (red)
+ * - HIGH (4): "warning" (orange)
+ * - MEDIUM (3): "info" (blue)
+ * - LOW (2): "success" (green)
+ * - NOTIFICATION (1): "default" (gray)
+ *
  * @param {number} priority - Priority level (1-5)
  * @returns {string} Material-UI color name
+ *
+ * @example
+ * const color = getPriorityColor(PRIORITY_LEVELS.CRITICAL);
+ * // Use in MUI component:
+ * // <Chip color={color} label="Kriittinen" />
  */
 export const getPriorityColor = (priority) => {
   switch (priority) {
@@ -2092,8 +2339,21 @@ export const getPriorityColor = (priority) => {
 /**
  * Get Finnish display name for validation category
  *
+ * **Category Names:**
+ * - BETONI: "Betoni"
+ * - ASIAKAS: "Asiakas"
+ * - TYOMAA: "Työmaa"
+ * - CONTACT: "Yhteystieto"
+ * - VEHICLE: "Ajoneuvo"
+ * - PUMPPARI: "Pumppari"
+ * - MUU: "Muu"
+ *
  * @param {string} category - Category constant from CATEGORIES
  * @returns {string} Finnish display name
+ *
+ * @example
+ * logger.category('keikkaValidator').info(getCategoryName(CATEGORIES.BETONI)); // "Betoni"
+ * logger.category('keikkaValidator').info(getCategoryName("unknown")); // "Tuntematon"
  */
 export const getCategoryName = (category) => {
   switch (category) {
