@@ -275,7 +275,7 @@ class UniversalCacheManager {
 
     const base = {
       keyPrefix: "", // No prefix to avoid scan/invalidation mismatches
-      connectTimeout: 10000,
+      connectTimeout: 2000, // Fail fast: a flapping Redis must not stall the request path
       retryStrategy: (times) => Math.min(times * 1000, 5000),
       db: this.currentDb, // DB 3 for production, DB 4 for development
     };
@@ -328,7 +328,8 @@ class UniversalCacheManager {
       if (!this.isConnected && this.client) {
         let timer;
         const timeoutPromise = new Promise((resolve) => {
-          timer = setTimeout(() => resolve(null), 10000);
+          // Cap the per-request ping race so a wedged Redis adds ~2s, not 10s.
+          timer = setTimeout(() => resolve(null), 2000);
         });
         const pingPromise = this.client
           .ping()
