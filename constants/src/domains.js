@@ -73,22 +73,16 @@ const allowedOrigins = [
   "https://kalleurho.fi",
   "https://www.kalleurho.fi",
 
-  // betoni.store public storefront
-  "https://betoni.store",
-  "https://www.betoni.store",
-
   // localhost for development
   "http://localhost:3000",
   "http://localhost:3001", // BSG2 Vite dev server
   "http://localhost:3002", // kalleurho.fi Vite dev server
   "http://localhost:3003", // maxbe.fi Vite dev server
-  "http://localhost:3004", // betoni-store Vite dev server
   "http://localhost:5173", // Vite dev server
   "http://localhost:5174", // betonijerry Vite dev server
   "http://localhost:8080",
   "http://127.0.0.1:3000",
   "http://127.0.0.1:3001", // BSG2 Vite dev server
-  "http://127.0.0.1:3004", // betoni-store Vite dev server
   "http://127.0.0.1:5173", // Vite dev server
   "http://127.0.0.1:5174", // betonijerry Vite dev server
   "http://127.0.0.1:8080",

@@ -55,13 +55,6 @@ const { FENNOA_PAYMENT_STATUS, FENNOA_PAYMENT_STATUS_LABELS_FI, INVOICE_STATUS, 
 const { SENTRY_REDACT_FIELDS, SENTRY_REDACTED_PLACEHOLDER } = require("./src/sentry.cjs");
 const { BETONIJERRY } = require("./src/betonijerry.cjs");
 const { PERSON_LOG_TYPES, PERSON_LOG_TYPE_NAMES } = require("./src/personLogTypes.cjs");
-const {
-  STORE_INQUIRY_STATUS_BY_ID,
-  STORE_INQUIRY_STATUS_BY_NAME,
-  STORE_CONDITION_BY_ID,
-  STORE_CONDITION_BY_NAME,
-  STORE_ASIAKAS_SETTING_HAS_BETONI_STORE,
-} = require("./src/storeConstants.cjs");
 
 module.exports = {
   // Step log type constants
@@ -131,11 +124,4 @@ module.exports = {
 
   // BetoniJerry umbrella tenant
   BETONIJERRY,
-
-  // Betoni.store v1
-  STORE_INQUIRY_STATUS_BY_ID,
-  STORE_INQUIRY_STATUS_BY_NAME,
-  STORE_CONDITION_BY_ID,
-  STORE_CONDITION_BY_NAME,
-  STORE_ASIAKAS_SETTING_HAS_BETONI_STORE,
 };

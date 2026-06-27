@@ -44,10 +44,6 @@
     "./betonijerry": {
       "import": "./src/betonijerry.js",
       "require": "./src/betonijerry.cjs"
-    },
-    "./store": {
-      "import": "./src/storeConstants.js",
-      "require": "./src/storeConstants.cjs"
     }
   },
   "keywords": [
