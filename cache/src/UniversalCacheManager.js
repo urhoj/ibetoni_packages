@@ -1706,8 +1706,17 @@ class UniversalCacheManager {
       case "SIJAINTI_CREATE":
       case "SIJAINTI_DELETE": {
         const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+        // fb#93: geocode keys embed sijaintiId / typeId / tyomaaId as their 3rd
+        // segment — never asiakasId — so the generic entity pattern
+        // (geocode:*:<asiakasId>*) matched nothing and sijainti get/list reads
+        // stayed stale until TTL. Target the real key shapes instead
+        // (generateGeocodeExtendedKey in universalCacheStrategy.js). Driving-
+        // distance and metrics keys are coordinate/global-keyed — left alone.
+        const sijaintiId = params.sijaintiId || params.entityId;
         const counts = await Promise.all([
-          this.invalidate(operation, "geocode", params),
+          this.invalidateByPattern(`geocode:sijainti:${sijaintiId || "*"}`),
+          this.invalidateByPattern("geocode:sijaintiList:*"),
+          this.invalidateByPattern("geocode:closest:*"),
           this.invalidate(operation, "tyomaa", params),
           this.invalidate(operation, "keikka", params),
           this.invalidateGridSmart("TYOMAA_UPDATE", params.body || {}, params),
