@@ -18,6 +18,7 @@ const sampleCanonical = () => ({
     isRoleManager: true,
     isSystemAdmin: false,
     isGlobalSijaintiAdmin: false,
+    isGlobalViewer: false,
   },
   asiakasesWithTypes: [
     {
@@ -73,6 +74,26 @@ describe("compressPayload (canonical → short)", () => {
       GLOBAL_ROLE_FLAGS.isSystemAdmin |
       GLOBAL_ROLE_FLAGS.isGlobalSijaintiAdmin;
     expect(short.g).toBe(expected);
+  });
+
+  it("encodes and round-trips isGlobalViewer (read-only cross-tenant flag)", () => {
+    expect(GLOBAL_ROLE_FLAGS.isGlobalViewer).toBe(16);
+    const canonical = {
+      ...sampleCanonical(),
+      globalRoles: {
+        isDeveloper: false,
+        isRoleManager: false,
+        isSystemAdmin: false,
+        isGlobalSijaintiAdmin: false,
+        isGlobalViewer: true,
+      },
+    };
+    const short = compressPayload(canonical);
+    expect(short.g).toBe(GLOBAL_ROLE_FLAGS.isGlobalViewer);
+    const expanded = expandPayload(short);
+    expect(expanded.globalRoles.isGlobalViewer).toBe(true);
+    // read-only flag must not imply any admin bit
+    expect(expanded.globalRoles.isSystemAdmin).toBe(false);
   });
 
   it("encodes asiakasesWithTypes as tuple rows", () => {
@@ -222,6 +243,7 @@ describe("expandPayload (short → canonical)", () => {
       isRoleManager: false,
       isSystemAdmin: true,
       isGlobalSijaintiAdmin: false,
+      isGlobalViewer: false,
     });
   });
 
@@ -383,8 +405,8 @@ describe("round-trip (compress → expand)", () => {
     });
   });
 
-  it("round-trip is idempotent across all 16 globalRoles bitmasks", () => {
-    for (let mask = 0; mask < 16; mask++) {
+  it("round-trip is idempotent across all 32 globalRoles bitmasks", () => {
+    for (let mask = 0; mask < 32; mask++) {
       const canonical = {
         personId: 1,
         globalRoles: {
@@ -392,6 +414,7 @@ describe("round-trip (compress → expand)", () => {
           isRoleManager: Boolean(mask & 2),
           isSystemAdmin: Boolean(mask & 4),
           isGlobalSijaintiAdmin: Boolean(mask & 8),
+          isGlobalViewer: Boolean(mask & 16),
         },
       };
       const round = expandPayload(compressPayload(canonical));

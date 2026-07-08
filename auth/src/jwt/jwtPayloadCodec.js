@@ -26,6 +26,7 @@
  *   2 = isRoleManager
  *   4 = isSystemAdmin
  *   8 = isGlobalSijaintiAdmin
+ *   16 = isGlobalViewer
  *
  * Company tuple slot 1 (companyFlags):
  *   1 = isTyomaaAsiakas
@@ -58,6 +59,7 @@ export const GLOBAL_ROLE_FLAGS = Object.freeze({
   isRoleManager: 2,
   isSystemAdmin: 4,
   isGlobalSijaintiAdmin: 8,
+  isGlobalViewer: 16,
 });
 
 export const COMPANY_FLAGS = Object.freeze({
@@ -74,6 +76,7 @@ function encodeGlobalRoles(g) {
   if (g.isRoleManager) n |= GLOBAL_ROLE_FLAGS.isRoleManager;
   if (g.isSystemAdmin) n |= GLOBAL_ROLE_FLAGS.isSystemAdmin;
   if (g.isGlobalSijaintiAdmin) n |= GLOBAL_ROLE_FLAGS.isGlobalSijaintiAdmin;
+  if (g.isGlobalViewer) n |= GLOBAL_ROLE_FLAGS.isGlobalViewer;
   return n;
 }
 
@@ -84,6 +87,7 @@ function decodeGlobalRoles(n) {
     isRoleManager: Boolean(v & GLOBAL_ROLE_FLAGS.isRoleManager),
     isSystemAdmin: Boolean(v & GLOBAL_ROLE_FLAGS.isSystemAdmin),
     isGlobalSijaintiAdmin: Boolean(v & GLOBAL_ROLE_FLAGS.isGlobalSijaintiAdmin),
+    isGlobalViewer: Boolean(v & GLOBAL_ROLE_FLAGS.isGlobalViewer),
   };
 }
 

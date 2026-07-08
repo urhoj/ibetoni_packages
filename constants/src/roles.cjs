@@ -200,6 +200,8 @@ const PERSON_SETTING_TYPE_IDS = {
   GLOBAL_USER_CONSENT: 44,
   DEFAULT_URL: 45,
   IS_GLOBAL_SIJAINTI_ADMIN: 46,
+  // 47 = Betonijerry TOS, 48 = Betonijerry Privacy (legal; DB-only, not enumerated here).
+  IS_GLOBAL_VIEWER: 49,
 };
 
 const ASIAKAS_SETTING_TYPE_IDS = {
