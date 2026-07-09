@@ -1,0 +1,21 @@
+{
+  "name": "@ibetoni/prh-utils",
+  "version": "1.0.0",
+  "description": "Shared PRH (Finnish business registry / YTJ) status classification for betoni.online",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "keywords": [
+    "prh",
+    "ytj",
+    "business-registry",
+    "classification"
+  ],
+  "author": "betoni.online",
+  "license": "UNLICENSED",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
