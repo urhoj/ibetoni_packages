@@ -18,8 +18,8 @@
   "private": true,
   "dependencies": {
     "@ibetoni/sentry": "file:../sentry",
-    "ioredis": "^5.11.0",
-    "lru-cache": "^11.5.1"
+    "ioredis": "^5.11.1",
+    "lru-cache": "^11.5.2"
   },
   "engines": {
     "node": ">=18.0.0"
