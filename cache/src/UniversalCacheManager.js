@@ -276,6 +276,19 @@ class UniversalCacheManager {
     const base = {
       keyPrefix: "", // No prefix to avoid scan/invalidation mismatches
       connectTimeout: 2000, // Fail fast: a flapping Redis must not stall the request path
+      // fb#160: fail-fast on a wedged/flapping Redis. Without these, a command
+      // issued on a "ready" connection that then wedges QUEUES (enableOfflineQueue
+      // default true) and hung 300-800s on 2026-06-26 -> Cloudflare 524 while
+      // /health stayed green. enableOfflineQueue:false = don't queue when the
+      // socket isn't writeable (commands reject in ~0ms); commandTimeout bounds a
+      // ready-but-wedged command; a low maxRetriesPerRequest avoids the 20-retry
+      // storm (MaxRetriesPerRequestError). Safe for both consumers: cache reads
+      // fail OPEN to (healthy) SQL, and DistributedLockManager.acquireLock catches
+      // the error and returns null = "not acquired" (callers only proceed if they
+      // hold the lock), so a faster failure never means proceed-without-lock.
+      enableOfflineQueue: false,
+      commandTimeout: 2000,
+      maxRetriesPerRequest: 3,
       retryStrategy: (times) => Math.min(times * 1000, 5000),
       db: this.currentDb, // DB 3 for production, DB 4 for development
     };
