@@ -54,6 +54,7 @@ const {
 const { FENNOA_PAYMENT_STATUS, FENNOA_PAYMENT_STATUS_LABELS_FI, INVOICE_STATUS, INVOICE_STATUS_LABELS_FI } = require("./src/fennoa.cjs");
 const { SENTRY_REDACT_FIELDS, SENTRY_REDACTED_PLACEHOLDER } = require("./src/sentry.cjs");
 const { BETONIJERRY } = require("./src/betonijerry.cjs");
+const { DASHBOARD_CLOSE_RADIUS_M } = require("./src/geo.cjs");
 const { PERSON_LOG_TYPES, PERSON_LOG_TYPE_NAMES } = require("./src/personLogTypes.cjs");
 
 module.exports = {
@@ -124,4 +125,7 @@ module.exports = {
 
   // BetoniJerry umbrella tenant
   BETONIJERRY,
+
+  // Geo / proximity constants
+  DASHBOARD_CLOSE_RADIUS_M,
 };

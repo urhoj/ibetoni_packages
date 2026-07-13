@@ -44,6 +44,10 @@
     "./betonijerry": {
       "import": "./src/betonijerry.js",
       "require": "./src/betonijerry.cjs"
+    },
+    "./geo": {
+      "import": "./src/geo.js",
+      "require": "./src/geo.cjs"
     }
   },
   "keywords": [
