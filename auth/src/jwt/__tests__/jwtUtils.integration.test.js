@@ -15,6 +15,7 @@ const sampleClaims = () => ({
     isRoleManager: true,
     isSystemAdmin: false,
     isGlobalSijaintiAdmin: false,
+    isGlobalViewer: false,
   },
   asiakasesWithTypes: [
     {
