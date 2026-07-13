@@ -6,8 +6,8 @@ export const ENDPOINTS = {
   frontend: [
     {
       name: "Production Frontend",
-      url: "https://ibetoni.fi",
-      versionEndpoint: "https://ibetoni.fi/version",
+      url: "https://betoni.online",
+      versionEndpoint: "https://betoni.online/version",
       type: "frontend",
       environment: "production",
     },
