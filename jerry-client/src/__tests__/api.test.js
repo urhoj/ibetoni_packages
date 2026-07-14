@@ -62,3 +62,30 @@ describe("createTarjouspyyntoApi", () => {
         expect(t.mutate).not.toHaveBeenCalled();
     });
 });
+
+describe("preview endpoints", () => {
+    it("getPreview builds the tokenized query path", async () => {
+        const query = vi.fn(async () => ({ ok: 1 }));
+        const api = createTarjouspyyntoApi({ query, mutate: vi.fn() });
+        await api.getPreview("abc/+=");
+        expect(query).toHaveBeenCalledWith(
+            "/api/pumppuRequests/preview?token=abc%2F%2B%3D",
+            { fallback: null },
+        );
+    });
+
+    it("getPreview requires the token", async () => {
+        const api = createTarjouspyyntoApi({ query: vi.fn(), mutate: vi.fn() });
+        await expect(() => api.getPreview(null)).toThrow(TypeError);
+    });
+
+    it("checkPreviewAccess posts the preview token", async () => {
+        const mutate = vi.fn(async () => ({ success: true, data: { ok: true } }));
+        const api = createTarjouspyyntoApi({ query: vi.fn(), mutate });
+        await api.checkPreviewAccess(42, "tok");
+        expect(mutate).toHaveBeenCalledWith(
+            "/api/pumppuRequests/42/preview-access",
+            { method: "POST", body: { previewToken: "tok" } },
+        );
+    });
+});

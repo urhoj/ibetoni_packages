@@ -28,6 +28,19 @@ export function createTarjouspyyntoApi({ query, mutate }) {
         getProviderDetail: (pumppuRequestId) =>
             query(`/api/pumppuRequests/${reqd(pumppuRequestId, "pumppuRequestId")}/provider-detail`, { fallback: null }),
 
+        // PUBLIC tokenized read-only preview (email CTA landing). Call with a
+        // TOKENLESS transport — the capability token in the query IS the auth.
+        getPreview: (previewToken) =>
+            query(`/api/pumppuRequests/preview?token=${encodeURIComponent(reqd(previewToken, "previewToken"))}`, { fallback: null }),
+
+        // Post-login access check for the preview flow. Requires an
+        // authenticated transport; returns { ok, asiakasId? } (never the denial case).
+        checkPreviewAccess: (pumppuRequestId, previewToken) =>
+            mutate(`/api/pumppuRequests/${reqd(pumppuRequestId, "pumppuRequestId")}/preview-access`, {
+                method: "POST",
+                body: { previewToken: reqd(previewToken, "previewToken") },
+            }),
+
         submitOffer: (pumppuRequestId, body) =>
             mutate(`/api/pumppuRequests/${reqd(pumppuRequestId, "pumppuRequestId")}/offers`, { method: "POST", body }),
 
