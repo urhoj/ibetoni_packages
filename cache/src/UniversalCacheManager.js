@@ -78,6 +78,13 @@ class UniversalCacheManager {
     // on every cache op; during a Redis outage that's thousands of identical
     // pings/min — we report at most once per PING_REPORT_THROTTLE_MS.
     this._lastPingErrorReportAt = 0;
+    // Throttle for the log breadcrumb (separate from the Sentry throttle so a
+    // transient blip that never escalates still can't flood the log).
+    this._lastPingLogAt = 0;
+    // Start of the current Redis-unavailability streak (0 = writeable). Set on
+    // the first failed ping, cleared in onReady. Only a SUSTAINED streak is
+    // Sentry-worthy — a normal failover reconnect fast-fails for a few seconds.
+    this._pingErrorStreakStartedAt = 0;
 
     // Track current Redis database (3 = production, 4 = development)
     const isProduction = process.env.NODE_ENV === "production";
@@ -367,19 +374,45 @@ class UniversalCacheManager {
   }
 
   /**
-   * Report a ping-during-reconnect failure to Sentry, throttled to one event
-   * per 5 minutes per process. getClient() is on every cache hot path, so an
-   * unthrottled report would emit thousands of identical events during a
-   * Redis outage. The first event surfaces the problem; the throttle prevents
-   * the flood while the outage persists.
+   * Handle a ping-during-reconnect failure.
+   *
+   * This rejection ("Stream isn't writeable", enableOfflineQueue:false) is the
+   * DESIGNED fast-fail from fb#160 — a normal Azure Redis failover/reconnect
+   * produces it for a few seconds, and it is fully handled (cache fails open to
+   * SQL). Reporting every blip to Sentry was self-defeating: the InstatusBot
+   * health probe (GET /) tripped it on each reconnect window, burying real
+   * signal under expected transients (NODE-EXPRESS-58).
+   *
+   * So: log a throttled breadcrumb for every blip, but only escalate to Sentry
+   * once the unavailability streak is SUSTAINED past PING_SUSTAINED_MS — that's
+   * a genuine Redis outage, not a routine reconnect. Both emissions are
+   * throttled because getClient() is on every cache hot path (thousands of
+   * pings/min during an outage). The streak resets in onReady on recovery.
    */
   _reportPingError(error) {
+    const PING_SUSTAINED_MS = 30 * 1000;
     const PING_REPORT_THROTTLE_MS = 5 * 60 * 1000;
+    const PING_LOG_THROTTLE_MS = 60 * 1000;
     const now = Date.now();
+
+    if (this._pingErrorStreakStartedAt === 0) this._pingErrorStreakStartedAt = now;
+    const streakMs = now - this._pingErrorStreakStartedAt;
+
+    if (now - this._lastPingLogAt >= PING_LOG_THROTTLE_MS) {
+      this._lastPingLogAt = now;
+      console.warn(
+        `[UniversalCache] Redis ping failed during reconnect ` +
+          `(unavailable ~${Math.round(streakMs / 1000)}s): ${error && error.message}`
+      );
+    }
+
+    // Transient reconnect — logged above, but not Sentry-worthy yet.
+    if (streakMs < PING_SUSTAINED_MS) return;
     if (now - this._lastPingErrorReportAt < PING_REPORT_THROTTLE_MS) return;
     this._lastPingErrorReportAt = now;
     captureError(error, {
       tags: { feature: "cache", operation: "client-ping-during-reconnect" },
+      extra: { unavailableMs: streakMs },
     });
   }
 
@@ -394,6 +427,9 @@ class UniversalCacheManager {
     // Set up event handlers to prevent memory leaks
     const onReady = () => {
       this.isConnected = true;
+      // Recovered — end any Redis-unavailability streak so the next outage is
+      // measured fresh (and a brief flap never accrues toward "sustained").
+      this._pingErrorStreakStartedAt = 0;
     };
 
     const onError = (err) => {
