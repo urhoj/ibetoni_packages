@@ -7,9 +7,13 @@
  * check (puminet5api asiakas prh-check route), so the two can never diverge.
  *
  * PRH records "dead" in TWO places, both needed:
- *  1. companySituations[].type — an ACTIVE proceeding. Codes are short uppercase
- *     abbreviations; KONK = konkurssi is verified live (Savcor Technologies Oy,
- *     Ahtium Oyj). During the proceeding the trade register still reads "Rekisterissä".
+ *  1. companySituations[].type — an ACTIVE proceeding. Closed enum per the PRH v3
+ *     OpenAPI schema (/v3/schema): exactly KONK / SELTILA / SANE, verified against the
+ *     official code list (/description?code=SELTILA,SANE,KONK) + live payloads
+ *     2026-07-17 (KONK: Savcor, Ahtium, Euran Rakennustarvike). A concluded proceeding
+ *     is REMOVED from the array (Componenta, OTSO — no endDate lingering), so every
+ *     entry present is active. During the proceeding the trade register still reads
+ *     "Rekisterissä".
  *  2. registeredEntries — once a company has CEASED, companySituations empties and the
  *     CURRENT (endDate=null) trade-register entry (register "1") flips from
  *     "Rekisterissä" (type "1") to "Lakannut" (type "4"). Verified: Cafe Mido Oy /
@@ -25,11 +29,11 @@ const PRH_STATUS = Object.freeze({
   NO_YTUNNUS: "no-ytunnus",
 });
 
-// companySituations[].type — PRH short uppercase codes. KONK verified live; the rest
-// mapped by prefix. Any unrecognised special-situation code fails safe to CAUTION.
-const SITUATION_DEAD_LABEL = { KONK: "konkurssi", SELV: "selvitystila", PURK: "purettu", LAKK: "lakannut", SULA: "sulautunut" };
-const SITUATION_DEAD_PREFIXES = ["KONK", "SELV", "PURK", "LAKK", "SULA", "JAKA", "LOPE"];
-const SITUATION_CAUTION_PREFIXES = ["SANE", "YSAN", "YRSA"]; // yrityssaneeraus
+// companySituations[].type — closed enum (KONK/SELTILA/SANE, see header). Mergers,
+// demergers and cessation never appear here; they surface via the trade-register
+// descriptions below. Any new/unrecognised code fails safe to CAUTION.
+const SITUATION_DEAD_LABEL = { KONK: "konkurssi", SELTILA: "selvitystila" };
+const SITUATION_CAUTION_LABEL = { SANE: "yrityssaneeraus" };
 
 // register "1" = kaupparekisteri (trade register); match the Finnish description of
 // its CURRENT (endDate=null) entry.
@@ -65,8 +69,7 @@ function classifyPrhStatus(company) {
     const code = String(s?.type || "").trim().toUpperCase();
     if (!code) continue;
     if (SITUATION_DEAD_LABEL[code]) { dead = dead || SITUATION_DEAD_LABEL[code]; continue; }
-    if (SITUATION_DEAD_PREFIXES.some((p) => code.startsWith(p))) { dead = dead || code.toLowerCase(); continue; }
-    if (SITUATION_CAUTION_PREFIXES.some((p) => code.startsWith(p))) { caution = caution || "yrityssaneeraus"; continue; }
+    if (SITUATION_CAUTION_LABEL[code]) { caution = caution || SITUATION_CAUTION_LABEL[code]; continue; }
     caution = caution || code.toLowerCase(); // unknown special situation -> fail-safe caution
   }
 

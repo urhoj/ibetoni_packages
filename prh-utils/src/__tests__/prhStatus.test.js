@@ -41,9 +41,14 @@ describe("classifyPrhStatus", () => {
     expect(r.status).toBe(PRH_STATUS.CAUTION);
   });
 
-  it("selvitystila situation code -> dead", () => {
-    const r = classifyPrhStatus({ companySituations: [{ type: "SELV" }], registeredEntries: [] });
+  it("liquidation (SELTILA — real PRH v3 enum code): -> dead, even while reg1 says Rekisterissa", () => {
+    // The enum is closed: KONK | SELTILA | SANE (PRH v3 OpenAPI schema). The old
+    // inferred code "SELV" never existed on the wire — keep fixtures mirroring the API.
+    const r = classifyPrhStatus({ status: "2",
+      companySituations: [{ type: "SELTILA", registrationDate: "2026-01-15", source: "1" }],
+      registeredEntries: [reg1("1", "Rekisterissä")] });
     expect(r.status).toBe(PRH_STATUS.DEAD);
+    expect(r.situation).toBe("selvitystila");
   });
 
   it("no active signal and nothing adverse -> unknown (do not assume ok)", () => {
