@@ -58,6 +58,7 @@ import {
 import { FENNOA_PAYMENT_STATUS, FENNOA_PAYMENT_STATUS_LABELS_FI, FENNOA_PAYMENT_STATUS_SEVERITY, INVOICE_STATUS, INVOICE_STATUS_LABELS_FI } from "./fennoa.js";
 import { SENTRY_REDACT_FIELDS, SENTRY_REDACTED_PLACEHOLDER } from "./sentry.js";
 import { BETONIJERRY } from "./betonijerry.js";
+import { PUMINET } from "./puminet.js";
 import { DASHBOARD_CLOSE_RADIUS_M } from "./geo.js";
 import { PERSON_LOG_TYPES, PERSON_LOG_TYPE_NAMES } from "./personLogTypes.js";
 import { TUOTE_CAT_TYPE_BY_ID, TUOTE_CAT_TYPE_BY_NAME, KNOWN_TUOTE_CAT_TYPE_IDS } from "./tuoteCatTypes.js";
@@ -131,6 +132,9 @@ export {
 
   // BetoniJerry umbrella tenant
   BETONIJERRY,
+
+  // PumiNet Oy (app operator)
+  PUMINET,
 
   // Geo / proximity constants
   DASHBOARD_CLOSE_RADIUS_M,
