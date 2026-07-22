@@ -79,6 +79,23 @@ describe("preview endpoints", () => {
         await expect(() => api.getPreview(null)).toThrow(TypeError);
     });
 
+    it("revealPreview POSTs the token in the body", async () => {
+        const mutate = vi.fn(async () => ({ success: true, data: {} }));
+        const api = createTarjouspyyntoApi({ query: vi.fn(), mutate });
+        await api.revealPreview("tok");
+        expect(mutate).toHaveBeenCalledWith(
+            "/api/pumppuRequests/preview/reveal",
+            { method: "POST", body: { token: "tok" } },
+        );
+    });
+
+    it("revealPreview requires the token", () => {
+        const mutate = vi.fn();
+        const api = createTarjouspyyntoApi({ query: vi.fn(), mutate });
+        expect(() => api.revealPreview(undefined)).toThrow(/previewToken/);
+        expect(mutate).not.toHaveBeenCalled();
+    });
+
     it("checkPreviewAccess posts the preview token", async () => {
         const mutate = vi.fn(async () => ({ success: true, data: { ok: true } }));
         const api = createTarjouspyyntoApi({ query: vi.fn(), mutate });

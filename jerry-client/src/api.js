@@ -33,6 +33,16 @@ export function createTarjouspyyntoApi({ query, mutate }) {
         getPreview: (previewToken) =>
             query(`/api/pumppuRequests/preview?token=${encodeURIComponent(reqd(previewToken, "previewToken"))}`, { fallback: null }),
 
+        // PUBLIC tokenized reveal of the customer's contact info on the preview
+        // page. Call with a TOKENLESS transport — the capability token IS the
+        // auth. Stamps the provider's view-claim (first reveal per company
+        // emails the customer) and returns the revealed preview envelope.
+        revealPreview: (previewToken) =>
+            mutate("/api/pumppuRequests/preview/reveal", {
+                method: "POST",
+                body: { token: reqd(previewToken, "previewToken") },
+            }),
+
         // Post-login access check for the preview flow. Requires an
         // authenticated transport; returns { ok, asiakasId? } (never the denial case).
         checkPreviewAccess: (pumppuRequestId, previewToken) =>
