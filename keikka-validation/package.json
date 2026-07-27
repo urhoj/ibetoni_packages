@@ -14,5 +14,5 @@
   "author": "betoni.online",
   "license": "UNLICENSED",
   "private": true,
-  "engines": { "node": ">=18.0.0" }
+  "engines": { "node": "^22.18.0 || >=24.11.0" }
 }

@@ -5,6 +5,9 @@
   "main": "src/index.js",
   "private": true,
   "license": "UNLICENSED",
+  "engines": {
+    "node": "^22.18.0 || >=24.11.0"
+  },
   "keywords": ["express", "api", "validation", "error-handling", "betoni"],
   "author": "betoni.online",
   "dependencies": {

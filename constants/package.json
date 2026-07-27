@@ -63,5 +63,8 @@
   ],
   "author": "betoni.online",
   "license": "UNLICENSED",
+  "engines": {
+    "node": "^22.18.0 || >=24.11.0"
+  },
   "private": true
 }

@@ -5,10 +5,13 @@
   "main": "src/index.js",
   "private": true,
   "license": "UNLICENSED",
+  "engines": {
+    "node": "^22.18.0 || >=24.11.0"
+  },
   "keywords": ["sentry", "error-tracking", "betoni"],
   "author": "betoni.online",
   "dependencies": {
     "@ibetoni/constants": "file:../constants",
-    "@sentry/node": "^10.48.0"
+    "@sentry/node": "^10.68.0"
   }
 }
