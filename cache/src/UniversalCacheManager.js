@@ -1261,6 +1261,39 @@ class UniversalCacheManager {
   }
 
   /**
+   * The `geocode:` read keys a sijainti-row write makes stale — the single
+   * source of truth shared by SIJAINTI_* and SIJAINTI_LATLNG_UPDATE, so the two
+   * can never drift apart (that drift is what left `ib sijainti list` uncleared;
+   * see the `geocode:cli:*` note below).
+   *
+   * fb#93: these keys embed sijaintiId / typeId / tyomaaId as their 3rd segment
+   * — never asiakasId — so the generic entity pattern (`geocode:*:<asiakasId>*`)
+   * matched none of them and sijainti get/list reads stayed stale until TTL.
+   * Target the real key shapes instead (generateGeocodeExtendedKey in
+   * puminet5api/modules/cache/universal/universalCacheStrategy.js).
+   *
+   * fb#322: `geocode:cli:<owner>:<hash>` (GET /api/cli/sijainti/list, i.e.
+   * `ib sijainti list`) WAS shaped to fall under that generic glob — it is the
+   * one geocode key whose 3rd segment IS the tenant — so replacing the glob in
+   * fb#93 silently dropped it. It must be swept explicitly.
+   *
+   * Driving-distance (`geocode:distance:*`) and `geocode:metrics` are
+   * coordinate-/global-keyed and stay correct across a row write — left alone.
+   *
+   * @param {number|string|null|undefined} sijaintiId - falsy widens the
+   *   per-row key to a wildcard (invalidate every cached sijainti).
+   * @returns {string[]} Redis key globs to sweep.
+   */
+  _sijaintiGeocodeReadPatterns(sijaintiId) {
+    return [
+      `geocode:sijainti:${sijaintiId || "*"}`,
+      "geocode:sijaintiList:*",
+      "geocode:closest:*",
+      "geocode:cli:*",
+    ];
+  }
+
+  /**
    * Cross-entity invalidation for complex operations
    * CRITICAL: This is what tilaCron needs for KEIKKA_BULK_UPDATE
    */
@@ -1755,17 +1788,10 @@ class UniversalCacheManager {
       case "SIJAINTI_CREATE":
       case "SIJAINTI_DELETE": {
         const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-        // fb#93: geocode keys embed sijaintiId / typeId / tyomaaId as their 3rd
-        // segment — never asiakasId — so the generic entity pattern
-        // (geocode:*:<asiakasId>*) matched nothing and sijainti get/list reads
-        // stayed stale until TTL. Target the real key shapes instead
-        // (generateGeocodeExtendedKey in universalCacheStrategy.js). Driving-
-        // distance and metrics keys are coordinate/global-keyed — left alone.
-        const sijaintiId = params.sijaintiId || params.entityId;
         const counts = await Promise.all([
-          this.invalidateByPattern(`geocode:sijainti:${sijaintiId || "*"}`),
-          this.invalidateByPattern("geocode:sijaintiList:*"),
-          this.invalidateByPattern("geocode:closest:*"),
+          ...this._sijaintiGeocodeReadPatterns(
+            params.sijaintiId || params.entityId,
+          ).map((p) => this.invalidateByPattern(p)),
           this.invalidate(operation, "tyomaa", params),
           this.invalidate(operation, "keikka", params),
           this.invalidateGridSmart("TYOMAA_UPDATE", params.body || {}, params),
@@ -1774,6 +1800,26 @@ class UniversalCacheManager {
           this.invalidateByPattern(`ecofleet:vehicleDayRoute:*:${today}`),
           this.invalidateByPattern("inventory:dashboard:*"), // sijainti.isVarasto feeds the Varasto dashboard
         ]);
+        totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
+        break;
+      }
+
+      // Coordinate-only write (sijainti_LatLng_save). Deliberately NARROWER than
+      // SIJAINTI_UPDATE: it sweeps the geocode read keys and nothing else.
+      // fb#322 — the writer geoCodeSql.updateSijaintiLatLng() is called from
+      // paths that never pass the route invalidation middleware (jerry enable →
+      // geocodeEmptyVarikot, toimittaja find → updateEmptySijaintiLatLng), so it
+      // must invalidate itself; but those callers run it in a LOOP and pass no
+      // asiakasId, under which SIJAINTI_UPDATE's asiakas/keikka/grid fan-out
+      // degrades to `asiakas:*:**` + `grid:v7tenant:*:*` — a cross-tenant cache
+      // wipe per geocoded row. Coords change no keikka/grid/tyomaa payload, so
+      // that fan-out is not needed here either.
+      case "SIJAINTI_LATLNG_UPDATE": {
+        const counts = await Promise.all(
+          this._sijaintiGeocodeReadPatterns(
+            params.sijaintiId || params.entityId,
+          ).map((p) => this.invalidateByPattern(p)),
+        );
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         break;
       }
