@@ -19,6 +19,10 @@
     "./oauth/google": {
       "require": "./src/oauth/googleAuth.js",
       "import": "./src/oauth/googleAuth.js"
+    },
+    "./oauth/errors": {
+      "require": "./src/oauth/oauthErrors.js",
+      "import": "./src/oauth/oauthErrors.js"
     }
   },
   "scripts": {

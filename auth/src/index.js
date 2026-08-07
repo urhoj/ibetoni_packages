@@ -50,8 +50,10 @@ module.exports = {
   // Google OAuth
   GoogleAuth,
   createGoogleAuth,
-  // Tag on errors from verifyGoogleToken meaning "bad credential" → answer 401.
+  // Tag on OAuth verification errors meaning "bad credential" → answer 401.
+  // Untagged errors from the same call are server faults → 500 + Sentry.
   INVALID_OAUTH_TOKEN,
+  isInvalidTokenError: require("./oauth/oauthErrors").isInvalidTokenError,
 
   // Microsoft OAuth
   MicrosoftAuth: require("./oauth/microsoftAuth").MicrosoftAuth,

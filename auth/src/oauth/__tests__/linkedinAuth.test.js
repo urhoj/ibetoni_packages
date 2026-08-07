@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import jwt from "jsonwebtoken";
 import { generateKeyPairSync } from "crypto";
 import { createLinkedInAuth } from "../linkedinAuth.js";
+import { isInvalidTokenError } from "../oauthErrors.js";
 
 // Capture fetch calls for token exchange
 const originalFetch = globalThis.fetch;
@@ -198,5 +199,69 @@ describe("LinkedInAuth.exchangeCodeForTokens", () => {
     ).rejects.toThrow(/LinkedIn token exchange failed: 400/);
 
     globalThis.fetch = originalFetch;
+  });
+});
+
+// fb#365: puminet5api's linkedin.js adapter turned EVERY throw from this module
+// into {success:false} → 401, so a missing client secret or LinkedIn being down
+// told the user their login was invalid and left no Sentry trace at all. The
+// adapter now rethrows anything untagged, which only works if the tagging here
+// is accurate.
+describe("LinkedInAuth error classification", () => {
+  const exchange = () =>
+    createLinkedInAuth().exchangeCodeForTokens({ code: "c", codeVerifier: "v", redirectUri: "u" });
+
+  const stubFetch = (status) => {
+    globalThis.fetch = vi.fn(async () => ({
+      ok: false,
+      status,
+      async text() {
+        return "{}";
+      },
+    }));
+  };
+
+  it("tags a 4xx token exchange — a spent or invalid authorization code is the caller's problem", async () => {
+    stubFetch(400);
+    const error = await exchange().catch((e) => e);
+    globalThis.fetch = originalFetch;
+
+    expect(isInvalidTokenError(error)).toBe(true);
+  });
+
+  it("leaves a 5xx token exchange untagged — LinkedIn being down deserves a Sentry report", async () => {
+    stubFetch(503);
+    const error = await exchange().catch((e) => e);
+    globalThis.fetch = originalFetch;
+
+    expect(isInvalidTokenError(error)).toBe(false);
+  });
+
+  it("leaves missing client credentials untagged", async () => {
+    delete process.env.LINKEDIN_CLIENT_SECRET;
+    const error = await exchange().catch((e) => e);
+
+    expect(error.message).toMatch(/not configured/);
+    expect(isInvalidTokenError(error)).toBe(false);
+  });
+
+  it("tags a bad id_token", async () => {
+    const { token, publicKey } = buildTestToken({ audience: "someone-else" });
+    const { auth } = buildAuthWithStubJwks(publicKey);
+
+    expect(isInvalidTokenError(await auth.verifyIdToken(token).catch((e) => e))).toBe(true);
+  });
+
+  it("leaves a Key Vault failure during id_token verification untagged", async () => {
+    const auth = createLinkedInAuth({
+      getEnvVar: async () => {
+        throw new Error("Key Vault unavailable");
+      },
+    });
+    const { token } = buildTestToken();
+    const error = await auth.verifyIdToken(token).catch((e) => e);
+
+    expect(error.message).toContain("Key Vault unavailable");
+    expect(isInvalidTokenError(error)).toBe(false);
   });
 });

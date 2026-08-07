@@ -7,23 +7,7 @@ const { OAuth2Client } = require("google-auth-library");
  * Compatible with both sync (process.env) and async (Key Vault) configurations
  */
 
-/**
- * Marks an error as "the CALLER supplied a credential we could not verify" —
- * an expired/forged/malformed ID token. Callers branch on this to answer 401
- * instead of 500. Errors WITHOUT this code are genuine server faults (missing
- * GOOGLE_CLIENT_ID, Key Vault outage) and must keep returning 500.
- *
- * Branch on the code, never on the message: the message is Google's and moves
- * between library versions.
- */
-const INVALID_OAUTH_TOKEN = "INVALID_OAUTH_TOKEN";
-
-/** Build an Error tagged as an unverifiable-credential (401) failure. */
-const invalidTokenError = (message) => {
-  const error = new Error(message);
-  error.code = INVALID_OAUTH_TOKEN;
-  return error;
-};
+const { INVALID_OAUTH_TOKEN, invalidTokenError } = require("./oauthErrors");
 
 /**
  * Get Google Client ID from environment

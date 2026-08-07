@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const { promisify } = require("util");
 const jwksClient = require("jwks-rsa");
+const { invalidTokenError } = require("./oauthErrors");
 
 const jwtVerify = promisify(jwt.verify);
 
@@ -84,16 +85,27 @@ class LinkedInAuth {
     });
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`LinkedIn token exchange failed: ${res.status} ${text}`);
+      // 4xx here means the authorization code the caller presented is bad or
+      // spent — a client error, tagged so it stays a 401. 5xx is LinkedIn
+      // being down, which is not our fault either but IS worth a Sentry
+      // report, so it stays untagged and surfaces as a server error (fb#365).
+      const message = `LinkedIn token exchange failed: ${res.status} ${text}`;
+      throw res.status < 500 ? invalidTokenError(message) : new Error(message);
     }
     return res.json();
   }
 
   async verifyIdToken(token) {
-    try {
-      if (!token) throw new Error("Token is required for verification");
+    if (!token) {
+      throw invalidTokenError("LinkedIn authentication failed: Token is required for verification");
+    }
 
-      const clientId = await getEnv(this.getEnvVar, "LINKEDIN_CLIENT_ID");
+    // Outside the try below on purpose — see appleAuth.js: a missing
+    // LINKEDIN_CLIENT_ID or a Key Vault outage is a server fault, not a bad
+    // credential, and must stay untagged so it is reported (fb#365).
+    const clientId = await getEnv(this.getEnvVar, "LINKEDIN_CLIENT_ID");
+
+    try {
       const getKeyWrapper = (header, callback) => this.getKey(header, callback);
 
       const decoded = await jwtVerify(token, getKeyWrapper, {
@@ -115,7 +127,7 @@ class LinkedInAuth {
         error: error.message,
         stack: error.stack,
       });
-      throw new Error(`LinkedIn authentication failed: ${error.message}`);
+      throw invalidTokenError(`LinkedIn authentication failed: ${error.message}`);
     }
   }
 

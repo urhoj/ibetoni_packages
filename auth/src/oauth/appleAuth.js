@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const { promisify } = require("util");
 const jwksClient = require("jwks-rsa");
+const { invalidTokenError } = require("./oauthErrors");
 
 const jwtVerify = promisify(jwt.verify);
 
@@ -65,10 +66,17 @@ class AppleAuth {
   }
 
   async verifyIdToken(token) {
-    try {
-      if (!token) throw new Error("Token is required for verification");
+    if (!token) {
+      throw invalidTokenError("Apple authentication failed: Token is required for verification");
+    }
 
-      const clientId = await getAppleClientId(this.getEnvVar);
+    // Client-id resolution sits OUTSIDE the try below on purpose: a missing
+    // APPLE_CLIENT_ID or a Key Vault outage is a SERVER fault, and tagging it
+    // as a bad credential would tell the user their login is invalid while the
+    // outage produced no telemetry at all (fb#365).
+    const clientId = await getAppleClientId(this.getEnvVar);
+
+    try {
       const getKeyWrapper = (header, callback) => this.getKey(header, callback);
 
       const decoded = await jwtVerify(token, getKeyWrapper, {
@@ -90,7 +98,7 @@ class AppleAuth {
         error: error.message,
         stack: error.stack,
       });
-      throw new Error(`Apple authentication failed: ${error.message}`);
+      throw invalidTokenError(`Apple authentication failed: ${error.message}`);
     }
   }
 

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import jwt from "jsonwebtoken";
 import { generateKeyPairSync } from "crypto";
 import { createAppleAuth } from "../appleAuth.js";
+import { INVALID_OAUTH_TOKEN, isInvalidTokenError } from "../oauthErrors.js";
 
 // Helper: generate an RSA key pair and a signed Apple-shaped ID token
 function buildTestToken({
@@ -104,6 +105,56 @@ describe("AppleAuth.verifyIdToken", () => {
     } finally {
       if (original !== undefined) process.env.APPLE_CLIENT_ID = original;
     }
+  });
+});
+
+// fb#365: puminet5api's apple.js adapter turned EVERY throw from here into
+// {success:false} → 401, so a Key Vault or config outage told the user their
+// login was invalid and, since console.error does not reach Sentry, left no
+// trace at all. The adapter now rethrows anything untagged; that only works if
+// this module tags accurately, which is what these assert.
+describe("AppleAuth.verifyIdToken error classification", () => {
+  it("tags a bad credential so the caller answers 401", async () => {
+    const { token, publicKey } = buildTestToken({ audience: "someone.else" });
+    const { auth } = buildAuthWithStubJwks(publicKey);
+
+    await expect(auth.verifyIdToken(token)).rejects.toMatchObject({
+      code: INVALID_OAUTH_TOKEN,
+    });
+  });
+
+  it("tags a missing token", async () => {
+    await expect(createAppleAuth().verifyIdToken("")).rejects.toMatchObject({
+      code: INVALID_OAUTH_TOKEN,
+    });
+  });
+
+  it("leaves a missing APPLE_CLIENT_ID untagged, so it stays a reported 500", async () => {
+    const original = process.env.APPLE_CLIENT_ID;
+    delete process.env.APPLE_CLIENT_ID;
+    try {
+      const { token, publicKey } = buildTestToken();
+      const { auth } = buildAuthWithStubJwks(publicKey);
+      const error = await auth.verifyIdToken(token).catch((e) => e);
+
+      expect(error.code).not.toBe(INVALID_OAUTH_TOKEN);
+      expect(isInvalidTokenError(error)).toBe(false);
+    } finally {
+      if (original !== undefined) process.env.APPLE_CLIENT_ID = original;
+    }
+  });
+
+  it("leaves a Key Vault failure untagged", async () => {
+    const auth = createAppleAuth({
+      getEnvVar: async () => {
+        throw new Error("Key Vault unavailable");
+      },
+    });
+    const { token } = buildTestToken();
+    const error = await auth.verifyIdToken(token).catch((e) => e);
+
+    expect(error.message).toContain("Key Vault unavailable");
+    expect(isInvalidTokenError(error)).toBe(false);
   });
 });
 
