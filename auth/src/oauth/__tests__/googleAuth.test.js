@@ -1,4 +1,11 @@
+// @vitest-environment node
 import { describe, it, expect, vi } from "vitest";
+// The pragma above is load-bearing: google-auth-library's createCrypto() picks
+// a BROWSER implementation whenever `window` exists and routes verification
+// through SubtleCrypto.importKey, which rejects the PEM public key the stubbed
+// cert fetch below serves. Production is always node. (Keep the pragma's own
+// spelling out of prose — vitest scans leading comments for it and will happily
+// read the next word of a sentence as the environment name.)
 import jwt from "jsonwebtoken";
 import { generateKeyPairSync } from "crypto";
 import { OAuth2Client } from "google-auth-library";
