@@ -5,12 +5,14 @@
  * L1 caches only static reference data (entity types in L1_ENTITY_TYPES).
  * All other entity types use Redis only.
  *
- * **Database Allocation**:
- * - DB 1: Socket.io sessions (managed by redisSessionClient.js)
- * - DB 3: API cache (production)
- * - DB 4: API cache (development)
+ * **Database Allocation**: everything shares DB 0, separated by key prefix.
+ * Azure Managed Redis (Redis Enterprise) exposes a single database and rejects
+ * SELECT, so the former split (DB 1 sessions / DB 3 prod cache / DB 4 dev cache)
+ * collapsed to one keyspace. Socket.io keys stay namespaced under `session:`
+ * (redisSessionClient.js `keyPrefix`), and clearAllCache() sweeps a positive
+ * allowlist — BASE_TTL entities + ORPHAN_PREFIXES — so it cannot reach them.
  *
- * Default: DB 3 for production (`NODE_ENV=production`), DB 4 otherwise.
+ * Override with `REDIS_DB` only against a local Redis, which supports multiple dbs.
  * Shared package version - logger and metrics are injectable.
  */
 
@@ -86,9 +88,10 @@ class UniversalCacheManager {
     // Sentry-worthy — a normal failover reconnect fast-fails for a few seconds.
     this._pingErrorStreakStartedAt = 0;
 
-    // Track current Redis database (3 = production, 4 = development)
-    const isProduction = process.env.NODE_ENV === "production";
-    this.currentDb = isProduction ? 3 : 4;
+    // Redis logical database. Azure Managed Redis (Redis Enterprise) exposes a
+    // single database and rejects SELECT, so 0 is the only portable default —
+    // env-overridable for a local Redis, which does support multiple dbs.
+    this.currentDb = parseInt(process.env.REDIS_DB || "0", 10);
 
     // Base TTL configuration for all entity types (seconds)
     // These are the foundation values before multiplier is applied
@@ -297,7 +300,7 @@ class UniversalCacheManager {
       commandTimeout: 2000,
       maxRetriesPerRequest: 3,
       retryStrategy: (times) => Math.min(times * 1000, 5000),
-      db: this.currentDb, // DB 3 for production, DB 4 for development
+      db: this.currentDb, // 0 unless REDIS_DB overrides (AMR supports only db 0)
       // ioredis 6 switched the default wire protocol to RESP3. Pin RESP2 (the v5
       // protocol): we use no RESP3 feature, so adopting it would be pure risk, and
       // it keeps the fail-fast tuning above behaving exactly as it was tested during
