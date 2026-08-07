@@ -8,6 +8,24 @@ const { OAuth2Client } = require("google-auth-library");
  */
 
 /**
+ * Marks an error as "the CALLER supplied a credential we could not verify" —
+ * an expired/forged/malformed ID token. Callers branch on this to answer 401
+ * instead of 500. Errors WITHOUT this code are genuine server faults (missing
+ * GOOGLE_CLIENT_ID, Key Vault outage) and must keep returning 500.
+ *
+ * Branch on the code, never on the message: the message is Google's and moves
+ * between library versions.
+ */
+const INVALID_OAUTH_TOKEN = "INVALID_OAUTH_TOKEN";
+
+/** Build an Error tagged as an unverifiable-credential (401) failure. */
+const invalidTokenError = (message) => {
+  const error = new Error(message);
+  error.code = INVALID_OAUTH_TOKEN;
+  return error;
+};
+
+/**
  * Get Google Client ID from environment
  * Supports both sync and async retrieval
  * @param {function} getEnvVar - Optional async function to get env var
@@ -35,11 +53,14 @@ class GoogleAuth {
    * @param {object} options - Configuration options
    * @param {object} options.logger - Optional logger instance (Winston, Bunyan, etc.)
    * @param {function} options.getEnvVar - Optional async function to get environment variables
+   * @param {object} options.client - Optional pre-built OAuth2Client. Injected by tests so the
+   *   federated-cert fetch can be stubbed and the real library verification path still runs
+   *   offline (mirrors the `jwksClient` injection on AppleAuth).
    */
   constructor(options = {}) {
     this.logger = options.logger;
     this.getEnvVar = options.getEnvVar;
-    this.client = null;
+    this.client = options.client || null;
   }
 
   /**
@@ -69,22 +90,27 @@ class GoogleAuth {
    * Verify a Google ID token
    * @param {string} token - Google ID token from frontend
    * @returns {Promise<object>} Verified token payload containing user info
-   * @throws {Error} If token is invalid or verification fails
+   * @throws {Error} Tagged `code === INVALID_OAUTH_TOKEN` when the token itself is
+   *   bad (caller should answer 401); untagged for server faults (caller: 500).
    */
   async verifyGoogleToken(token) {
+    if (!token) {
+      throw invalidTokenError("Google authentication failed: Token is required for verification");
+    }
+
+    // Client construction and client-id resolution sit OUTSIDE the try below on
+    // purpose: a missing GOOGLE_CLIENT_ID or a Key Vault outage is a server
+    // fault, and tagging it as a bad credential would report an outage to the
+    // user as "your login is invalid" and hide it from Sentry.
+    const oauthClient = await this.initializeClient();
+
+    if (!oauthClient) {
+      throw new Error("OAuth2Client failed to initialize");
+    }
+
+    const googleClientId = await getGoogleClientId(this.getEnvVar);
+
     try {
-      if (!token) {
-        throw new Error("Token is required for verification");
-      }
-
-      const oauthClient = await this.initializeClient();
-
-      if (!oauthClient) {
-        throw new Error("OAuth2Client failed to initialize");
-      }
-
-      const googleClientId = await getGoogleClientId(this.getEnvVar);
-
       const ticket = await oauthClient.verifyIdToken({
         idToken: token,
         audience: googleClientId,
@@ -115,7 +141,7 @@ class GoogleAuth {
       } else {
         console.error("Google token verification failed:", error.message);
       }
-      throw new Error(`Google authentication failed: ${error.message}`);
+      throw invalidTokenError(`Google authentication failed: ${error.message}`);
     }
   }
 }
@@ -135,4 +161,5 @@ const createGoogleAuth = (options = {}) => {
 module.exports = {
   GoogleAuth,
   createGoogleAuth,
+  INVALID_OAUTH_TOKEN,
 };

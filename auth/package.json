@@ -15,6 +15,10 @@
     "./jwt": {
       "require": "./src/jwt/jwtUtils.js",
       "import": "./src/jwt/jwtUtils.js"
+    },
+    "./oauth/google": {
+      "require": "./src/oauth/googleAuth.js",
+      "import": "./src/oauth/googleAuth.js"
     }
   },
   "scripts": {

@@ -25,7 +25,7 @@
 
 const jwtUtils = require("./jwt/jwtUtils");
 const jwtPayloadCodec = require("./jwt/jwtPayloadCodec.cjs");
-const { GoogleAuth, createGoogleAuth } = require("./oauth/googleAuth");
+const { GoogleAuth, createGoogleAuth, INVALID_OAUTH_TOKEN } = require("./oauth/googleAuth");
 
 module.exports = {
   // JWT utilities
@@ -50,6 +50,8 @@ module.exports = {
   // Google OAuth
   GoogleAuth,
   createGoogleAuth,
+  // Tag on errors from verifyGoogleToken meaning "bad credential" → answer 401.
+  INVALID_OAUTH_TOKEN,
 
   // Microsoft OAuth
   MicrosoftAuth: require("./oauth/microsoftAuth").MicrosoftAuth,
