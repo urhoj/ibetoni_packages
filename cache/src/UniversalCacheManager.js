@@ -298,6 +298,14 @@ class UniversalCacheManager {
       maxRetriesPerRequest: 3,
       retryStrategy: (times) => Math.min(times * 1000, 5000),
       db: this.currentDb, // DB 3 for production, DB 4 for development
+      // ioredis 6 switched the default wire protocol to RESP3. Pin RESP2 (the v5
+      // protocol): we use no RESP3 feature, so adopting it would be pure risk, and
+      // it keeps the fail-fast tuning above behaving exactly as it was tested during
+      // the fb#160 incident. Verified locally against Redis 6.0 (the version Azure
+      // reports) that RESP3 does work for our access patterns — the unclosed gap is
+      // Azure Cache for Redis' managed proxy, not the protocol itself. Drop this line
+      // to adopt RESP3, but soak pub/sub broadcasting first.
+      protocol: 2,
     };
 
     return process.env.REDIS_HOSTNAME
