@@ -12,6 +12,6 @@
   "author": "betoni.online",
   "dependencies": {
     "@ibetoni/constants": "file:../constants",
-    "@sentry/node": "^10.68.0"
+    "@sentry/node": "^10.69.0"
   }
 }
