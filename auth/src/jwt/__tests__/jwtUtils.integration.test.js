@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import jwt from "jsonwebtoken";
 import {
   createToken,
+  createVerifyTokenMiddleware,
   getTokenData,
 } from "../jwtUtils.js";
 
@@ -188,5 +189,84 @@ describe("createToken + getTokenData integration", () => {
       });
       await expect(getTokenData(noneToken)).rejects.toThrow();
     });
+  });
+});
+
+/**
+ * req.user.asiakasList — the DERIVED membership set, not a wire claim.
+ *
+ * The JWT carries `asiakasesWithTypes`; the verify middleware expands it into
+ * `asiakasList` before assigning req.user. Backend membership gates read the
+ * derived field (puminet5api requireAsiakasReadAccess.isMember,
+ * requirePersonListAsiakasAccess, PersonController, authUtils.hasCompanyRole,
+ * grid buildVisibilityArrays), and every one of their tests hand-sets it on a
+ * mock req.user — so nothing proved the middleware actually populates it, and a
+ * reader who greps the wire claims concludes the field does not exist and the
+ * gates are dead (feedback #398, filed against a gate that works).
+ *
+ * These cases run a REAL minted token through the REAL middleware, so the
+ * derivation cannot silently disappear from under those gates.
+ */
+describe("createVerifyTokenMiddleware — req.user.asiakasList derivation", () => {
+  const runMiddleware = async (token) => {
+    const mw = createVerifyTokenMiddleware();
+    const req = { headers: { authorization: `Bearer ${token}` } };
+    const res = {
+      statusCode: null,
+      body: null,
+      status(code) {
+        this.statusCode = code;
+        return this;
+      },
+      json(payload) {
+        this.body = payload;
+        return this;
+      },
+    };
+    let nexted = false;
+    await mw(req, res, () => {
+      nexted = true;
+    });
+    return { req, res, nexted };
+  };
+
+  beforeEach(() => {
+    process.env.JWT_KEY = TEST_KEY;
+    delete process.env.JWT_SHORT_KEYS;
+  });
+
+  afterEach(() => {
+    delete process.env.JWT_SHORT_KEYS;
+  });
+
+  for (const shape of ["legacy", "short"]) {
+    it(`derives asiakasList from asiakasesWithTypes (${shape} shape)`, async () => {
+      if (shape === "short") process.env.JWT_SHORT_KEYS = "true";
+      const token = await createToken("u@x.fi", 12345, sampleClaims());
+
+      const { req, nexted } = await runMiddleware(token);
+
+      expect(nexted).toBe(true);
+      // Membership by asiakasId — the arm every company gate tests against.
+      expect(req.user.asiakasList.map((a) => a.asiakasId)).toEqual([101]);
+      // Roles arrive as the companyRoles flag object, not the raw string array.
+      expect(req.user.asiakasList[0].companyRoles.isAsiakasAdmin).toBe(true);
+      expect(req.user.asiakasList[0].roles).toBeUndefined();
+      // Company type flags survive for buildVisibilityArrays.
+      expect(req.user.asiakasList[0].isPumppuToimittaja).toBe(true);
+    });
+  }
+
+  it("defaults asiakasList to [] when the token carries no companies", async () => {
+    const token = await createToken("u@x.fi", 12345, {
+      ownerAsiakasId: 100,
+      globalRoles: {},
+    });
+
+    const { req, nexted } = await runMiddleware(token);
+
+    expect(nexted).toBe(true);
+    // Present-but-empty, so gates iterate without a guard and fail CLOSED.
+    expect(req.user.asiakasList).toEqual([]);
   });
 });
