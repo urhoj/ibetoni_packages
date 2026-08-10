@@ -62,8 +62,14 @@ const deriveCompanyRoles = (asiakasesWithTypes, ownerAsiakasId) => {
  * The legacy `roles: string[]` field is intentionally dropped from the
  * output — consumers should read `companyRoles` instead.
  *
- * @param {Array} asiakasesWithTypes - JWT field, array of {asiakasId, ownerAsiakasId, roles, isPumppuToimittaja, ...}
- * @returns {Array} array of {asiakasId, ownerAsiakasId, companyRoles: {isXxx: boolean}, isPumppuToimittaja, ...}
+ * NOTE the entries carry NO `ownerAsiakasId`: the claim builder selects only
+ * asiakasId + the four company-type flags, so nothing downstream can resolve a
+ * company's OWNER from this list — only membership by asiakasId. Backend gates
+ * that appear to offer owner-based access off this data are inert, not live
+ * (betoni.online feedback #398).
+ *
+ * @param {Array} asiakasesWithTypes - JWT field, array of {asiakasId, roles, isPumppuToimittaja, ...}
+ * @returns {Array} array of {asiakasId, companyRoles: {isXxx: boolean}, isPumppuToimittaja, ...}
  */
 const deriveAsiakasList = (asiakasesWithTypes) => {
   if (!Array.isArray(asiakasesWithTypes)) return [];
@@ -155,6 +161,11 @@ const createVerifyTokenMiddleware = (options = {}) => {
 
       // Normalized per-company shape mirroring the frontend `user.asiakasList`.
       // Always present (defaults to []), so consumers can iterate without guards.
+      //
+      // NOT a wire claim — it is derived HERE, from `asiakasesWithTypes`, before
+      // req.user is assigned. Backend membership gates read the derived field, so
+      // grepping the JWT's claims alone makes those gates look dead (feedback
+      // #398). Pinned by jwtUtils.integration.test.js.
       decoded.asiakasList = deriveAsiakasList(decoded.asiakasesWithTypes);
 
       // Attach user data to request

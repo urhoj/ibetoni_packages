@@ -211,23 +211,14 @@ describe("createVerifyTokenMiddleware — req.user.asiakasList derivation", () =
   const runMiddleware = async (token) => {
     const mw = createVerifyTokenMiddleware();
     const req = { headers: { authorization: `Bearer ${token}` } };
-    const res = {
-      statusCode: null,
-      body: null,
-      status(code) {
-        this.statusCode = code;
-        return this;
-      },
-      json(payload) {
-        this.body = payload;
-        return this;
-      },
-    };
+    // Stub, not a spy: the reject branch is never exercised here, and a token
+    // that fails to verify shows up as nexted === false either way.
+    const res = { status: () => res, json: () => res };
     let nexted = false;
     await mw(req, res, () => {
       nexted = true;
     });
-    return { req, res, nexted };
+    return { req, nexted };
   };
 
   beforeEach(() => {
