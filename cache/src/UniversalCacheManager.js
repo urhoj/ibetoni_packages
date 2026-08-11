@@ -304,10 +304,14 @@ class UniversalCacheManager {
       // ioredis 6 switched the default wire protocol to RESP3. Pin RESP2 (the v5
       // protocol): we use no RESP3 feature, so adopting it would be pure risk, and
       // it keeps the fail-fast tuning above behaving exactly as it was tested during
-      // the fb#160 incident. Verified locally against Redis 6.0 (the version Azure
-      // reports) that RESP3 does work for our access patterns — the unclosed gap is
-      // Azure Cache for Redis' managed proxy, not the protocol itself. Drop this line
-      // to adopt RESP3, but soak pub/sub broadcasting first.
+      // the fb#160 incident.
+      // NOTE: the original caveat here was about Azure Cache for Redis' managed proxy.
+      // That backend is gone (migrated to Azure Managed Redis 2026-08-10), so the old
+      // reasoning no longer applies either way — but AMR fronts Redis Enterprise with
+      // its own proxy, so the gap is unverified rather than closed. Drop this line to
+      // adopt RESP3, and soak pub/sub broadcasting first: the socket.io adapter rides
+      // this config, and a silent push-delivery failure would stop cross-instance
+      // broadcasts while every health check stayed green.
       protocol: 2,
     };
 
