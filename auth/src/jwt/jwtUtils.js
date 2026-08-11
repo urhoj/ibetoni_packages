@@ -216,7 +216,11 @@ const createToken = async (
     ...additionalClaims, // Allow additional claims (globalRoles, companyRoles, etc.)
   };
 
-  const short = useShortShape();
+  // Scope tokens (peli) are a DIFFERENT token family with their own claims
+  // (peliUserId, displayName) — compressPayload is an app-token whitelist and
+  // would drop them at sign time, silently breaking that login. They stay
+  // long-shape regardless of the flag; verify accepts both shapes anyway.
+  const short = useShortShape() && user.scope === undefined;
   const payload = short ? compressPayload(user) : user;
 
   const token = jwt.sign(payload, jwtKey, {

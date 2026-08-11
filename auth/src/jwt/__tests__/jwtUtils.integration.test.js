@@ -261,3 +261,50 @@ describe("createVerifyTokenMiddleware — req.user.asiakasList derivation", () =
     expect(req.user.asiakasList).toEqual([]);
   });
 });
+
+/**
+ * Scope tokens (peli) are a different token family: createPeliToken mints
+ * `peliUserId` + `displayName`, and compressPayload is an APP-token whitelist
+ * that would drop both at sign time — leaving a token that verifies fine and
+ * authorizes nobody. They stay long-shape whatever JWT_SHORT_KEYS says.
+ */
+describe("scope (peli) tokens are exempt from short shape", () => {
+  const peliClaims = () => ({
+    peliUserId: 42,
+    displayName: "Pelaaja",
+    scope: "peli",
+  });
+
+  beforeEach(() => {
+    process.env.JWT_KEY = TEST_KEY;
+    process.env.JWT_SHORT_KEYS = "true";
+  });
+
+  afterEach(() => {
+    delete process.env.JWT_SHORT_KEYS;
+  });
+
+  it("keeps peli claims on the wire with JWT_SHORT_KEYS=true", async () => {
+    const token = await createToken("peli_1@peli.betoni.online", null, peliClaims());
+    const raw = jwt.verify(token, TEST_KEY);
+
+    expect(raw.v).toBeUndefined(); // long shape, not v2
+    expect(raw.peliUserId).toBe(42);
+    expect(raw.displayName).toBe("Pelaaja");
+    expect(raw.scope).toBe("peli");
+  });
+
+  it("round-trips through getTokenData with every claim intact", async () => {
+    const token = await createToken("peli_1@peli.betoni.online", null, peliClaims());
+    const decoded = await getTokenData(token);
+
+    expect(decoded.peliUserId).toBe(42);
+    expect(decoded.displayName).toBe("Pelaaja");
+  });
+
+  it("still compresses an ordinary app token in the same process", async () => {
+    // Guards against the exemption being widened into "never compress".
+    const token = await createToken("u@x.fi", 12345, sampleClaims());
+    expect(jwt.verify(token, TEST_KEY).v).toBe(2);
+  });
+});

@@ -510,3 +510,41 @@ describe("impersonation claims (imp / imp_sid)", () => {
     expect(round.imp_sid).toBeUndefined();
   });
 });
+
+/**
+ * ownerAsiakasName — the display label for the active company.
+ *
+ * It reaches the wire because `ib auth login` / `whoami` read it straight off
+ * the token (betonicli src/auth/login.ts, jwt.ts). Before it was whitelisted
+ * here, enabling JWT_SHORT_KEYS dropped it at sign time and those commands
+ * showed a blank company — the codec is a whitelist, so an unlisted claim is
+ * lost silently rather than loudly.
+ */
+describe("ownerAsiakasName claim", () => {
+  it("compresses to `n` and expands back", () => {
+    const short = compressPayload({ ...sampleCanonical(), ownerAsiakasName: "Acme Oy" });
+    expect(short.n).toBe("Acme Oy");
+    expect(expandPayload(short).ownerAsiakasName).toBe("Acme Oy");
+  });
+
+  it("survives a full round-trip alongside the other claims", () => {
+    const canonical = { ...sampleCanonical(), ownerAsiakasName: "Betoni Ky" };
+    const round = expandPayload(compressPayload(canonical));
+    expect(round.ownerAsiakasName).toBe("Betoni Ky");
+    expect(round.ownerAsiakasId).toBe(canonical.ownerAsiakasId);
+  });
+
+  it("preserves an empty-string label (the no-name fallback) rather than dropping it", () => {
+    // buildAuthClaims emits "" when the company row has no name; "" is falsy,
+    // so a truthiness guard here would silently turn it into undefined.
+    const short = compressPayload({ ...sampleCanonical(), ownerAsiakasName: "" });
+    expect(short.n).toBe("");
+    expect(expandPayload(short).ownerAsiakasName).toBe("");
+  });
+
+  it("stays absent when the canonical payload has no label", () => {
+    const short = compressPayload(sampleCanonical());
+    expect(short.n).toBeUndefined();
+    expect(expandPayload(short).ownerAsiakasName).toBeUndefined();
+  });
+});

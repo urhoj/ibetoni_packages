@@ -92,6 +92,9 @@ function compressPayload(canonical) {
   }
   if (canonical.exp !== undefined) short.exp = canonical.exp;
   if (canonical.ownerAsiakasId !== undefined) short.o = canonical.ownerAsiakasId;
+  // Display label for the active company. Carried because `ib auth login` /
+  // whoami read it straight off the token; without it they show a blank company.
+  if (canonical.ownerAsiakasName !== undefined) short.n = canonical.ownerAsiakasName;
   if (canonical.tenantAsiakasId !== undefined) short.t = canonical.tenantAsiakasId;
   if (canonical.globalRoles !== undefined) {
     short.g = encodeGlobalRoles(canonical.globalRoles);
@@ -124,6 +127,7 @@ function expandPayload(decoded, { onUnknownRole = "throw" } = {}) {
   if (decoded.exp !== undefined) out.exp = decoded.exp;
   if (decoded.iat !== undefined) out.iat = decoded.iat;
   if (decoded.o !== undefined) out.ownerAsiakasId = decoded.o;
+  if (decoded.n !== undefined) out.ownerAsiakasName = decoded.n;
   if (decoded.t !== undefined) out.tenantAsiakasId = decoded.t;
   if (decoded.g !== undefined) out.globalRoles = decodeGlobalRoles(decoded.g);
   if (Array.isArray(decoded.a)) {
