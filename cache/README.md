@@ -320,10 +320,10 @@ await releaseAllLocks();
 
 The cache manager uses these environment variables for Redis connection:
 
-### Azure Redis (Production)
+### Azure Managed Redis (Production)
 ```env
-REDIS_HOSTNAME=your-redis.redis.cache.windows.net
-REDIS_PORT=6380
+REDIS_HOSTNAME=puminet7amr.northeurope.redis.azure.net
+REDIS_PORT=10000
 REDIS_ACCESS_KEY=your-access-key
 REDIS_CACHE_ENABLED=true  # Set to 'false' to disable cache
 ```
