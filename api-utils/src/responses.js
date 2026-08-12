@@ -36,10 +36,15 @@ function sendSuccess(res, data, statusCode = 200) {
  * @param {object} res - Express response object
  * @param {string|Error} error - Error message or Error object
  * @param {number} statusCode - HTTP status code (default: 500)
+ * @param {string} [code] - Optional stable machine code for clients that render
+ *   their own localized copy. OMITTED from the body when falsy, so every existing
+ *   caller's response stays byte-identical.
  */
-function sendError(res, error, statusCode = 500) {
+function sendError(res, error, statusCode = 500, code) {
   const message = typeof error === "string" ? error : error.message || "An error occurred";
-  res.status(statusCode).json({ success: false, message, error: message });
+  const body = { success: false, message, error: message };
+  if (code) body.code = code;
+  res.status(statusCode).json(body);
 }
 
 function sendValidationError(res, message) {

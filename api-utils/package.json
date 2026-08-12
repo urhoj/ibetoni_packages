@@ -10,6 +10,9 @@
   },
   "keywords": ["express", "api", "validation", "error-handling", "betoni"],
   "author": "betoni.online",
+  "scripts": {
+    "test": "vitest run"
+  },
   "dependencies": {
     "@ibetoni/sentry": "file:../sentry"
   }
