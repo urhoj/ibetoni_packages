@@ -28,6 +28,17 @@ const allowedOrigins = [
 
   // staging environment
   "https://wonderful-rock-08f826703-staging.westeurope.3.azurestaticapps.net",
+  // jerry-swa staging slot. BOTH forms are listed on purpose: the
+  // region-qualified one is what `az staticwebapp environment list` and the
+  // deploy pipeline report as canonical, but the unqualified one resolves
+  // through Traffic Manager per caller and serves 200 from Europe — so a
+  // developer opening that shorter URL hits the same origin from the browser's
+  // point of view. Missing these is why every data-backed page on the jerry
+  // staging slot failed its fetch while curl succeeded (feedback #468); the
+  // failure surfaced as ordinary "failed to load" copy, so a pre-swap staging
+  // smoke-check passed a broken page as fine.
+  "https://calm-beach-0d5380703-staging.westeurope.7.azurestaticapps.net",
+  "https://calm-beach-0d5380703-staging.7.azurestaticapps.net",
   "https://puminet7app-staging.azurewebsites.net",
   "https://staging.betoni.online",
   "https://staging.ibetoni.fi",
@@ -39,7 +50,7 @@ const allowedOrigins = [
 
   // staging slot (blue-green deployment staging)
   "https://prod.ibetoni.fi",
-  "https://staging.betoni.online",
+  // (staging.betoni.online listed once under "staging environment" above)
 
   // production (live)
   "https://wonderful-rock-08f826703.azurestaticapps.net",
