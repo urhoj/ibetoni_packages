@@ -2,6 +2,9 @@
   "name": "@ibetoni/constants",
   "version": "1.0.0",
   "description": "Shared constants for betoni.online platform",
+  "scripts": {
+    "test": "vitest run"
+  },
   "main": "index.js",
   "module": "src/index.js",
   "exports": {
