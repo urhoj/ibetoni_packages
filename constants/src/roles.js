@@ -16,11 +16,24 @@
  */
 export const COMPANY_ROLE_TO_TYPE_ID = {
   /**
-   * Laskupohja Admin (typeId 1). NAMING NOTE: this is ONE grant with two names —
-   * the JWT/code flag is `isLaskupohjaAdmin`, but `dbo.asiakasPersonSettingTypes`
-   * describes typeId 1 as `isTarjousAdmin` ("saa luoda, muokata ja lähettää
-   * tarjouksia"). They are the same role; **use `isLaskupohjaAdmin` in code**.
-   * Treated as edit-tier by hasCompanyRole (see puminet5api authUtils).
+   * Laskupohja Admin (typeId 1). The JWT/code flag is `isLaskupohjaAdmin`, but
+   * `dbo.asiakasPersonSettingTypes` describes typeId 1 as `isTarjousAdmin`
+   * ("saa luoda, muokata ja lähettää tarjouksia"). Same grant; **use
+   * `isLaskupohjaAdmin` in code**. Treated as edit-tier by hasCompanyRole
+   * (see puminet5api authUtils).
+   *
+   * ⚠ "TarjousAdmin" NAMES TWO DIFFERENT ROLES (fb#418). Do not reach for this
+   * one just because the word matches — check which consumer you are writing
+   * for:
+   *   - typeId 1 (here) — what the DB calls isTarjousAdmin, what the FE
+   *     `auth.page.jerry` gate reads, and what jerryRecipients falls back to
+   *     via ASIAKAS_ANY_ADMIN_ROLE_TYPE_IDS [22,6,11,2,1].
+   *   - typeId 5 `isLaskuAdmin` — what the BetoniJerry module means by
+   *     "TarjousAdmin": jerryAdminSql's tarjousAdminCount and the `jerry`
+   *     validation profile's people.tarjousAdmin check both key on 5, and 5 is
+   *     what live provider companies actually hold.
+   * Granting the one this comment used to point at left Jerry validation red
+   * with a message saying nothing had been granted.
    */
   isLaskupohjaAdmin: 1,
 
@@ -30,7 +43,11 @@ export const COMPANY_ROLE_TO_TYPE_ID = {
   /** Asiakas Editor - Customer editor */
   isAsiakasEditor: 6,
 
-  /** Lasku Admin - Invoice administrator */
+  /**
+   * Lasku Admin - Invoice administrator (typeId 5). ALSO what the BetoniJerry
+   * module means by "TarjousAdmin" — jerryAdminSql's tarjousAdminCount and the
+   * `jerry` validation profile key on this id, NOT on typeId 1 (fb#418).
+   */
   isLaskuAdmin: 5,
 
   /** Pumppari - Concrete pump driver */
@@ -89,7 +106,7 @@ export const COMPANY_ROLE_TO_TYPE_ID = {
  * @constant {Object.<string, string>} ROLE_NAME_TO_KEY_MAP
  */
 export const ROLE_NAME_TO_KEY_MAP = {
-  laskupohjaAdmin: "isLaskupohjaAdmin", // typeId 1; DB asiakasPersonSettingTypes calls this isTarjousAdmin (same grant)
+  laskupohjaAdmin: "isLaskupohjaAdmin", // typeId 1; DB calls it isTarjousAdmin — but Jerry's "TarjousAdmin" is typeId 5 (fb#418)
   asiakasAdmin: "isAsiakasAdmin",
   laskuAdmin: "isLaskuAdmin",
   asiakasEditor: "isAsiakasEditor",
@@ -154,7 +171,7 @@ export function buildCompanyRoles(roles) {
  * @constant {Object.<number, string>}
  */
 export const ROLE_NAME_BY_TYPEID = Object.freeze({
-  1: "laskupohjaAdmin", // typeId 1; DB describes it as isTarjousAdmin (same grant; use laskupohjaAdmin in code)
+  1: "laskupohjaAdmin", // DB describes it as isTarjousAdmin; Jerry's "TarjousAdmin" is 5, not this (fb#418)
   2: "asiakasAdmin",
   5: "laskuAdmin",
   6: "asiakasEditor",
