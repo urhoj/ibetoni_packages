@@ -76,6 +76,20 @@ function sendForbidden(res, message = "Forbidden") {
  *   All other keys are forwarded as Sentry "extra" data.
  */
 function handleRouteError(res, error, operation, extra = {}) {
+  // fb#644: saving onto a row another user already deleted is an expected
+  // conflict, not a server fault. Two things are wrong if it falls through to
+  // the generic path below: it books a Sentry event for something no one can
+  // fix, and — the silent half — the response body there carries no `code`, so
+  // the client cannot tell this 409 apart from any other and shows generic copy.
+  //
+  // Handled here rather than in each controller. fb#556 and fb#600 each added
+  // their own branch ahead of this call; every route that did not have one both
+  // reported the noise and dropped the code. Those branches still work, they
+  // just short-circuit to the same answer before reaching this one.
+  if (error?.code === "ROW_DELETED") {
+    return sendError(res, error.message, error.statusCode || 409, error.code);
+  }
+
   const { _entity = "unknown", _tags = {}, ...sentryExtra } = extra;
   const req = res.req || {};
   const user = req.user || {};
