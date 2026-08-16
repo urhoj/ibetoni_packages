@@ -64,6 +64,35 @@ function sendForbidden(res, message = "Forbidden") {
 }
 
 /**
+ * Classify an mssql error the caller caused, or return null.
+ *
+ * SQL Server raises **2628** ("String or binary data would be truncated in table
+ * 't', column 'c'.") and, on older compatibility levels, **8152** with no column
+ * information. Both mean the caller sent a value longer than the column — a
+ * validation failure, not an outage. fb#444: an overlong `--doc-version`
+ * surfaced as an opaque 500 that reproduced identically on both slots, and was
+ * diagnosed as a deploy outage before anyone read the SQL error.
+ *
+ * Lives here so the classification exists once (fb#483). Two callers wrap it in
+ * two different wire formats: handleRouteError in the standard envelope,
+ * legalDocument's handler in its retryable one.
+ *
+ * @param {Error & {number?: number}} error - the caught error
+ * @returns {{code: string, message: string} | null} null when it is not a
+ *   caller-input SQL error, so callers can fall through to their own handling.
+ */
+function classifySqlError(error) {
+  if (error?.number !== 2628 && error?.number !== 8152) return null;
+  const col = /column '([^']+)'/.exec(error.message || "")?.[1];
+  return {
+    code: "VALIDATION_ERROR",
+    message: col
+      ? `Arvo on liian pitkä sarakkeeseen '${col}'.`
+      : "Arvo on liian pitkä tietokantasarakkeeseen.",
+  };
+}
+
+/**
  * Catch-block error handler: Sentry + error response.
  * Use in catch blocks where unexpected errors need reporting.
  * @param {object} res - Express response object
@@ -124,6 +153,17 @@ function handleRouteError(res, error, operation, extra = {}) {
       bodyKeys: req.body && typeof req.body === "object" ? Object.keys(req.body) : undefined,
     },
   });
+  // fb#483: truncation reaching here used to fall through to the 500 default, so
+  // every module except legalDocument reported the caller's overlong input as a
+  // server fault. Classified AFTER the Sentry capture on purpose — unlike
+  // ROW_DELETED above, a truncation is somebody's missing length guard upstream,
+  // which is worth keeping visible. An explicit error.statusCode still wins: a
+  // caller that already decided the status is not guessing.
+  const sqlIssue = error?.statusCode ? null : classifySqlError(error);
+  if (sqlIssue) {
+    return sendError(res, sqlIssue.message, 400, sqlIssue.code);
+  }
+
   const message = error.clientMessage || error.message || `Failed: ${operation}`;
   res.status(error.statusCode || 500).json({ success: false, message, error: message });
 }
@@ -131,6 +171,7 @@ function handleRouteError(res, error, operation, extra = {}) {
 module.exports = {
   sendSuccess,
   sendError,
+  classifySqlError,
   sendValidationError,
   sendNotFound,
   sendUnauthorized,

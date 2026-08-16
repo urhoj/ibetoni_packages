@@ -7,7 +7,7 @@ import { createRequire } from "module";
 const nodeRequire = createRequire(import.meta.url);
 const sentry = nodeRequire("@ibetoni/sentry");
 
-const { sendError, sendNotFound, handleRouteError } = nodeRequire("../responses.js");
+const { sendError, sendNotFound, handleRouteError, classifySqlError } = nodeRequire("../responses.js");
 
 function mockRes() {
     const res = { statusCode: null, body: null };
@@ -73,6 +73,86 @@ describe("handleRouteError on a vanished row (fb#644)", () => {
             expect(res.statusCode).toBe(500);
             expect("code" in res.body).toBe(false);
             expect(spy).toHaveBeenCalledTimes(1);
+        } finally {
+            spy.mockRestore();
+        }
+    });
+});
+
+/**
+ * SQL truncation (fb#444 → fb#483).
+ *
+ * fb#444 fixed this in legalDocument's own handler only, so every other module
+ * kept answering 500 for an overlong input — the exact shape that reproduces on
+ * both slots and reads as a deploy outage. These pin the classification itself;
+ * the legalDocument wire format has its own jest suite in puminet5api.
+ */
+function sqlError(number, message) {
+    const error = new Error(message);
+    error.number = number;
+    return error;
+}
+
+describe("classifySqlError", () => {
+    it("names the offending column from a 2628", () => {
+        const hit = classifySqlError(sqlError(
+            2628,
+            "String or binary data would be truncated in table 'puminet.dbo.legalDocuments', column 'version'. Truncated value: 'zz-probe'."
+        ));
+        expect(hit).toEqual({ code: "VALIDATION_ERROR", message: "Arvo on liian pitkä sarakkeeseen 'version'." });
+    });
+
+    it("falls back to a generic length message on the legacy 8152, which carries no column", () => {
+        const hit = classifySqlError(sqlError(8152, "String or binary data would be truncated."));
+        expect(hit.message).toBe("Arvo on liian pitkä tietokantasarakkeeseen.");
+    });
+
+    it("returns null for anything else, so callers keep their own handling", () => {
+        expect(classifySqlError(new Error("boom"))).toBeNull();
+        expect(classifySqlError(sqlError(547, "FK violation"))).toBeNull();
+        expect(classifySqlError(undefined)).toBeNull();
+    });
+});
+
+describe("handleRouteError on SQL truncation (fb#483)", () => {
+    it("answers 400 naming the column instead of an opaque 500", () => {
+        const spy = vi.spyOn(sentry, "captureException").mockImplementation(() => {});
+        try {
+            const res = mockRes();
+            handleRouteError(
+                res,
+                sqlError(2628, "String or binary data would be truncated in table 'dbo.keikka', column 'otsikko'."),
+                "saveKeikka",
+                { _entity: "keikka" }
+            );
+            expect(res.statusCode).toBe(400);
+            expect(res.body.code).toBe("VALIDATION_ERROR");
+            expect(res.body.message).toContain("otsikko");
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
+    // Deliberately unlike ROW_DELETED, which returns before Sentry: a truncation
+    // means a missing length guard upstream, and that is worth seeing.
+    it("still books the Sentry event, because a truncation is a real upstream gap", () => {
+        const spy = vi.spyOn(sentry, "captureException").mockImplementation(() => {});
+        try {
+            handleRouteError(mockRes(), sqlError(8152, "String or binary data would be truncated."), "saveKeikka");
+            expect(spy).toHaveBeenCalledTimes(1);
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
+    it("lets an explicit statusCode win — a caller that decided is not guessing", () => {
+        const spy = vi.spyOn(sentry, "captureException").mockImplementation(() => {});
+        try {
+            const error = sqlError(2628, "String or binary data would be truncated in table 't', column 'c'.");
+            error.statusCode = 422;
+            const res = mockRes();
+            handleRouteError(res, error, "saveKeikka");
+            expect(res.statusCode).toBe(422);
         } finally {
             spy.mockRestore();
         }

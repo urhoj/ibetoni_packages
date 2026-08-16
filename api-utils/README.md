@@ -16,7 +16,15 @@ Promoted from `puminet5api/utils/{apiResponseHandler,validation}.js` so all back
 | `sendNotFound(res, message?)` | `sendError` with status 404. |
 | `sendUnauthorized(res, message?)` | `sendError` with status 401. |
 | `sendForbidden(res, message?)` | `sendError` with status 403. |
-| `handleRouteError(res, error, operation, extra?)` | For catch blocks: reports to Sentry with user/asiakas tags + sends error response. Reads `error.statusCode` (default 500). `extra._entity` becomes the `entity` tag; `extra._tags` is merged into Sentry tags (use for queryable per-route diagnostics like `targetAsiakasId`); all other keys land in Sentry "extra". |
+| `handleRouteError(res, error, operation, extra?)` | For catch blocks: reports to Sentry with user/asiakas tags + sends error response. Reads `error.statusCode` (default 500). `extra._entity` becomes the `entity` tag; `extra._tags` is merged into Sentry tags (use for queryable per-route diagnostics like `targetAsiakasId`); all other keys land in Sentry "extra". Also maps SQL truncation to a **400** — see `classifySqlError`. |
+| `classifySqlError(error)` | `{ code, message }` when the error is one the CALLER caused, else `null`. Today that is SQL truncation: mssql **2628** (names the column) and legacy **8152** (does not). Exported so a module with its own wire format can reuse the classification instead of re-deriving it. |
+
+**On truncation → 400 (fb#444 → fb#483):** an overlong input used to reach the
+500 default, which reproduces identically on both slots and so reads as a deploy
+outage — it was diagnosed as one before anyone read the SQL error. It is a
+validation failure and now answers 400 naming the column. Unlike the
+`ROW_DELETED` 409, it is **still reported to Sentry**: it means a missing length
+guard upstream, which is worth seeing. An explicit `error.statusCode` still wins.
 
 ### Validators (from `./validation`)
 
