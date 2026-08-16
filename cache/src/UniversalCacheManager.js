@@ -14,12 +14,71 @@
  *
  * Override with `REDIS_DB` only against a local Redis, which supports multiple dbs.
  * Shared package version - logger and metrics are injectable.
+ *
+ * **Key namespace (fb#614)**: every cache entry is physically stored under
+ * `r:<releaseStamp>:<logical key>`, so two BUILDS can never answer from each
+ * other's entries. Without it, the staging and production App Service slots —
+ * one Redis, one keyspace, two different commits — pinned each other's response
+ * bodies: whichever slot was asked first cached the payload its code produced,
+ * and the other slot served that same body for the whole TTL. That made staging
+ * verification meaningless in both directions, and (the security half) let a
+ * payload-NARROWING fix keep serving the wide pre-fix body it inherited from the
+ * not-yet-deployed slot.
+ *
+ * The stamp follows the CODE (the deployed commit), not the slot: a slot-scoped
+ * prefix would break at swap time, when the promoted build starts reading the
+ * entries the build it replaced wrote under the same slot name.
+ *
+ * Reads/writes are namespaced; INVALIDATION deliberately is not — it globs
+ * `r:*:<pattern>` across every build. Both slots write to the same SQL database,
+ * so a write on either must clear the other's cached copy. `SCAN MATCH` walks
+ * the keyspace regardless of pattern, so the leading wildcard costs nothing.
+ *
+ * Raw-client keys (token blacklist, rate limits, locks, `mcp:*`, `api:perf:*`,
+ * `grid:last-update:*`, socket `session:*`) go through `getClient()` directly and
+ * stay UNNAMESPACED on purpose — they are shared operational state, and a
+ * per-build token blacklist or rate limiter would be a security regression.
  */
 
 const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
 const Redis = require("ioredis");
 const { LRUCache } = require("lru-cache");
 const { captureError } = require("@ibetoni/sentry");
+
+/** First segment of every namespaced cache key. Kept to one char — it is on every key. */
+const NAMESPACE_PREFIX = "r";
+
+/**
+ * Deployed commit SHA, from the `release.txt` that each deploy workflow writes
+ * (`echo $GITHUB_SHA > release.txt`) and that the staging→production swap carries
+ * with the bundle. Same source as `GET /api/version`'s `commit` and the Sentry
+ * release, so all three always name the same build.
+ */
+function readReleaseSha() {
+  try {
+    const filePath = path.join(process.cwd(), "release.txt");
+    if (fs.existsSync(filePath)) {
+      const sha = fs.readFileSync(filePath, "utf8").trim();
+      if (sha) return sha;
+    }
+  } catch {
+    // audit:swallowed-errors-ignore: release.txt is a deploy-only artifact (absent in dev).
+  }
+  return null;
+}
+
+/**
+ * Resolve the namespace stamp. Never empty: an un-stamped writer would put keys
+ * outside the `r:*:` invalidation glob, where no write could ever clear them.
+ * `:` and `*` are stripped so the stamp can't malform that glob.
+ */
+function resolveReleaseStamp() {
+  const explicit = process.env.CACHE_NAMESPACE || process.env.SENTRY_RELEASE;
+  const stamp = explicit || readReleaseSha()?.slice(0, 8) || "dev";
+  return String(stamp).replace(/[:*\s]/g, "_");
+}
 
 /**
  * TTL Multiplier - Global scaling factor for all cache TTL values
@@ -60,6 +119,9 @@ class UniversalCacheManager {
    * @param {Object} [options.cacheMetrics] - Optional cache metrics instance
    * @param {Object} [options.redisConfig] - Optional Redis configuration override
    * @param {number} [options.ttlMultiplier] - Override TTL multiplier (default: env or 4.0)
+   * @param {string} [options.keyNamespace] - Override the per-build key-namespace stamp
+   *   (default: CACHE_NAMESPACE → SENTRY_RELEASE → release.txt SHA → "dev"). Tests use
+   *   this to simulate two deployed builds sharing one Redis.
    */
   constructor(options = {}) {
     this.logger = options.logger || this._createDefaultLogger();
@@ -92,6 +154,13 @@ class UniversalCacheManager {
     // single database and rejects SELECT, so 0 is the only portable default —
     // env-overridable for a local Redis, which does support multiple dbs.
     this.currentDb = parseInt(process.env.REDIS_DB || "0", 10);
+
+    // Per-build key namespace (fb#614) — see the module header. `keyNamespace`
+    // prefixes what this build writes and reads; `keyNamespaceGlob` is what
+    // invalidation sweeps, and matches EVERY build's copy of a key.
+    this.releaseStamp = options.keyNamespace || resolveReleaseStamp();
+    this.keyNamespace = `${NAMESPACE_PREFIX}:${this.releaseStamp}:`;
+    this.keyNamespaceGlob = `${NAMESPACE_PREFIX}:*:`;
 
     // Base TTL configuration for all entity types (seconds)
     // These are the foundation values before multiplier is applied
@@ -549,6 +618,42 @@ class UniversalCacheManager {
   }
 
   /**
+   * Logical key → the physical Redis key THIS build reads and writes.
+   * Callers never see this form; it exists only at the Redis boundary.
+   */
+  _nsKey(key) {
+    return `${this.keyNamespace}${key}`;
+  }
+
+  /**
+   * Logical glob → a glob matching that key in EVERY build's namespace.
+   * Used by every scan that feeds an invalidation, so a write on one slot
+   * clears the other slot's copy (both slots share one SQL database).
+   *
+   * A pattern that is ALREADY physical (`r:…`) is passed through untouched:
+   * `ib dev cache keys` reports physical keys, and pasting one straight into
+   * `ib dev cache pattern` must not silently match nothing. No logical key
+   * begins with `r:` — the closest entity names are `reminder`/`rl`, neither of
+   * which has a colon after the `r`.
+   */
+  _nsGlob(pattern) {
+    return String(pattern).startsWith(`${NAMESPACE_PREFIX}:`)
+      ? pattern
+      : `${this.keyNamespaceGlob}${pattern}`;
+  }
+
+  /**
+   * Physical key → logical key. For diagnostics (`ib dev cache keys` grouping)
+   * and for prefix checks that must run against the logical name, such as
+   * clearAllCache()'s EXCLUDE_PREFIXES filter.
+   */
+  stripNamespace(key) {
+    return typeof key === "string" && key.startsWith(`${NAMESPACE_PREFIX}:`)
+      ? key.replace(new RegExp(`^${NAMESPACE_PREFIX}:[^:]*:`), "")
+      : key;
+  }
+
+  /**
    * Generate consistent cache keys for any entity type
    */
   generateKey(entityType, operation, ...params) {
@@ -680,7 +785,7 @@ class UniversalCacheManager {
         // Add ±5% jitter to prevent synchronized cache expiration (cache stampede prevention)
         const jitter = Math.floor(baseTtl * 0.05 * (Math.random() * 2 - 1));
         const ttl = baseTtl + jitter;
-        await redis.setex(key, ttl, JSON.stringify(data));
+        await redis.setex(this._nsKey(key), ttl, JSON.stringify(data));
         // Populate L1 cache for eligible entity types
         if (this.L1_ENTITY_TYPES.has(entityType)) {
           this.l1Cache.set(key, data);
@@ -712,7 +817,7 @@ class UniversalCacheManager {
     return await this.withRedis(
       async (redis) => {
         const ttl = ttlSeconds || this.TTL[entityType] || this.TTL.default;
-        await redis.setex(key, ttl, JSON.stringify(value));
+        await redis.setex(this._nsKey(key), ttl, JSON.stringify(value));
         if (this.L1_ENTITY_TYPES.has(entityType)) {
           this.l1Cache.set(key, value);
         }
@@ -739,7 +844,7 @@ class UniversalCacheManager {
 
     return await this.withRedis(
       async (redis) => {
-        const data = await redis.get(key);
+        const data = await redis.get(this._nsKey(key));
 
         if (data) {
           this.cacheMetrics.recordHit(entityType);
@@ -758,7 +863,7 @@ class UniversalCacheManager {
               tags: { feature: "cache", operation: "corrupt-json-on-read" },
               extra: { key, entityType, sample: typeof data === "string" ? data.slice(0, 200) : null },
             });
-            await redis.del(key);
+            await redis.del(this._nsKey(key));
             return null;
           }
         }
@@ -806,9 +911,28 @@ class UniversalCacheManager {
   }
 
   /**
-   * Production-safe key scanning using SCAN instead of KEYS
+   * Scan for a LOGICAL pattern across every build's namespace, returning the
+   * physical keys. This is the invalidation view: a sweep must reach the copy
+   * the other slot cached, not just this build's own.
    */
   async scanKeys(pattern, scanCount = this.SCAN_COUNT) {
+    return await this._scan(this._nsGlob(pattern), scanCount);
+  }
+
+  /**
+   * Scan the raw keyspace, unnamespaced. For diagnostics that must report
+   * physical truth (`ib dev cache keys`/`stats`), including the operational
+   * keys — sessions, locks, blacklist — that carry no cache namespace at all.
+   */
+  async scanRawKeys(pattern, scanCount = this.SCAN_COUNT) {
+    return await this._scan(pattern, scanCount);
+  }
+
+  /**
+   * Production-safe key scanning using SCAN instead of KEYS.
+   * Takes a PHYSICAL pattern — callers go through scanKeys/scanRawKeys.
+   */
+  async _scan(pattern, scanCount = this.SCAN_COUNT) {
     return await this.withRedis(
       async (redis) => {
         const keys = [];
@@ -963,14 +1087,23 @@ class UniversalCacheManager {
       .map((entityType) => `${entityType}:*`);
     const allPatterns = [...baseTtlPatterns, ...this.ORPHAN_PREFIXES];
 
-    const keyArrays = await Promise.all(
-      allPatterns.map((pattern) => this.scanKeys(pattern)),
-    );
+    const keyArrays = await Promise.all([
+      // Every build's namespaced entries…
+      ...allPatterns.map((pattern) => this.scanKeys(pattern)),
+      // …plus the pre-fb#614 unprefixed ones. Nothing READS those any more, so
+      // they are inert, but an admin clear should still be able to reclaim them.
+      ...allPatterns.map((pattern) => this.scanRawKeys(pattern)),
+    ]);
 
-    // Union, then drop anything in an excluded namespace.
+    // Union, then drop anything in an excluded namespace. The prefix check runs
+    // on the LOGICAL key so it still recognises e.g. grid:last-update: inside a
+    // namespaced key (raw scans of `grid:*` also surface the unnamespaced ones).
     const candidates = [...new Set(keyArrays.flat())];
     const survivors = candidates.filter(
-      (key) => !this.EXCLUDE_PREFIXES.some((prefix) => key.startsWith(prefix)),
+      (key) =>
+        !this.EXCLUDE_PREFIXES.some((prefix) =>
+          this.stripNamespace(key).startsWith(prefix),
+        ),
     );
 
     const deleted = survivors.length > 0 ? await this.batchDelete(survivors) : 0;
@@ -2106,6 +2239,7 @@ class UniversalCacheManager {
       connected: this.isConnected,
       client: this.client ? "initialized" : "not initialized",
       currentDb: this.currentDb,
+      keyNamespace: this.keyNamespace,
     };
   }
 

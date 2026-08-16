@@ -20,6 +20,7 @@ const { DistributedLockManager, releaseAllLocks } = require('./DistributedLockMa
  * @param {Object} [options.logger] - Logger instance
  * @param {Object} [options.cacheMetrics] - Optional custom cache metrics instance
  * @param {Object} [options.redisConfig] - Optional Redis configuration override
+ * @param {string} [options.keyNamespace] - Optional per-build key-namespace override
  * @returns {UniversalCacheManager} Configured cache manager instance
  */
 function createCacheManager(options = {}) {
@@ -30,6 +31,7 @@ function createCacheManager(options = {}) {
     cacheMetrics: metrics,
     redisConfig: options.redisConfig,
     onError: options.onError,
+    keyNamespace: options.keyNamespace,
   });
 }
 
