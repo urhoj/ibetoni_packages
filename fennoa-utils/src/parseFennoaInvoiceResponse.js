@@ -5,7 +5,7 @@
  * @returns {{ invoiceData: object, salesInvoice: object }} Normalized invoice data
  */
 function parseFennoaInvoiceResponse(responseData) {
-  let invoiceData = null;
+  let invoiceData;
   if (responseData.data?.Invoice) {
     invoiceData = responseData.data.Invoice;
   } else if (responseData.Invoice) {

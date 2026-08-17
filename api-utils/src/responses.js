@@ -47,20 +47,30 @@ function sendError(res, error, statusCode = 500, code) {
   res.status(statusCode).json(body);
 }
 
-function sendValidationError(res, message) {
-  sendError(res, message, 400);
+/**
+ * Status-specific wrappers around sendError.
+ *
+ * Each forwards the optional stable machine `code` (see sendError) so a caller
+ * can migrate `sendError(res, msg, 404, "X")` → `sendNotFound(res, msg, "X")`
+ * — as the eslint no-restricted-syntax rules ask — WITHOUT silently dropping
+ * `code` from the body. betonijerry's src/i18n/errorCopy.js renders localized
+ * copy off those codes, so losing one degrades the UI to the raw Finnish
+ * fallback with no error anywhere.
+ */
+function sendValidationError(res, message, code) {
+  sendError(res, message, 400, code);
 }
 
-function sendNotFound(res, message = "Resource not found") {
-  sendError(res, message, 404);
+function sendNotFound(res, message = "Resource not found", code) {
+  sendError(res, message, 404, code);
 }
 
-function sendUnauthorized(res, message = "Unauthorized") {
-  sendError(res, message, 401);
+function sendUnauthorized(res, message = "Unauthorized", code) {
+  sendError(res, message, 401, code);
 }
 
-function sendForbidden(res, message = "Forbidden") {
-  sendError(res, message, 403);
+function sendForbidden(res, message = "Forbidden", code) {
+  sendError(res, message, 403, code);
 }
 
 /**

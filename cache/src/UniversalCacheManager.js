@@ -1160,7 +1160,8 @@ class UniversalCacheManager {
     const pumppuAika = params.pumppuAika;
 
     // Generate invalidation pattern
-    let pattern = "";
+    // Every non-returning case (incl. `default`) assigns before the read below.
+    let pattern;
     switch (entityType) {
       case "keikka": {
         const keikkaIdValue =

@@ -132,7 +132,7 @@ class MicrosoftAuth {
         error: error.message,
         stack: error.stack,
       });
-      throw new Error(`Microsoft authentication failed: ${error.message}`);
+      throw new Error(`Microsoft authentication failed: ${error.message}`, { cause: error });
     }
   }
 

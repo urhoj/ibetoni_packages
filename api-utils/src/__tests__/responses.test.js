@@ -42,6 +42,17 @@ describe("sendError", () => {
         sendNotFound(res, "nope");
         expect(res.body).toEqual({ success: false, message: "nope", error: "nope" });
     });
+
+    // The eslint no-restricted-syntax rules push sendError(res, msg, 404, code)
+    // callers onto sendNotFound. If the wrapper drops the 3rd arg, the migration
+    // silently strips `code` from the body and betonijerry's src/i18n/errorCopy.js
+    // falls back to raw Finnish with nothing logged anywhere.
+    it("forwards a code through the status wrappers", () => {
+        const res = mockRes();
+        sendNotFound(res, "Tarjouspyyntöä ei löydy", "REQUEST_NOT_FOUND");
+        expect(res.statusCode).toBe(404);
+        expect(res.body.code).toBe("REQUEST_NOT_FOUND");
+    });
 });
 
 describe("handleRouteError on a vanished row (fb#644)", () => {
