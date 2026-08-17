@@ -7,6 +7,16 @@ const PUMINET = Object.freeze({
   // NOTIFY_PERSON_ID = 10` — same person, two sources of truth, and the two
   // flows are already documented as mirrors of each other.
   MAINTAINER_PERSON_ID: 10,
+  // The same human as MAINTAINER_PERSON_ID, as a literal address, because three
+  // fire-and-forget alert paths need a recipient without an await:
+  // asiakasCombinator's large-merge alert (which had no env escape hatch at all
+  // and carried a TODO asking for exactly this constant), auth/registrationMonitor
+  // and betonijerry/previewAccessAlert. The latter two keep their
+  // `process.env.ADMIN_EMAIL ||` override — only the duplicated fallback literal
+  // is centralised. Deliberately NOT getPersonEmail(MAINTAINER_PERSON_ID): that
+  // trades a free literal for a DB round-trip inside an alert path whose whole
+  // point is not to fail.
+  MAINTAINER_EMAIL: "juha.urho@gmail.com",
 });
 
 module.exports = { PUMINET };

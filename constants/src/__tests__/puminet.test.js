@@ -23,6 +23,13 @@ describe("PUMINET constants", () => {
     expect(requiredCopy.MAINTAINER_PERSON_ID).toBe(10);
   });
 
+  // Same human as MAINTAINER_PERSON_ID, as a literal, for the three alert paths
+  // that need a recipient without an await. Was hardcoded three times in
+  // puminet5api, once with no env override and a TODO asking for this constant.
+  test("MAINTAINER_EMAIL is the maintainer's address", () => {
+    expect(requiredCopy.MAINTAINER_EMAIL).toBe("juha.urho@gmail.com");
+  });
+
   test("the ESM and CJS copies agree", () => {
     expect(esmCopy).toEqual(requiredCopy);
   });
