@@ -55,6 +55,27 @@ async function main() {
     });
   }
 
+  // A myProperties row carries name/address/coords/isVarasto/nextExpirationDate,
+  // so property CRUD and a customer merge both stale it. That key is scoped by the
+  // sorted tenant SET of the caller, which the asiakasId-scoped default cannot match.
+  // SIJAINTI_LATLNG_UPDATE is deliberately excluded - it runs in a loop, and the
+  // "sweeps exactly the geocode read keys" test below pins that narrowness.
+  for (const op of ["SIJAINTI_UPDATE", "SIJAINTI_CREATE", "SIJAINTI_DELETE"]) {
+    await test(`${op} sweeps the cross-tenant myProperties list`, async () => {
+      const { mgr, patterns } = newMgr();
+      await mgr.invalidateCrossEntity(op, { asiakasId: 8, sijaintiId: 183 });
+      assert.ok(patterns.includes("sijainti:myProperties:*"),
+        `expected sweep of "sijainti:myProperties:*", got ${JSON.stringify(patterns)}`);
+    });
+  }
+
+  await test("ASIAKAS_MERGE sweeps the cross-tenant myProperties list", async () => {
+    const { mgr, patterns } = newMgr();
+    await mgr.invalidateCrossEntity("ASIAKAS_MERGE", { asiakasId: 8 });
+    assert.ok(patterns.includes("sijainti:myProperties:*"),
+      `expected sweep of "sijainti:myProperties:*", got ${JSON.stringify(patterns)}`);
+  });
+
   await test("SIJAINTI_UPDATE falls back to a wildcard row key with no id", async () => {
     const { mgr, patterns } = newMgr();
     await mgr.invalidateCrossEntity("SIJAINTI_UPDATE", { asiakasId: 8 });
@@ -113,33 +134,19 @@ async function main() {
   const DATE_PARAMS = { asiakasId: 1360, entityType: "sijaintiDate", sijaintiId: 96 };
 
   for (const op of SIJAINTI_DATE_OPS) {
-    await test(`${op} clears sijaintiDate + sijaintiRequiredDateType + myProperties`, async () => {
+    // Exact sets, not `includes`: this case is deliberately NARROWER than its
+    // VEHICLE/PERSON/TYOMAA/ASIAKAS siblings (rationale on the case body), so an
+    // EXTRA member is the regression. A "make it consistent with vehicle" edit adds
+    // invalidateGridSmart, a complianceDashboard:* sweep, or a parent `sijainti`
+    // invalidation - all three surface here, and `includes` would miss every one.
+    await test(`${op} sweeps exactly sijaintiDate + sijaintiRequiredDateType + myProperties`, async () => {
       const { mgr, patterns, scopedCalls } = newMgr();
-      await mgr.invalidateCrossEntity(op, { ...DATE_PARAMS });
-      const entities = scopedCalls.map((c) => c.entityType);
-      for (const expected of ["sijaintiDate", "sijaintiRequiredDateType"]) {
-        assert.ok(entities.includes(expected),
-          `expected scoped invalidation of "${expected}", got ${JSON.stringify(entities)}`);
-      }
-      // sijainti:myProperties:<sortedVisibilitySet> is keyed on the caller's tenant
-      // SET, not a bare asiakasId, so the asiakasId-scoped default pattern
-      // (`sijainti:*:<asiakasId>*`) cannot reach it — it needs an explicit sweep.
-      assert.ok(patterns.includes("sijainti:myProperties:*"),
-        `expected sweep of "sijainti:myProperties:*", got ${JSON.stringify(patterns)}`);
-    });
-
-    await test(`${op} does NOT wipe the grid or the compliance dashboard`, async () => {
-      const { mgr, patterns, scopedCalls } = newMgr();
-      await mgr.invalidateCrossEntity(op, { ...DATE_PARAMS });
-      // invalidateGridSmart has no *_DATE_* case, so routing these ops through it
-      // would hit its own default and wipe grid:v7tenant:*:* on every write.
-      // Property maintenance dates never render on the keikka grid.
-      assert.ok(!scopedCalls.some((c) => c.entityType === "grid"),
-        `must not touch the grid, got ${JSON.stringify(scopedCalls)}`);
-      // complianceDashboardSql hardcodes vehicle + person CTEs; sijainti is absent
-      // from that rollup, so sweeping it would be pure cost.
-      assert.ok(!patterns.some((p) => p.startsWith("complianceDashboard")),
-        `must not sweep the compliance dashboard, got ${JSON.stringify(patterns)}`);
+      await mgr.invalidateCrossEntity(op, DATE_PARAMS);
+      assert.deepStrictEqual(scopedCalls.map((c) => c.entityType).sort(),
+        ["sijaintiDate", "sijaintiRequiredDateType"],
+        `unexpected scoped invalidations: ${JSON.stringify(scopedCalls)}`);
+      assert.deepStrictEqual(patterns, ["sijainti:myProperties:*"],
+        `unexpected pattern sweeps: ${JSON.stringify(patterns)}`);
     });
   }
 

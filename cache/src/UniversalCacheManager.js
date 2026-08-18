@@ -1729,6 +1729,9 @@ class UniversalCacheManager {
           this.invalidateByPattern("asiakas:list:*"),
           this.invalidateByPattern("grid:v7tenant:*:*"),
           this.invalidateByPattern("grid:palkki:list:*"),
+          // A merge rewrites owner FKs, so ownerAsiakasId/ownerName in the
+          // cross-tenant property list change; the tenant-SET key needs this sweep.
+          this.invalidateByPattern("sijainti:myProperties:*"),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         break;
@@ -1976,6 +1979,11 @@ class UniversalCacheManager {
           this.invalidateByPattern(`ecofleet:vehicleDayTimeline:*:${today}`),
           this.invalidateByPattern(`ecofleet:vehicleDayRoute:*:${today}`),
           this.invalidateByPattern("inventory:dashboard:*"), // sijainti.isVarasto feeds the Varasto dashboard
+          // The row's name/address/coords/isVarasto all surface in the cross-tenant
+          // property list, whose key is the caller's sorted tenant SET - the
+          // asiakasId-scoped default pattern cannot reach it. (Deliberately NOT on
+          // SIJAINTI_LATLNG_UPDATE: that one runs in a loop and stays geocode-only.)
+          this.invalidateByPattern("sijainti:myProperties:*"),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         break;
