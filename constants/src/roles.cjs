@@ -202,6 +202,8 @@ const PERSON_SETTING_TYPE_IDS = {
   IS_GLOBAL_SIJAINTI_ADMIN: 46,
   // 47 = Betonijerry TOS, 48 = Betonijerry Privacy (legal; DB-only, not enumerated here).
   IS_GLOBAL_VIEWER: 49,
+  // 50 = UI_LANGUAGE (preferences; DB-only, not enumerated here).
+  NOTIFY_DEV_NEW_FEEDBACK: 51,
 };
 
 const ASIAKAS_SETTING_TYPE_IDS = {

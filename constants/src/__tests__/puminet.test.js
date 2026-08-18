@@ -16,9 +16,10 @@ describe("PUMINET constants", () => {
     expect(requiredCopy.OWNER_ASIAKAS_ID).toBe(26);
   });
 
-  // personId 10 = the maintainer who receives the CLI-feedback digest and new
-  // support escalations. Previously declared as a private NOTIFY_PERSON_ID in
-  // both feedbackEmail.js and supportEmail.js.
+  // personId 10 = the maintainer who receives new support escalations.
+  // Previously declared as a private NOTIFY_PERSON_ID in both supportEmail.js and
+  // the since-deleted feedbackEmail.js (new `ib feedback` now pushes to opted-in
+  // developers instead of mailing this person).
   test("MAINTAINER_PERSON_ID is 10", () => {
     expect(requiredCopy.MAINTAINER_PERSON_ID).toBe(10);
   });

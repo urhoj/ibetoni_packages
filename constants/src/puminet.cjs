@@ -1,11 +1,11 @@
 // PumiNet Oy — the company operating betoni.online (system-admin Fennoa surfaces).
 const PUMINET = Object.freeze({
   OWNER_ASIAKAS_ID: 26,
-  // Recipient of the maintainer heads-up mails: the new-CLI-feedback digest
-  // (modules/feedback/feedbackEmail.js) and new support escalations
-  // (modules/messaging/supportEmail.js). Both declared their own `const
-  // NOTIFY_PERSON_ID = 10` — same person, two sources of truth, and the two
-  // flows are already documented as mirrors of each other.
+  // Recipient of the maintainer heads-up mail for new support escalations
+  // (modules/messaging/supportEmail.js). It had a twin in the new-CLI-feedback
+  // digest (modules/feedback/feedbackEmail.js) — both declared their own `const
+  // NOTIFY_PERSON_ID = 10`, same person, two sources of truth — until 2026-08-18,
+  // when feedback moved to an opt-in developer push and that mail was deleted.
   MAINTAINER_PERSON_ID: 10,
   // The same human as MAINTAINER_PERSON_ID, as a literal address, because three
   // fire-and-forget alert paths need a recipient without an await:
