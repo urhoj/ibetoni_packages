@@ -190,6 +190,9 @@ class UniversalCacheManager {
       tyomaaDateType: 43200, // 12 hours - työmaa date types (reference data)
       asiakasDate: 7200, // 2 hours - asiakas dates, moderate changes
       asiakasDateType: 43200, // 12 hours - asiakas date types (reference data)
+      sijaintiDate: 7200, // 2 hours - property dates, moderate changes
+      sijaintiDateType: 43200, // 12 hours - property date types (reference data)
+      sijaintiRequiredDateType: 7200, // 2 hours - property required date types
       complianceDashboard: 7200, // 2 hours - dashboard aggregations (matches date entities)
       sijainti: 7200, // 2 hours - locations, rarely changes
       geocode: 3600, // 1 hour - geocoding & driving distances
@@ -1625,6 +1628,30 @@ class UniversalCacheManager {
         break;
       }
 
+      case "SIJAINTI_DATE_DISMISS":
+      case "SIJAINTI_DATE_UNDISMISS":
+      case "SIJAINTI_DATE_UPDATE":
+      case "SIJAINTI_DATE_CREATE":
+      case "SIJAINTI_DATE_DELETE": {
+        // Deliberately NARROWER than its VEHICLE/PERSON/TYOMAA/ASIAKAS siblings:
+        // - no complianceDashboard:* sweep — complianceDashboardSql hardcodes
+        //   vehicle + person CTEs, so property dates are not in that rollup;
+        // - no invalidateGridSmart — it has no *_DATE_* case, so it would fall to
+        //   its own default and wipe grid:v7tenant:*:* on every property-date
+        //   write, and property dates never render on the keikka grid.
+        const counts = await Promise.all([
+          this.invalidate(operation, "sijaintiDate", params),
+          this.invalidate(operation, "sijaintiRequiredDateType", params),
+          // sijainti:myProperties:<sortedVisibilitySet> embeds nextExpirationDate,
+          // derived from sijaintiDate. That key is scoped by the caller's tenant
+          // SET, not a bare asiakasId, so the asiakasId-scoped default pattern
+          // cannot reach it — sweep it explicitly.
+          this.invalidateByPattern("sijainti:myProperties:*"),
+        ]);
+        totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
+        break;
+      }
+
       // Asiakas CRUD operations - invalidate asiakas and related entity caches
       case "ASIAKAS_UPDATE":
       case "ASIAKAS_CREATE":
@@ -1691,6 +1718,7 @@ class UniversalCacheManager {
           "tyomaaDate",
           "personDate",
           "vehicleDate",
+          "sijaintiDate",
         ];
 
         const counts = await Promise.all([

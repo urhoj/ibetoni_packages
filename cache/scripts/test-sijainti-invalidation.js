@@ -99,6 +99,50 @@ async function main() {
     }
   });
 
+  // fb#752: the five SIJAINTI_DATE_* ops had no case at all and fell through to
+  // `default:`, which invalidates only params.entityType. That left
+  // sijaintiRequiredDateType (whose compliance reads change the moment a date is
+  // written) and the myProperties list stale for the whole TTL.
+  const SIJAINTI_DATE_OPS = [
+    "SIJAINTI_DATE_CREATE",
+    "SIJAINTI_DATE_UPDATE",
+    "SIJAINTI_DATE_DELETE",
+    "SIJAINTI_DATE_DISMISS",
+    "SIJAINTI_DATE_UNDISMISS",
+  ];
+  const DATE_PARAMS = { asiakasId: 1360, entityType: "sijaintiDate", sijaintiId: 96 };
+
+  for (const op of SIJAINTI_DATE_OPS) {
+    await test(`${op} clears sijaintiDate + sijaintiRequiredDateType + myProperties`, async () => {
+      const { mgr, patterns, scopedCalls } = newMgr();
+      await mgr.invalidateCrossEntity(op, { ...DATE_PARAMS });
+      const entities = scopedCalls.map((c) => c.entityType);
+      for (const expected of ["sijaintiDate", "sijaintiRequiredDateType"]) {
+        assert.ok(entities.includes(expected),
+          `expected scoped invalidation of "${expected}", got ${JSON.stringify(entities)}`);
+      }
+      // sijainti:myProperties:<sortedVisibilitySet> is keyed on the caller's tenant
+      // SET, not a bare asiakasId, so the asiakasId-scoped default pattern
+      // (`sijainti:*:<asiakasId>*`) cannot reach it — it needs an explicit sweep.
+      assert.ok(patterns.includes("sijainti:myProperties:*"),
+        `expected sweep of "sijainti:myProperties:*", got ${JSON.stringify(patterns)}`);
+    });
+
+    await test(`${op} does NOT wipe the grid or the compliance dashboard`, async () => {
+      const { mgr, patterns, scopedCalls } = newMgr();
+      await mgr.invalidateCrossEntity(op, { ...DATE_PARAMS });
+      // invalidateGridSmart has no *_DATE_* case, so routing these ops through it
+      // would hit its own default and wipe grid:v7tenant:*:* on every write.
+      // Property maintenance dates never render on the keikka grid.
+      assert.ok(!scopedCalls.some((c) => c.entityType === "grid"),
+        `must not touch the grid, got ${JSON.stringify(scopedCalls)}`);
+      // complianceDashboardSql hardcodes vehicle + person CTEs; sijainti is absent
+      // from that rollup, so sweeping it would be pure cost.
+      assert.ok(!patterns.some((p) => p.startsWith("complianceDashboard")),
+        `must not sweep the compliance dashboard, got ${JSON.stringify(patterns)}`);
+    });
+  }
+
   if (failures > 0) { console.error(`\n${failures} test(s) failed`); process.exit(1); }
   console.log(`\nAll tests passed`);
 }
