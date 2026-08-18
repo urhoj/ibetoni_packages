@@ -1,0 +1,26 @@
+{
+  "name": "@ibetoni/jerry-emails",
+  "version": "1.0.0",
+  "description": "BetoniJerry transactional email content: pure fi/en template builders + the copy table. No transport.",
+  "main": "src/index.js",
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ibetoni/utils": "file:../utils"
+  },
+  "keywords": [
+    "betonijerry",
+    "email",
+    "templates",
+    "shared"
+  ],
+  "author": "betoni.online",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^22.18.0 || >=24.11.0"
+  }
+}
