@@ -1,12 +1,12 @@
 // Per-language copy for the BetoniJerry transactional emails. Kept separate from
-// jerryEmailTemplates.js so the templates stay pure layout/assembly and adding a
+// ./templates.js so the templates stay pure layout/assembly and adding a
 // language is a data change, not a control-flow change.
 //
 // Customer templates are addressed by pumppuRequest.language (Task 6); provider
 // templates by the recipient's personSettings UI_LANGUAGE (Task 7). Task 13 wires
 // those sources into the call sites — this module only supplies the copy.
 //
-// The `fi` entries are lifted VERBATIM from the strings jerryEmailTemplates.js used
+// The `fi` entries are lifted VERBATIM from the strings ./templates.js used
 // to hard-code — this was an extraction, not a rewrite. Do not "improve" the Finnish
 // wording here; any change is a regression against the live templates.
 const COPY = {

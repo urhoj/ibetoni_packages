@@ -132,11 +132,6 @@ describe("formatters", () => {
     expect(t.formatPourTime(new Date(2026, 6, 4, 8, 5))).toBe("04.07.2026 klo 08.05");
     expect(t.formatPourTime("not-a-date")).toBe("");
   });
-  it("escapes html", () => {
-    // &#39; not &#039; since escapeHtml moved to @ibetoni/utils: the same
-    // codepoint (U+0027) written without the leading zero. Renders identically.
-    expect(t.escapeHtml('<b>&"\'')).toBe("&lt;b&gt;&amp;&quot;&#39;");
-  });
 });
 
 describe("wrapJerryLayout", () => {

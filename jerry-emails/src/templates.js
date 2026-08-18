@@ -9,10 +9,8 @@
 // pumppuRequest.language; provider templates by the recipient's UI_LANGUAGE setting
 // (wired in Task 13, not here).
 const { COPY, copyFor } = require("./copy");
-// escapeHtml comes from the shared package rather than a local copy. The only
-// visible difference from the implementation this module used to carry is the
-// apostrophe entity - &#39; instead of &#039; - which is the same codepoint
-// (U+0027) written with and without a leading zero, and renders identically.
+// Internal only - deliberately NOT re-exported. This package does not own HTML
+// escaping; @ibetoni/utils does, and every caller that needs it imports it there.
 const { escapeHtml } = require("@ibetoni/utils");
 
 // Language normalization is derived from the copy table itself rather than from
@@ -22,7 +20,7 @@ const { escapeHtml } = require("@ibetoni/utils");
 // single edit that enables it. Behaviour today is identical - COPY holds exactly
 // fi and en, the same pair the backend whitelist carries.
 function normalizeLang(lang) {
-  return Object.prototype.hasOwnProperty.call(COPY, lang) ? lang : "fi";
+  return Object.hasOwn(COPY, lang) ? lang : "fi";
 }
 
 function formatEuroFromCents(cents, lang = "fi") {
@@ -87,7 +85,7 @@ function providerNewRequest(d, lang = "fi") {
   // used to substitute the one-line `c.contactHint` for `c.intro`, so the two
   // MIME parts said materially different things: the HTML carried the pricing-
   // privacy guarantee and the call to quote, the text part carried neither.
-  // `c.contactHint` is left defined in jerryEmailCopy.js — unused here now, but
+  // `c.contactHint` is left defined in ./copy.js — unused here now, but
   // the in-flight English tier-1 plan still references it.
   const text = `${c.heading}.\n\n${c.intro}\n\n${c.labels.kayttokohde}: ${d.kayttokohde || "—"}\n${c.labels.maara}: ${d.totalM3} m³\n${c.labels.sijainti}: ${d.maskedAddress || "—"}\n\n${c.ctaTextPrefix}: ${d.operatorUrl}`;
   return { subject: c.subject, html, text };
@@ -191,7 +189,7 @@ function customerProviderViewed(d, lang = "fi") {
 }
 
 module.exports = {
-  escapeHtml, formatEuroFromCents, formatPourTime, wrapJerryLayout, wrapJerryText,
+  formatEuroFromCents, formatPourTime, wrapJerryLayout, wrapJerryText,
   providerNewRequest, customerNoSupply, customerOfferReceived,
   providerOfferAccepted, providerOfferRejected, customerProviderDeclined,
   customerPourConfirmed, customerProviderViewed,
