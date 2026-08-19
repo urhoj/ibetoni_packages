@@ -1176,19 +1176,6 @@ class UniversalCacheManager {
 
         return await this.invalidateByPattern(individualPattern);
       }
-      case "asiakas":
-        pattern = `asiakas:*:${asiakasId || "*"}*`;
-        break;
-      case "vehicleRequiredDateType":
-      case "personRequiredDateType":
-      case "tyomaaRequiredDateType":
-      case "asiakasRequiredDateType":
-        // These keys have variable segments:
-        // - 3 segments: entityType:operation:asiakasId (e.g., vehicleRequiredDateType:compliance:8)
-        // - 5 segments: entityType:operation:asiakasId:ids:date (e.g., vehicleRequiredDateType:batchCompliance:8:1,51,52:20260109)
-        // Trailing * matches both formats
-        pattern = `${entityType}:*:${asiakasId || "*"}*`;
-        break;
       case "stat":
         // Stat keys have varying segment counts (3-6 segments):
         // - stat:stat4:{ownerAsiakasId} (3 segments)
@@ -1236,17 +1223,15 @@ class UniversalCacheManager {
         );
         return results.reduce((sum, c) => sum + c, 0);
       }
-      case "personpvm":
-        // PersonPVM keys: personpvm:list:asiakasId or personpvm:list:asiakasId:startDate:endDate
-        // Use trailing wildcard to match both 3-segment and 5-segment keys
-        pattern = `personpvm:*:${asiakasId || "*"}*`;
-        break;
       case "keikkaBetoni":
         // keikkaBetoni keys: keikkaBetoni:list:asiakasId:keikkaId, keikkaBetoni:get:asiakasId:keikkaBetoniId
         pattern = `keikkaBetoni:*:${asiakasId || "*"}:*`;
         break;
       default:
-        // Use trailing wildcard (no colon) to match 3+ segment keys like entity:list:asiakasId
+        // Use trailing wildcard (no colon) to match 3+ segment keys like entity:list:asiakasId.
+        // Also covers the variable-segment *RequiredDateType and personpvm key shapes:
+        // - 3 segments: entityType:operation:asiakasId (e.g., vehicleRequiredDateType:compliance:8)
+        // - 5 segments: entityType:operation:asiakasId:ids:date (e.g., vehicleRequiredDateType:batchCompliance:8:1,51,52:20260109)
         pattern = `${entityType}:*:${asiakasId || "*"}*`;
     }
 
