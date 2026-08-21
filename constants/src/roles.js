@@ -425,6 +425,7 @@ export const PERSON_SETTING_TYPE_IDS = {
   IS_GLOBAL_VIEWER: 49,
   // 50 = UI_LANGUAGE (preferences; DB-only, not enumerated here).
   NOTIFY_DEV_NEW_FEEDBACK: 51,
+  NOTIFY_ONLY_IF_INVOLVED: 52,
 };
 
 /**
