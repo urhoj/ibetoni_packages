@@ -1,8 +1,5 @@
-const jwt = require("jsonwebtoken");
-const { promisify } = require("util");
-const jwksClient = require("jwks-rsa");
-
-const jwtVerify = promisify(jwt.verify);
+const { invalidTokenError } = require("./oauthErrors");
+const { jwtVerify, createKeyResolver } = require("./jwksVerifier");
 
 /**
  * Microsoft Authentication Service for betoni.online platform
@@ -34,10 +31,12 @@ const jwtVerify = promisify(jwt.verify);
  * @returns {Promise<string>|string} Microsoft Client ID (audience)
  */
 const getMicrosoftClientId = async (getEnvVar) => {
-  if (getEnvVar) {
-    return await getEnvVar("MICROSOFT_CLIENT_ID");
-  }
-  return process.env.MICROSOFT_CLIENT_ID;
+  const clientId = getEnvVar ? await getEnvVar("MICROSOFT_CLIENT_ID") : process.env.MICROSOFT_CLIENT_ID;
+  // Must throw when unset: jwt.verify SKIPS the audience check entirely when
+  // `audience` is undefined, so returning undefined here would verify tokens
+  // minted for any other application.
+  if (!clientId) throw new Error("MICROSOFT_CLIENT_ID environment variable is not set");
+  return clientId;
 };
 
 class MicrosoftAuth {
@@ -45,46 +44,15 @@ class MicrosoftAuth {
    * @param {object} options - Configuration options
    * @param {object} options.logger - Optional logger instance
    * @param {function} options.getEnvVar - Optional async function to get environment variables
+   * @param {object} options.jwksClient - Optional injected JWKS client — tests stub getSigningKey
    */
   constructor(options = {}) {
     this.logger = options.logger;
     this.getEnvVar = options.getEnvVar;
-    this.jwksClient = null;
-  }
-
-  /**
-   * Initialize JWKS (JSON Web Key Set) client for Microsoft public key retrieval
-   *
-   * Lazy-initializes a singleton JWKS client that fetches Microsoft's public signing keys
-   * from the Azure AD discovery endpoint. Keys are cached for 24 hours to minimize API calls.
-   *
-   * @private
-   * @returns {JwksClient} Configured JWKS client instance
-   *
-   * @see https://login.microsoftonline.com/common/discovery/v2.0/keys
-   */
-  getJwksClient() {
-    if (!this.jwksClient) {
-      this.jwksClient = jwksClient({
-        jwksUri: "https://login.microsoftonline.com/common/discovery/v2.0/keys",
-        cache: true,
-        cacheMaxEntries: 5,
-        cacheMaxAge: 24 * 60 * 60 * 1000, // 24 hours
-      });
-    }
-    return this.jwksClient;
-  }
-
-  /**
-   * Get signing key from JWKS endpoint
-   * @param {object} header - Token header containing kid
-   * @param {function} callback - Callback for jwt.verify compatibility
-   */
-  getKey(header, callback) {
-    this.getJwksClient()
-      .getSigningKey(header.kid)
-      .then((key) => callback(null, key.getPublicKey()))
-      .catch((err) => callback(err));
+    this.getKey = createKeyResolver(
+      "https://login.microsoftonline.com/common/discovery/v2.0/keys",
+      options.jwksClient || null,
+    );
   }
 
   /**
@@ -92,26 +60,36 @@ class MicrosoftAuth {
    *
    * @param {string} token - Microsoft ID token from frontend (OIDC ID token)
    * @returns {Promise<object>} Verified token payload
-   * @throws {Error} If token is invalid, expired, or verification fails
+   * @throws {Error} Tagged `code === INVALID_OAUTH_TOKEN` when the token itself is
+   *   bad (caller should answer 401); untagged for server faults (caller: 500).
    *
    * @see https://learn.microsoft.com/en-us/entra/identity-platform/id-tokens
    */
   async verifyIdToken(token) {
+    if (!token) {
+      throw invalidTokenError("Microsoft authentication failed: Token is required for verification");
+    }
+
+    // Outside the try below on purpose — see appleAuth.js: a missing
+    // MICROSOFT_CLIENT_ID or a Key Vault outage is a server fault, not a bad
+    // credential, and must stay untagged so it is reported (fb#365).
+    const clientId = await getMicrosoftClientId(this.getEnvVar);
+
     try {
-      if (!token) {
-        throw new Error("Token is required for verification");
-      }
-
-      const clientId = await getMicrosoftClientId(this.getEnvVar);
-      const getKeyWrapper = (header, callback) => this.getKey(header, callback);
-
-      const decoded = await jwtVerify(token, getKeyWrapper, {
+      const decoded = await jwtVerify(token, this.getKey, {
         audience: clientId,
         algorithms: ["RS256"],
-        issuer: /^https:\/\/login\.microsoftonline\.com\/[a-f0-9-]+\/v2\.0$/,
         clockTolerance: 60,
         maxAge: "1h",
       });
+
+      // Azure AD is multi-tenant, so the issuer must be matched against a
+      // pattern — and it must happen HERE, by hand: jsonwebtoken's `issuer`
+      // option only supports string/array and silently ignores a RegExp, so
+      // passing the pattern as an option validates nothing.
+      if (!/^https:\/\/login\.microsoftonline\.com\/[a-f0-9-]+\/v2\.0$/.test(decoded.iss || "")) {
+        throw new Error(`jwt issuer invalid: ${decoded.iss}`);
+      }
 
       if (!decoded.nonce) {
         this.logger?.warn?.("Microsoft token missing nonce claim (replay attack risk)", {
@@ -132,7 +110,7 @@ class MicrosoftAuth {
         error: error.message,
         stack: error.stack,
       });
-      throw new Error(`Microsoft authentication failed: ${error.message}`, { cause: error });
+      throw invalidTokenError(`Microsoft authentication failed: ${error.message}`);
     }
   }
 

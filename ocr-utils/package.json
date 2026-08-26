@@ -8,9 +8,7 @@
     ".": "./src/index.js",
     "./constants": "./src/constants.js",
     "./classification": "./src/classification.js",
-    "./confidence": "./src/confidence.js",
-    "./validation": "./src/validation.js",
-    "./statusTransitions": "./src/statusTransitions.js"
+    "./confidence": "./src/confidence.js"
   },
   "scripts": {
     "test": "vitest run"

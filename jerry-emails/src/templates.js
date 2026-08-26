@@ -1,7 +1,7 @@
 // Pure content builders + formatters for BetoniJerry transactional emails.
 // No I/O, no transport, no database — the sender (puminet5api's
-// modules/betonijerry/jerryEmail.js) wraps these with the brand layout and the
-// demo disclaimer, and owns the SendGrid category.
+// modules/betonijerry/jerryEmail.js) wraps these with the brand layout and
+// owns the SendGrid category.
 //
 // Every builder takes a trailing `lang` ("fi" | "en", default "fi") and sources its
 // copy from ./copy.js — control flow here never branches on language, only
@@ -44,8 +44,8 @@ function formatPourTime(date, lang = "fi") {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} klo ${pad(d.getHours())}.${pad(d.getMinutes())}`;
 }
 
-// Shared brand chrome. `disclaimerHtml` (demo banner) is injected by jerryEmail.
-function wrapJerryLayout(contentHtml, disclaimerHtml = "", lang = "fi") {
+// Shared brand chrome.
+function wrapJerryLayout(contentHtml, lang = "fi") {
   const year = new Date().getFullYear();
   return `<!DOCTYPE html>
 <html lang="${normalizeLang(lang)}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -54,14 +54,14 @@ function wrapJerryLayout(contentHtml, disclaimerHtml = "", lang = "fi") {
 <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background:#fff;border-radius:12px;box-shadow:0 4px 6px rgba(0,0,0,.07);overflow:hidden;">
 <tr><td style="background:linear-gradient(135deg,#F59E0B 0%,#D97706 100%);padding:36px 30px;text-align:center;">
 <h1 style="margin:0;color:#fff;font-size:30px;font-weight:700;">BetoniJerry</h1></td></tr>
-<tr><td style="padding:40px;color:#1a202c;font-size:16px;line-height:1.6;">${disclaimerHtml}${contentHtml}</td></tr>
+<tr><td style="padding:40px;color:#1a202c;font-size:16px;line-height:1.6;">${contentHtml}</td></tr>
 <tr><td style="background:#FEF9E7;padding:28px 40px;text-align:center;border-top:1px solid #f0e6c8;">
 <p style="margin:0;color:#a0aec0;font-size:11px;">© ${year} BetoniJerry</p></td></tr>
 </table></td></tr></table></body></html>`;
 }
 
-function wrapJerryText(contentText, disclaimerText = "") {
-  return `BetoniJerry\n\n${disclaimerText}${contentText}\n\n— BetoniJerry`;
+function wrapJerryText(contentText) {
+  return `BetoniJerry\n\n${contentText}\n\n— BetoniJerry`;
 }
 
 function cta(url, label) {
@@ -70,7 +70,7 @@ function cta(url, label) {
 
 // --- #1 provider: new request (masked, NO customer PII) ---
 function providerNewRequest(d, lang = "fi") {
-  const c = copyFor(normalizeLang(lang), "providerNewRequest");
+  const c = copyFor(lang, "providerNewRequest");
   const lines = [
     `<strong>${c.labels.kayttokohde}:</strong> ${escapeHtml(d.kayttokohde || "—")}`,
     `<strong>${c.labels.maara}:</strong> ${escapeHtml(d.totalM3)} m³`,
@@ -93,7 +93,7 @@ function providerNewRequest(d, lang = "fi") {
 
 // --- #2 customer: no providers found ---
 function customerNoSupply(d, lang = "fi") {
-  const c = copyFor(normalizeLang(lang), "customerNoSupply");
+  const c = copyFor(lang, "customerNoSupply");
   const html = `<h2 style="margin:0 0 16px;font-size:22px;">${c.heading}</h2>
 <p style="margin:0 0 16px;">${c.introPrefix}<strong>${escapeHtml(d.address || "")}</strong>${c.introSuffix}</p>${cta(d.valutUrl, c.cta)}`;
   const text = `${c.textPrefix}${d.address || ""}${c.textSuffix}\n\n${d.valutUrl}`;
@@ -115,7 +115,7 @@ function customerOfferReceived(d, lang = "fi") {
 
 // --- #4 provider: accepted (full reveal) ---
 function providerOfferAccepted(d, lang = "fi") {
-  const c = copyFor(normalizeLang(lang), "providerOfferAccepted");
+  const c = copyFor(lang, "providerOfferAccepted");
   const html = `<h2 style="margin:0 0 16px;font-size:22px;">${c.heading}</h2>
 <p style="margin:0 0 16px;">${c.leadPrefix}<strong>${c.callToAction}</strong>${c.leadSuffix}</p>
 <p style="margin:6px 0;"><strong>${c.labels.asiakas}:</strong> ${escapeHtml(d.customerName || "—")}</p>
@@ -130,7 +130,7 @@ function providerOfferAccepted(d, lang = "fi") {
 // Masked — no customer PII (the provider lost, so no reveal). Closes the loop so a
 // losing offer doesn't silently go idle in the provider's inbox.
 function providerOfferRejected(d, lang = "fi") {
-  const c = copyFor(normalizeLang(lang), "providerOfferRejected");
+  const c = copyFor(lang, "providerOfferRejected");
   const lines = [
     d.kayttokohde ? `<strong>${c.labels.kayttokohde}:</strong> ${escapeHtml(d.kayttokohde)}` : null,
     d.totalM3 != null ? `<strong>${c.labels.maara}:</strong> ${escapeHtml(d.totalM3)} m³` : null,
@@ -146,7 +146,7 @@ function providerOfferRejected(d, lang = "fi") {
 // The request may stay open for other providers; this closes the loop for the
 // customer so a declining provider isn't an invisible non-response.
 function customerProviderDeclined(d, lang = "fi") {
-  const c = copyFor(normalizeLang(lang), "customerProviderDeclined");
+  const c = copyFor(lang, "customerProviderDeclined");
   const providerNameHtml = escapeHtml(d.providerName || c.defaultProviderName);
   const reason = d.reason ? `<p style="margin:0 0 16px;">${c.reasonLabel}: <em>${escapeHtml(d.reason)}</em></p>` : "";
   const tail = d.hasOtherProviders
@@ -178,7 +178,7 @@ function customerPourConfirmed(d, lang = "fi") {
 // Names the company; carries no provider contact details — the provider
 // contacts the customer, not the other way around.
 function customerProviderViewed(d, lang = "fi") {
-  const c = copyFor(normalizeLang(lang), "customerProviderViewed");
+  const c = copyFor(lang, "customerProviderViewed");
   const name = d.providerName || c.defaultProviderName;
   const subject = `${name}${c.subjectSuffix}`;
   const html = `<h2 style="margin:0 0 16px;font-size:22px;">${escapeHtml(name)}${c.headingSuffix}</h2>

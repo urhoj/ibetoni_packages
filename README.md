@@ -13,8 +13,7 @@ Shared business logic packages for the betoni.online concrete delivery managemen
 | [@ibetoni/constants](./constants/) | 1.0.0 | Shared CORS origins, HTTP statuses, role/module constants | [README](./constants/README.md) |
 | [@ibetoni/fennoa-utils](./fennoa-utils/) | 1.0.0 | Fennoa invoice response parsing and payment status computation | [README](./fennoa-utils/README.md) |
 | [@ibetoni/health-monitor](./health-monitor/) | 1.0.0 | Deployment health checks and response-time monitoring | — |
-| [@ibetoni/ocr-utils](./ocr-utils/) | 1.0.0 | OCR document classification, confidence scoring, status transitions | — |
-| [@ibetoni/permissions](./permissions/) | 1.0.0 | Role-based permission validation | [README](./permissions/README.md) |
+| [@ibetoni/ocr-utils](./ocr-utils/) | 1.0.0 | OCR document classification and confidence display | — |
 | [@ibetoni/sentry](./sentry/) | 1.0.0 | Shared Sentry initialization, capture helpers, redaction | — |
 | [@ibetoni/utils](./utils/) | 1.0.0 | General-purpose shared utilities (HTML escaping) | — |
 
@@ -29,8 +28,7 @@ These packages encapsulate core business logic that needs to be shared across mu
 - **`@ibetoni/constants`** - Centralized CORS allowed origins, HTTP status codes, role/module constants (eliminates 90 lines of duplicate code)
 - **`@ibetoni/fennoa-utils`** - Fennoa API response parsing (`parseFennoaInvoiceResponse`) and payment status computation (`computePaymentStatus`)
 - **`@ibetoni/health-monitor`** - Deployment health checks, response-time monitoring, and shared status dashboard helpers
-- **`@ibetoni/ocr-utils`** - OCR document classification, confidence scoring, and field-validation/status-transition helpers
-- **`@ibetoni/permissions`** - Centralizes role-based access control logic used by both frontend and backend
+- **`@ibetoni/ocr-utils`** - OCR document classification and confidence display helpers
 - **`@ibetoni/sentry`** - Shared `@sentry/node` initialization, `captureError`/`captureException` helpers, and PII redaction
 - **`@ibetoni/utils`** - General-purpose shared utilities (HTML escaping)
 
@@ -56,7 +54,6 @@ node_modules/
 ├── @ibetoni/fennoa-utils   → ../../ibetoni_packages/fennoa-utils
 ├── @ibetoni/health-monitor → ../../ibetoni_packages/health-monitor
 ├── @ibetoni/ocr-utils      → ../../ibetoni_packages/ocr-utils
-├── @ibetoni/permissions    → ../../ibetoni_packages/permissions
 ├── @ibetoni/sentry         → ../../ibetoni_packages/sentry
 └── @ibetoni/utils          → ../../ibetoni_packages/utils
 ```
@@ -71,7 +68,6 @@ Projects reference packages using `file:` protocol in `package.json`:
     "@ibetoni/auth": "file:../ibetoni_packages/auth",
     "@ibetoni/cache": "file:../ibetoni_packages/cache",
     "@ibetoni/constants": "file:../ibetoni_packages/constants",
-    "@ibetoni/permissions": "file:../ibetoni_packages/permissions",
     "@ibetoni/betoni-utils": "file:../ibetoni_packages/betoni-utils",
     "@ibetoni/fennoa-utils": "file:../ibetoni_packages/fennoa-utils"
   }
@@ -132,7 +128,7 @@ console.log(payload.email, payload.name);
 - JWT token generation with 7-day expiration
 - JWT verification middleware for Express
 - Google OAuth ID token verification
-- Token refresh logic (`isTokenExpiringSoon`, `refreshToken`)
+- Token refresh logic (`refreshToken`)
 - Password hashing utilities (`hashPassword`, `comparePassword`)
 - Supports both sync (process.env) and async (Key Vault) configuration
 - Backward compatible wrappers in existing apps
@@ -200,31 +196,6 @@ app.use(cors({
 - Consistent security policy
 
 [Full Documentation →](./constants/README.md)
-
-### @ibetoni/permissions
-
-Permission validation and role checking.
-
-```typescript
-import { hasPermission, PERMISSIONS } from '@ibetoni/permissions';
-
-// Check single permission
-if (hasPermission(user, PERMISSIONS.KEIKKA_CREATE)) {
-  // Allow order creation
-}
-
-// Frontend usage
-import { usePermissions } from '@ibetoni/permissions/hooks';
-
-function OrderButton() {
-  const { can } = usePermissions();
-
-  if (!can(PERMISSIONS.KEIKKA_CREATE)) return null;
-  return <button>Create Order</button>;
-}
-```
-
-[Full Documentation →](./permissions/README.md)
 
 ### @ibetoni/betoni-utils
 
@@ -294,7 +265,6 @@ const formatted = formatLujuusLuokka('C30/37'); // "C30/37"
        "ibetoni_packages/auth",
        "ibetoni_packages/cache",
        "ibetoni_packages/constants",
-       "ibetoni_packages/permissions",
        "ibetoni_packages/betoni-utils",
        "ibetoni_packages/my-package"  // Add here
      ]

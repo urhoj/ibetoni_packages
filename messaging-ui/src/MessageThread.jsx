@@ -23,8 +23,10 @@ import {
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import PropTypes from "prop-types";
+import { appendUnique } from "./appendUnique.js";
 
 const POLL_INTERVAL_MS = 8000;
+const noop = () => {};
 const PROFILE_INITIALS_RE = /\b([A-ZÅÄÖ])/g;
 
 function initialsFrom(name) {
@@ -42,7 +44,7 @@ function formatTime(iso) {
 
 export default function MessageThread({
     threadId, currentPersonId, token, apiBaseUrl, socket = null,
-    height = 480,
+    height = 480, onError = noop,
 }) {
     const [messages, setMessages] = useState([]);
     const [draft, setDraft] = useState("");
@@ -56,16 +58,21 @@ export default function MessageThread({
         () => (token ? { Authorization: `Bearer ${token}` } : {}),
         [token],
     );
+    const jsonHeaders = useMemo(
+        () => ({ ...authHeaders, "Content-Type": "application/json" }),
+        [authHeaders],
+    );
+    const threadUrl = useMemo(
+        () => `${apiBaseUrl}/api/messages/threads/${threadId}`,
+        [apiBaseUrl, threadId],
+    );
 
     // Pull initial messages + bookmark the latest createdAt for delta polling.
     const fetchAll = useCallback(async () => {
         if (!threadId) return;
         setLoading(true);
         try {
-            const res = await fetch(
-                `${apiBaseUrl}/api/messages/threads/${threadId}/messages?limit=500`,
-                { headers: authHeaders },
-            );
+            const res = await fetch(`${threadUrl}/messages?limit=500`, { headers: authHeaders });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const list = await res.json();
             setMessages(Array.isArray(list) ? list : []);
@@ -76,45 +83,37 @@ export default function MessageThread({
         } finally {
             setLoading(false);
         }
-    }, [threadId, apiBaseUrl, authHeaders]);
+    }, [threadId, threadUrl, authHeaders]);
 
-    // Delta pull — used by polling when no socket is available.
+    // Delta pull — used by polling when no socket is available. On the
+    // customer (betonijerry) side no socket is ever passed, so this IS the
+    // delivery mechanism — report persistent failures via onError instead of
+    // letting the chat silently go quiet.
     const fetchSince = useCallback(async () => {
         if (!threadId || !lastSeenIsoRef.current) return;
         try {
             const res = await fetch(
-                `${apiBaseUrl}/api/messages/threads/${threadId}/messages?since=${encodeURIComponent(lastSeenIsoRef.current)}`,
+                `${threadUrl}/messages?since=${encodeURIComponent(lastSeenIsoRef.current)}`,
                 { headers: authHeaders },
             );
             if (!res.ok) return;
             const newer = await res.json();
             if (Array.isArray(newer) && newer.length) {
-                setMessages((prev) => {
-                    // Dedupe by messageId. The ?since= bookmark is millisecond-
-                    // truncated (JS Date / JSON) while message.createdAt is
-                    // DATETIME2(7), so `createdAt > @since` re-returns the last
-                    // message(s) on every poll. Without this filter the thread
-                    // grows by a duplicate each cycle (the socket path already
-                    // dedupes the same way).
-                    const seen = new Set(prev.map((m) => m.messageId));
-                    const fresh = newer.filter((m) => !seen.has(m.messageId));
-                    return fresh.length ? [...prev, ...fresh] : prev;
-                });
+                setMessages((prev) => appendUnique(prev, newer));
                 lastSeenIsoRef.current = newer[newer.length - 1].createdAt;
             }
-        } catch {
-            // silent — next poll retries
+        } catch (e) {
+            // next poll retries; surface to the host app's reporter
+            onError(e, { operation: "messageThread.fetchSince", threadId });
         }
-    }, [threadId, apiBaseUrl, authHeaders]);
+    }, [threadId, threadUrl, authHeaders, onError]);
 
-    // Mark thread read — fire-and-forget.
+    // Mark thread read — fire-and-forget (failure only means a stale unread badge).
     const markRead = useCallback(() => {
         if (!threadId) return;
-        fetch(`${apiBaseUrl}/api/messages/threads/${threadId}/read`, {
-            method: "POST",
-            headers: { ...authHeaders, "Content-Type": "application/json" },
-        }).catch(() => {});
-    }, [threadId, apiBaseUrl, authHeaders]);
+        fetch(`${threadUrl}/read`, { method: "POST", headers: jsonHeaders })
+            .catch((e) => onError(e, { operation: "messageThread.markRead", threadId }));
+    }, [threadId, threadUrl, jsonHeaders, onError]);
 
     // Initial load — wrapped so react-hooks/set-state-in-effect doesn't
     // flag the synchronous setLoading inside fetchAll.
@@ -132,10 +131,7 @@ export default function MessageThread({
         if (socket) {
             const handler = (payload) => {
                 if (payload?.threadId !== threadId) return;
-                setMessages((prev) => {
-                    if (prev.some((m) => m.messageId === payload.message.messageId)) return prev;
-                    return [...prev, payload.message];
-                });
+                setMessages((prev) => appendUnique(prev, [payload.message]));
                 lastSeenIsoRef.current = payload.message.createdAt;
                 markRead();
             };
@@ -158,14 +154,11 @@ export default function MessageThread({
         setSending(true);
         setError(null);
         try {
-            const res = await fetch(
-                `${apiBaseUrl}/api/messages/threads/${threadId}/messages`,
-                {
-                    method: "POST",
-                    headers: { ...authHeaders, "Content-Type": "application/json" },
-                    body: JSON.stringify({ body }),
-                },
-            );
+            const res = await fetch(`${threadUrl}/messages`, {
+                method: "POST",
+                headers: jsonHeaders,
+                body: JSON.stringify({ body }),
+            });
             if (!res.ok) {
                 const errBody = await res.json().catch(() => ({}));
                 throw new Error(errBody.message || `HTTP ${res.status}`);
@@ -304,4 +297,7 @@ MessageThread.propTypes = {
     apiBaseUrl: PropTypes.string.isRequired,
     socket: PropTypes.object,
     height: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    // (error, { operation, threadId }) — wire the host app's error reporter
+    // (puminet4: captureError). Default no-op keeps the package dependency-free.
+    onError: PropTypes.func,
 };

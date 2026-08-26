@@ -9,7 +9,6 @@
  */
 
 const { allowedOrigins } = require("./src/domains.cjs");
-const { HTTP_STATUS } = require("./src/http.cjs");
 const { ERROR_CODES } = require("./src/errors.cjs");
 const {
   CACHE_TTL,
@@ -19,13 +18,7 @@ const {
   DEFAULT_VEHICLE_TTL,
   DEFAULT_WEATHER_TTL,
 } = require("./src/cache.cjs");
-const {
-  SECURITY,
-  MAX_LOGIN_ATTEMPTS,
-  LOCKOUT_DURATION,
-  RATE_LIMIT_WINDOW,
-  MAX_REQUESTS_PER_WINDOW,
-} = require("./src/security.cjs");
+const { MAX_LOGIN_ATTEMPTS, LOCKOUT_DURATION } = require("./src/security.cjs");
 const { STEP_LOG_TYPE } = require("./src/steplog.cjs");
 const {
   ADMIN_COMPANY_ROLE_TYPE_IDS,
@@ -51,12 +44,12 @@ const {
   roleTypeIdsToNames,
   buildCompanyRoles,
 } = require("./src/roles.cjs");
-const { FENNOA_PAYMENT_STATUS, FENNOA_PAYMENT_STATUS_LABELS_FI, INVOICE_STATUS, INVOICE_STATUS_LABELS_FI } = require("./src/fennoa.cjs");
+const { FENNOA_PAYMENT_STATUS, INVOICE_STATUS, INVOICE_STATUS_LABELS_FI } = require("./src/fennoa.cjs");
 const { SENTRY_REDACT_FIELDS, SENTRY_REDACTED_PLACEHOLDER } = require("./src/sentry.cjs");
 const { BETONIJERRY, BETONIJERRY_CITIES } = require("./src/betonijerry.cjs");
 const { PUMINET } = require("./src/puminet.cjs");
 const { DASHBOARD_CLOSE_RADIUS_M } = require("./src/geo.cjs");
-const { PERSON_LOG_TYPES, PERSON_LOG_TYPE_NAMES } = require("./src/personLogTypes.cjs");
+const { PERSON_LOG_TYPES } = require("./src/personLogTypes.cjs");
 
 module.exports = {
   // Step log type constants
@@ -64,13 +57,9 @@ module.exports = {
 
   // PersonLog type constants
   PERSON_LOG_TYPES,
-  PERSON_LOG_TYPE_NAMES,
 
   // Domain constants
   allowedOrigins,
-
-  // HTTP status codes
-  HTTP_STATUS,
 
   // Error codes
   ERROR_CODES,
@@ -84,11 +73,8 @@ module.exports = {
   DEFAULT_WEATHER_TTL,
 
   // Security constants
-  SECURITY,
   MAX_LOGIN_ATTEMPTS,
   LOCKOUT_DURATION,
-  RATE_LIMIT_WINDOW,
-  MAX_REQUESTS_PER_WINDOW,
 
   // Role mapping constants
   COMPANY_ROLE_TO_TYPE_ID,
@@ -116,7 +102,6 @@ module.exports = {
 
   // Fennoa constants
   FENNOA_PAYMENT_STATUS,
-  FENNOA_PAYMENT_STATUS_LABELS_FI,
   INVOICE_STATUS,
   INVOICE_STATUS_LABELS_FI,
 

@@ -9,20 +9,6 @@ export const FENNOA_PAYMENT_STATUS = {
   PARTIALLY_PAID: "partially_paid",
 };
 
-export const FENNOA_PAYMENT_STATUS_LABELS_FI = {
-  [FENNOA_PAYMENT_STATUS.PAID]: "Maksettu",
-  [FENNOA_PAYMENT_STATUS.UNPAID]: "Maksamatta",
-  [FENNOA_PAYMENT_STATUS.OVERDUE]: "Erääntynyt",
-  [FENNOA_PAYMENT_STATUS.PARTIALLY_PAID]: "Osittain maksettu",
-};
-
-export const FENNOA_PAYMENT_STATUS_SEVERITY = {
-  [FENNOA_PAYMENT_STATUS.PAID]: "success",
-  [FENNOA_PAYMENT_STATUS.OVERDUE]: "warning",
-  [FENNOA_PAYMENT_STATUS.PARTIALLY_PAID]: "info",
-  [FENNOA_PAYMENT_STATUS.UNPAID]: "info",
-};
-
 /**
  * Complete invoice status enum.
  * Extends Fennoa payment statuses with legacy invoice states (draft, sent).
@@ -36,7 +22,10 @@ export const INVOICE_STATUS = {
 };
 
 export const INVOICE_STATUS_LABELS_FI = {
-  ...FENNOA_PAYMENT_STATUS_LABELS_FI,
+  [FENNOA_PAYMENT_STATUS.PAID]: "Maksettu",
+  [FENNOA_PAYMENT_STATUS.UNPAID]: "Maksamatta",
+  [FENNOA_PAYMENT_STATUS.OVERDUE]: "Erääntynyt",
+  [FENNOA_PAYMENT_STATUS.PARTIALLY_PAID]: "Osittain maksettu",
   [INVOICE_STATUS.DRAFT]: "Luonnos",
   [INVOICE_STATUS.SENT]: "Lähetetty",
   [INVOICE_STATUS.UNKNOWN]: "Tuntematon",

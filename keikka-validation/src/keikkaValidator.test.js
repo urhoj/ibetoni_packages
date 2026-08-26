@@ -676,6 +676,18 @@ describe("keikkaValidator", () => {
       });
       expect(result.issues.some((i) => i.type === "MISSING_FACTORY")).toBe(false);
     });
+
+    test("a rule config carrying only a priority (no enabled key) still fires", () => {
+      // Regression: the post-pass used to filter with `!ruleConfig.enabled`, so a
+      // saved config like { priority: 4 } — no `enabled` key — silently suppressed
+      // the rule that isRuleEnabled had correctly let fire (fail-open contract).
+      const keikka = createTestKeikka({ keikkaTilaId: 4 });
+      const result = validateKeikka(keikka, {
+        ...testContext,
+        validationSettings: { enabled: true, rules: { MISSING_FACTORY: { priority: 4 } } },
+      });
+      expect(result.issues.some((i) => i.type === "MISSING_FACTORY")).toBe(true);
+    });
   });
 });
 

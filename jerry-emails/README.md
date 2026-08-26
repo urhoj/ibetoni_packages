@@ -30,8 +30,8 @@ Every builder takes a trailing `lang` (`"fi" | "en"`, default `"fi"`) and return
 
 ## Two rules that are easy to break
 
-**Builders return a FRAGMENT, never a document.** The `<html>` wrapper, brand
-header and demo disclaimer are added once, centrally, by `wrapJerryLayout` in the
+**Builders return a FRAGMENT, never a document.** The `<html>` wrapper and brand
+header are added once, centrally, by `wrapJerryLayout` in the
 sender (`puminet5api/modules/betonijerry/jerryEmail.js`). A builder that wraps
 itself gets wrapped again on the way out, and every real outbound email arrives
 double-wrapped. The test suite asserts `not.toContain("<html")` on every builder

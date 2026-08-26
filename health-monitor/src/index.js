@@ -1,34 +1,9 @@
 /**
  * @ibetoni/health-monitor
  *
- * Health monitoring and status dashboard for betoni.online deployment environments
+ * Health checks for betoni.online deployment environments.
+ * Sole consumer: puminet7-functions-app /api/external-health.
  */
 
-// Export endpoints configuration
-export {
-  ENDPOINTS,
-  getAllEndpoints,
-  getEndpointsByType,
-  getEndpointsByEnvironment
-} from './endpoints.js';
-
-// Export health checking functions
-export {
-  STATUS,
-  checkEndpointHealth,
-  checkMultipleEndpoints,
-  getStatusSummary,
-  formatResponseTime,
-  getStatusIcon,
-  getStatusColor
-} from './healthChecker.js';
-
-// Export utilities
-export {
-  formatTimestamp,
-  groupResultsByType,
-  groupResultsByEnvironment,
-  sortByStatus,
-  calculateUptime
-} from './utils.js';
-
+export { ENDPOINTS, getAllEndpoints } from './endpoints.js';
+export { STATUS, checkEndpointHealth, checkMultipleEndpoints } from './healthChecker.js';

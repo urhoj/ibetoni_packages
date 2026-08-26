@@ -55,19 +55,6 @@ export const PROCESSING_STATUSES = {
 };
 
 /**
- * Processing Status Names (for display and filtering)
- */
-export const PROCESSING_STATUS_NAMES = {
-  1: 'pending',
-  2: 'processing',
-  3: 'completed',
-  4: 'needs_review',
-  5: 'error',
-  6: 'cancelled',
-  7: 'skipped'
-};
-
-/**
  * Source Asiakas IDs (who printed the document)
  * Maps to asiakas table in database
  */
@@ -80,7 +67,7 @@ export const SOURCE_ASIAKAS_IDS = {
 /**
  * Source Asiakas Names (for display)
  */
-export const SOURCE_ASIAKAS_NAMES = {
+const SOURCE_ASIAKAS_NAMES = {
   8: 'Kalle Urho',
   30: 'Rudus',
   28: 'PEAB'
@@ -106,17 +93,9 @@ export const CONFIDENCE_THRESHOLDS = {
 };
 
 /**
- * OCR Engines
- */
-export const OCR_ENGINES = {
-  AZURE_DOCINTEL_V4: 'azure_docintel_v4',
-  AZURE_DOCINTEL_V3: 'azure_docintel_v3'
-};
-
-/**
  * Document Type Display Names (Finnish)
  */
-export const DOCUMENT_TYPE_NAMES = {
+const DOCUMENT_TYPE_NAMES = {
   [DOCUMENT_TYPES.KUORMAKIRJA_PUMP]: 'Kuormakirja (Pumppu)',
   [DOCUMENT_TYPES.KUORMAKIRJA_TRUCK]: 'Kuormakirja (Betoniauto)',
   [DOCUMENT_TYPES.PYSTYTYSPÖYTÄKIRJA]: 'Pystytyspöytäkirja',
@@ -131,32 +110,4 @@ export const DOCUMENT_TYPE_NAMES = {
  */
 export function getDocumentTypeName(documentTypeId) {
   return DOCUMENT_TYPE_NAMES[documentTypeId] || 'Unknown Document Type';
-}
-
-/**
- * Get processing status display name
- * @param {number} statusId
- * @returns {string}
- */
-export function getProcessingStatusName(statusId) {
-  return PROCESSING_STATUS_NAMES[statusId] || 'unknown';
-}
-
-/**
- * Check if document type is kuormakirja (any format)
- * @param {number} documentTypeId
- * @returns {boolean}
- */
-export function isKuormakirja(documentTypeId) {
-  return documentTypeId === DOCUMENT_TYPES.KUORMAKIRJA_PUMP ||
-         documentTypeId === DOCUMENT_TYPES.KUORMAKIRJA_TRUCK;
-}
-
-/**
- * Check if document type is environmental/waste disposal
- * @param {number} documentTypeId
- * @returns {boolean}
- */
-export function isEnvironmentalDocument(documentTypeId) {
-  return documentTypeId === DOCUMENT_TYPES.KAATOPAIKKA;
 }

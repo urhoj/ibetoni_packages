@@ -12,10 +12,6 @@
       "import": "./src/index.js",
       "require": "./index.js"
     },
-    "./http": {
-      "import": "./src/http.js",
-      "require": "./src/http.cjs"
-    },
     "./errors": {
       "import": "./src/errors.js",
       "require": "./src/errors.cjs"
@@ -58,7 +54,6 @@
     "constants",
     "cors",
     "domains",
-    "http",
     "errors",
     "cache",
     "security",

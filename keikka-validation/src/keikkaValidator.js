@@ -420,88 +420,19 @@ const validateKeikka = (keikka, options = {}) => {
   );
   validateWeather(keikka, issues, validationSettings, ownerAsiakasId);
 
-  // Apply custom settings to filter and modify issues
-  const filteredIssues = applyValidationSettings(issues, validationSettings);
-
-  // Calculate summary from filtered issues
-  const summary = calculateSummary(filteredIssues);
+  // No post-filtering: every issues.push above is already gated by
+  // isRuleEnabled (fail-open) and carries its priority from getRulePriority.
+  // A post-pass that re-filtered on `!ruleConfig.enabled` used to suppress
+  // rules whose saved config lacked an `enabled` key — see the fail-open
+  // regression test.
+  const summary = calculateSummary(issues);
 
   return {
-    isValid: filteredIssues.length === 0,
-    issues: filteredIssues,
+    isValid: issues.length === 0,
+    issues,
     summary,
   };
 };
-
-/**
- * Filter and modify validation issues based on settings
- *
- * Post-processing step that applies validation settings to:
- * 1. Remove disabled rules (enabled=false)
- * 2. Override priorities for specific rules
- *
- * **Non-mutating:** Returns new array and new issue objects
- *
- * **Backward Compatibility:** Supports both `rules` and `validationRules` fields
- *
- * @param {Array<ValidationIssue>} issues - Raw validation issues
- * @param {ValidationSettings|null} validationSettings - Settings configuration
- * @returns {Array<ValidationIssue>} Filtered and modified issues
- *
- * @example
- * const issues = [
- *   { id: "MISSING_PHONE", priority: 3, ...otherFields },
- *   { id: "MISSING_EMAIL", priority: 3, ...otherFields }
- * ];
- * const settings = {
- *   rules: {
- *     MISSING_PHONE: { enabled: false }, // Remove this issue
- *     MISSING_EMAIL: { enabled: true, priority: 5 } // Change to CRITICAL
- *   }
- * };
- * const filtered = applyValidationSettings(issues, settings);
- * // Result: [{ id: "MISSING_EMAIL", priority: 5 }]
- *
- * @performance O(n) where n=number of issues
- */
-function applyValidationSettings(issues, validationSettings) {
-  if (!validationSettings) {
-    return issues;
-  }
-
-  // Check for both rules and validationRules for backward compatibility
-  const rules = validationSettings.rules || validationSettings.validationRules;
-
-  if (!rules) {
-    return issues;
-  }
-
-  return issues
-    .filter((issue) => {
-      const i = /** @type {any} */ (issue);
-      const ruleId = i.rule || issue.id || issue.type || "unknown";
-      const ruleConfig = rules[ruleId];
-
-      // If rule is disabled, filter it out
-      if (ruleConfig && !ruleConfig.enabled) {
-        return false;
-      }
-
-      return true;
-    })
-    .map((issue) => {
-      const i = /** @type {any} */ (issue);
-      const ruleId = i.rule || issue.id || issue.type || "unknown";
-      const ruleConfig = rules[ruleId];
-
-      // Apply custom priority if set - return new object to prevent mutation
-      if (ruleConfig && ruleConfig.priority) {
-        return { ...issue, priority: ruleConfig.priority };
-      }
-
-      return issue;
-    });
-}
 
 /**
  * Check if validation rule should execute

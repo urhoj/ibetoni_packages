@@ -17,18 +17,15 @@ describe("createTarjouspyyntoApi", () => {
         await createTarjouspyyntoApi(t).listProviderRequests();
         expect(t.query.mock.calls[0][0]).toBe("/api/pumppuRequests/provider-list?tab=avoimet");
     });
-    it("counts, detail, attachments are GET paths", async () => {
+    it("counts and detail are GET paths", async () => {
         const t = mockTransport();
         const api = createTarjouspyyntoApi(t);
         await api.getProviderCounts();
         await api.getProviderDetail(42);
-        await api.listOfferAttachments(7);
         expect(t.query.mock.calls.map((c) => c[0])).toEqual([
             "/api/pumppuRequests/provider-counts",
             "/api/pumppuRequests/42/provider-detail",
-            "/api/attachments/pumppuOffer/list/7",
         ]);
-        expect(t.query.mock.calls[2][1]).toEqual({ fallback: [] });
     });
     it("submitOffer POSTs the body; sendOffer POSTs empty body", async () => {
         const t = mockTransport();

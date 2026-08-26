@@ -277,39 +277,6 @@ const comparePassword = async (password, hashedPassword) => {
 };
 
 /**
- * Check if token is close to expiration
- * @param {string} token - JWT token to check
- * @param {object} [options] - Check options
- * @param {number} [options.hoursBeforeExpiry] - Hours before expiry to consider "close" (default: 24)
- * @param {function} [options.getEnvVar] - Optional async function to get env vars
- * @returns {Promise<{isExpiringSoon: boolean, expiresAt: Date|null, hoursUntilExpiry: number}>}
- */
-const isTokenExpiringSoon = async (token, options = {}) => {
-  const hoursBeforeExpiry = options.hoursBeforeExpiry || 24;
-
-  try {
-    const decoded = await getTokenData(token, options);
-    const expiresAt = new Date(decoded.exp * 1000);
-    const now = new Date();
-    const hoursUntilExpiry =
-      (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-    return {
-      isExpiringSoon: hoursUntilExpiry <= hoursBeforeExpiry,
-      expiresAt,
-      hoursUntilExpiry: Math.round(hoursUntilExpiry * 10) / 10, // Round to 1 decimal
-    };
-  } catch (_error) {
-    // If token is invalid or expired, return true for expiring soon
-    return {
-      isExpiringSoon: true,
-      expiresAt: null,
-      hoursUntilExpiry: 0,
-    };
-  }
-};
-
-/**
  * Refresh a JWT token (issue new token with same claims)
  * @param {string} token - Current JWT token
  * @param {object} [options] - Refresh options
@@ -347,7 +314,6 @@ module.exports = {
   getTokenData,
   hashPassword,
   comparePassword,
-  isTokenExpiringSoon,
   refreshToken,
   deriveCompanyRoles,
   deriveAsiakasList,

@@ -74,9 +74,6 @@ export function createTarjouspyyntoApi({ query, mutate }) {
         startConversation: (pumppuRequestId) =>
             mutate(`/api/pumppuRequests/${reqd(pumppuRequestId, "pumppuRequestId")}/thread`, { method: "POST", body: {} }),
 
-        listOfferAttachments: (pumppuOfferId) =>
-            query(`/api/attachments/pumppuOffer/list/${reqd(pumppuOfferId, "pumppuOfferId")}`, { fallback: [] }),
-
         getJerryProviderSettings: () =>
             query("/api/jerry-provider-settings", { fallback: null }),
 

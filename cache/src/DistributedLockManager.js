@@ -66,12 +66,12 @@ for (const signal of ["SIGTERM", "SIGINT"]) {
 class DistributedLockManager {
   /**
    * @param {Object} redisClient - ioredis client instance
-   * @param {Object} logger - Logger instance with info/warn/error methods
+   * @param {Object} _logger - Unused; kept positional so existing `(client, console, metrics)`
+   *   call sites don't shift `metrics` into the wrong slot
    * @param {Object} metrics - Optional CacheMetrics instance for monitoring
    */
-  constructor(redisClient, logger, metrics = null) {
+  constructor(redisClient, _logger, metrics = null) {
     this.redis = redisClient;
-    this.logger = logger;
     this.metrics = metrics;
     this.lockPrefix = "lock:";
   }
@@ -108,7 +108,6 @@ class DistributedLockManager {
           this.redis,
           lockKey,
           lockValue,
-          this.logger,
           this.metrics,
         );
         activeLocks.add(lock);
@@ -141,11 +140,10 @@ class DistributedLockManager {
  * @internal Created by DistributedLockManager.acquireLock()
  */
 class DistributedLock {
-  constructor(redis, lockKey, lockValue, logger, metrics = null) {
+  constructor(redis, lockKey, lockValue, metrics = null) {
     this.redis = redis;
     this.lockKey = lockKey;
     this.lockValue = lockValue;
-    this.logger = logger;
     this.metrics = metrics;
     this.released = false;
     this.acquiredAt = Date.now();

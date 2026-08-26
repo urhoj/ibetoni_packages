@@ -48,29 +48,6 @@ class GoogleAuth {
   }
 
   /**
-   * Initialize OAuth2Client lazily
-   * @returns {Promise<OAuth2Client>} Google OAuth2 client
-   */
-  async initializeClient() {
-    if (!this.client) {
-      const googleClientId = await getGoogleClientId(this.getEnvVar);
-
-      if (!googleClientId) {
-        const error = new Error("GOOGLE_CLIENT_ID is not set or returned undefined");
-        if (this.logger?.error) {
-          console.error("Failed to initialize Google OAuth2 client", {
-            error: error.message
-          });
-        }
-        throw error;
-      }
-
-      this.client = new OAuth2Client(googleClientId);
-    }
-    return this.client;
-  }
-
-  /**
    * Verify a Google ID token
    * @param {string} token - Google ID token from frontend
    * @returns {Promise<object>} Verified token payload containing user info
@@ -86,45 +63,24 @@ class GoogleAuth {
     // purpose: a missing GOOGLE_CLIENT_ID or a Key Vault outage is a server
     // fault, and tagging it as a bad credential would report an outage to the
     // user as "your login is invalid" and hide it from Sentry.
-    const oauthClient = await this.initializeClient();
-
-    if (!oauthClient) {
-      throw new Error("OAuth2Client failed to initialize");
+    const googleClientId = await getGoogleClientId(this.getEnvVar);
+    if (!googleClientId) {
+      throw new Error("GOOGLE_CLIENT_ID is not set or returned undefined");
+    }
+    if (!this.client) {
+      this.client = new OAuth2Client(googleClientId);
     }
 
-    const googleClientId = await getGoogleClientId(this.getEnvVar);
-
     try {
-      const ticket = await oauthClient.verifyIdToken({
+      const ticket = await this.client.verifyIdToken({
         idToken: token,
         audience: googleClientId,
       });
 
-      const payload = ticket.getPayload();
-
-      // Payload structure:
-      // {
-      //   sub: "google user ID",
-      //   email: "user@example.com",
-      //   email_verified: true,
-      //   name: "Full Name",
-      //   given_name: "First",
-      //   family_name: "Last",
-      //   picture: "https://...",
-      //   iat: 1234567890,
-      //   exp: 1234567890
-      // }
-
-      return payload;
+      // Payload: { sub, email, email_verified, name, given_name, family_name, picture, iat, exp }
+      return ticket.getPayload();
     } catch (error) {
-      if (this.logger?.error) {
-        console.error("Google token verification failed", {
-          error: error.message,
-          stack: error.stack,
-        });
-      } else {
-        console.error("Google token verification failed:", error.message);
-      }
+      console.error("Google token verification failed:", error.message);
       throw invalidTokenError(`Google authentication failed: ${error.message}`);
     }
   }

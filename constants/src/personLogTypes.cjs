@@ -7,13 +7,4 @@ const PERSON_LOG_TYPES = Object.freeze({
   IMPERSONATION_EXTEND: 32,
 });
 
-const PERSON_LOG_TYPE_NAMES = Object.freeze({
-  1: "login",
-  8: "session_refresh",
-  7: "page_visit",
-  30: "impersonation_start",
-  31: "impersonation_end",
-  32: "impersonation_extend",
-});
-
-module.exports = { PERSON_LOG_TYPES, PERSON_LOG_TYPE_NAMES };
+module.exports = { PERSON_LOG_TYPES };

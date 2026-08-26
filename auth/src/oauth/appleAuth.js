@@ -1,9 +1,5 @@
-const jwt = require("jsonwebtoken");
-const { promisify } = require("util");
-const jwksClient = require("jwks-rsa");
 const { invalidTokenError } = require("./oauthErrors");
-
-const jwtVerify = promisify(jwt.verify);
+const { jwtVerify, createKeyResolver } = require("./jwksVerifier");
 
 /**
  * Apple Authentication Service for betoni.online platform
@@ -41,28 +37,8 @@ class AppleAuth {
   constructor(options = {}) {
     this.logger = options.logger;
     this.getEnvVar = options.getEnvVar;
-    // Optional injected JWKS client — used by tests to stub getSigningKey.
-    // In production, leave undefined and we lazy-create a real jwks-rsa client.
-    this.jwksClient = options.jwksClient || null;
-  }
-
-  getJwksClient() {
-    if (!this.jwksClient) {
-      this.jwksClient = jwksClient({
-        jwksUri: "https://appleid.apple.com/auth/keys",
-        cache: true,
-        cacheMaxEntries: 5,
-        cacheMaxAge: 24 * 60 * 60 * 1000,
-      });
-    }
-    return this.jwksClient;
-  }
-
-  getKey(header, callback) {
-    this.getJwksClient()
-      .getSigningKey(header.kid)
-      .then((key) => callback(null, key.getPublicKey()))
-      .catch((err) => callback(err));
+    // options.jwksClient: optional injected JWKS client — tests stub getSigningKey.
+    this.getKey = createKeyResolver("https://appleid.apple.com/auth/keys", options.jwksClient || null);
   }
 
   async verifyIdToken(token) {
@@ -77,9 +53,7 @@ class AppleAuth {
     const clientId = await getAppleClientId(this.getEnvVar);
 
     try {
-      const getKeyWrapper = (header, callback) => this.getKey(header, callback);
-
-      const decoded = await jwtVerify(token, getKeyWrapper, {
+      const decoded = await jwtVerify(token, this.getKey, {
         audience: clientId,
         algorithms: ["RS256"],
         issuer: "https://appleid.apple.com",

@@ -56,17 +56,3 @@ export function getAllEndpoints() {
     ...ENDPOINTS.functions,
   ];
 }
-
-/**
- * Get endpoints by type
- */
-export function getEndpointsByType(type) {
-  return ENDPOINTS[type] || [];
-}
-
-/**
- * Get endpoints by environment
- */
-export function getEndpointsByEnvironment(environment) {
-  return getAllEndpoints().filter((ep) => ep.environment === environment);
-}

@@ -6,51 +6,40 @@
  *
  * Usage:
  *   const { getSingletonCacheManager } = require('@ibetoni/cache');
- *   const cacheManager = getSingletonCacheManager({ logger: myLogger });
+ *   const cacheManager = getSingletonCacheManager();
  *   await cacheManager.invalidateCrossEntity('KEIKKA_BULK_UPDATE', {...});
  */
 
 const UniversalCacheManager = require('./UniversalCacheManager');
 const CacheMetrics = require('./CacheMetrics');
-const { DistributedLockManager, releaseAllLocks } = require('./DistributedLockManager');
-
-/**
- * Create a configured cache manager instance
- * @param {Object} options - Configuration options
- * @param {Object} [options.logger] - Logger instance
- * @param {Object} [options.cacheMetrics] - Optional custom cache metrics instance
- * @param {Object} [options.redisConfig] - Optional Redis configuration override
- * @param {string} [options.keyNamespace] - Optional per-build key-namespace override
- * @returns {UniversalCacheManager} Configured cache manager instance
- */
-function createCacheManager(options = {}) {
-  const metrics = options.cacheMetrics || new CacheMetrics();
-
-  return new UniversalCacheManager({
-    logger: options.logger,
-    cacheMetrics: metrics,
-    redisConfig: options.redisConfig,
-    onError: options.onError,
-    keyNamespace: options.keyNamespace,
-  });
-}
+const { DistributedLockManager } = require('./DistributedLockManager');
 
 /** Singleton cache manager instance */
 let singletonInstance = null;
 
+/**
+ * @param {Object} options - Configuration options (first call only)
+ * @param {Object} [options.cacheMetrics] - Optional custom cache metrics instance
+ * @param {Object} [options.redisConfig] - Optional Redis configuration override
+ * @param {Function} [options.onError] - Optional error hook (see setErrorHandler)
+ * @param {string} [options.keyNamespace] - Optional per-build key-namespace override
+ * @returns {UniversalCacheManager} Singleton cache manager instance
+ */
 function getSingletonCacheManager(options = {}) {
   if (!singletonInstance) {
-    singletonInstance = createCacheManager(options);
+    singletonInstance = new UniversalCacheManager({
+      cacheMetrics: options.cacheMetrics || new CacheMetrics(),
+      redisConfig: options.redisConfig,
+      onError: options.onError,
+      keyNamespace: options.keyNamespace,
+    });
   }
   return singletonInstance;
 }
 
 module.exports = {
   UniversalCacheManager,
-  CacheMetrics,
-  createCacheManager,
   getSingletonCacheManager,
   getCacheManager: getSingletonCacheManager, // Legacy alias
   DistributedLockManager,
-  releaseAllLocks,
 };

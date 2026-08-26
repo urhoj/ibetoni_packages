@@ -7,13 +7,12 @@
  * eliminating duplication and ensuring consistency.
  *
  * Usage:
- *   import { allowedOrigins, HTTP_STATUS, ERROR_CODES } from '@ibetoni/constants';
+ *   import { allowedOrigins, ERROR_CODES } from '@ibetoni/constants';
  *   // or access specific modules
- *   import { HTTP_STATUS } from '@ibetoni/constants/http';
+ *   import { ERROR_CODES } from '@ibetoni/constants/errors';
  */
 
 import { allowedOrigins } from "./domains.js";
-import { HTTP_STATUS } from "./http.js";
 import { ERROR_CODES } from "./errors.js";
 import {
   CACHE_TTL,
@@ -23,13 +22,7 @@ import {
   DEFAULT_VEHICLE_TTL,
   DEFAULT_WEATHER_TTL,
 } from "./cache.js";
-import {
-  SECURITY,
-  MAX_LOGIN_ATTEMPTS,
-  LOCKOUT_DURATION,
-  RATE_LIMIT_WINDOW,
-  MAX_REQUESTS_PER_WINDOW,
-} from "./security.js";
+import { MAX_LOGIN_ATTEMPTS, LOCKOUT_DURATION } from "./security.js";
 import { STEP_LOG_TYPE } from "./steplog.js";
 import {
   ADMIN_COMPANY_ROLE_TYPE_IDS,
@@ -55,13 +48,12 @@ import {
   roleTypeIdsToNames,
   buildCompanyRoles,
 } from "./roles.js";
-import { FENNOA_PAYMENT_STATUS, FENNOA_PAYMENT_STATUS_LABELS_FI, FENNOA_PAYMENT_STATUS_SEVERITY, INVOICE_STATUS, INVOICE_STATUS_LABELS_FI } from "./fennoa.js";
+import { FENNOA_PAYMENT_STATUS, INVOICE_STATUS, INVOICE_STATUS_LABELS_FI } from "./fennoa.js";
 import { SENTRY_REDACT_FIELDS, SENTRY_REDACTED_PLACEHOLDER } from "./sentry.js";
 import { BETONIJERRY, BETONIJERRY_CITIES } from "./betonijerry.js";
 import { PUMINET } from "./puminet.js";
 import { DASHBOARD_CLOSE_RADIUS_M } from "./geo.js";
-import { PERSON_LOG_TYPES, PERSON_LOG_TYPE_NAMES } from "./personLogTypes.js";
-import { TUOTE_CAT_TYPE_BY_ID, TUOTE_CAT_TYPE_BY_NAME, KNOWN_TUOTE_CAT_TYPE_IDS } from "./tuoteCatTypes.js";
+import { PERSON_LOG_TYPES } from "./personLogTypes.js";
 
 export {
   // Step log type constants
@@ -69,13 +61,9 @@ export {
 
   // PersonLog type constants
   PERSON_LOG_TYPES,
-  PERSON_LOG_TYPE_NAMES,
 
   // Domain constants
   allowedOrigins,
-
-  // HTTP status codes
-  HTTP_STATUS,
 
   // Error codes
   ERROR_CODES,
@@ -89,11 +77,8 @@ export {
   DEFAULT_WEATHER_TTL,
 
   // Security constants
-  SECURITY,
   MAX_LOGIN_ATTEMPTS,
   LOCKOUT_DURATION,
-  RATE_LIMIT_WINDOW,
-  MAX_REQUESTS_PER_WINDOW,
 
   // Role mapping constants
   COMPANY_ROLE_TO_TYPE_ID,
@@ -121,8 +106,6 @@ export {
 
   // Fennoa constants
   FENNOA_PAYMENT_STATUS,
-  FENNOA_PAYMENT_STATUS_LABELS_FI,
-  FENNOA_PAYMENT_STATUS_SEVERITY,
   INVOICE_STATUS,
   INVOICE_STATUS_LABELS_FI,
 
@@ -139,9 +122,4 @@ export {
 
   // Geo / proximity constants
   DASHBOARD_CLOSE_RADIUS_M,
-
-  // Tuote category type mapping
-  TUOTE_CAT_TYPE_BY_ID,
-  TUOTE_CAT_TYPE_BY_NAME,
-  KNOWN_TUOTE_CAT_TYPE_IDS,
 };

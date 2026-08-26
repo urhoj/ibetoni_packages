@@ -115,19 +115,15 @@ const MAX_TTL_SECONDS = 604800; // 7 days
 class UniversalCacheManager {
   /**
    * @param {Object} options - Configuration options
-   * @param {Object} [options.logger] - Logger instance (console-compatible), falls back to console
    * @param {Object} [options.cacheMetrics] - Optional cache metrics instance
    * @param {Object} [options.redisConfig] - Optional Redis configuration override
-   * @param {number} [options.ttlMultiplier] - Override TTL multiplier (default: env or 4.0)
    * @param {string} [options.keyNamespace] - Override the per-build key-namespace stamp
    *   (default: CACHE_NAMESPACE → SENTRY_RELEASE → release.txt SHA → "dev"). Tests use
    *   this to simulate two deployed builds sharing one Redis.
    */
   constructor(options = {}) {
-    this.logger = options.logger || this._createDefaultLogger();
     this.cacheMetrics = options.cacheMetrics || this._createDefaultMetrics();
     this.redisConfigOverride = options.redisConfig;
-    this.ttlMultiplier = options.ttlMultiplier || TTL_MULTIPLIER;
     this._onError = typeof options.onError === 'function' ? options.onError : null;
 
     /** @type {Map<string, Promise<any>>} In-process singleflight for getOrCompute */
@@ -294,18 +290,6 @@ class UniversalCacheManager {
   }
 
   /**
-   * Create default logger if none provided
-   */
-  _createDefaultLogger() {
-    return {
-      info: (...args) => console.log("[CACHE]", ...args),
-      warn: (...args) => console.warn("[CACHE]", ...args),
-      error: (...args) => console.error("[CACHE]", ...args),
-      debug: (...args) => console.log("[CACHE-DEBUG]", ...args),
-    };
-  }
-
-  /**
    * Create default metrics tracker if none provided
    */
   _createDefaultMetrics() {
@@ -339,7 +323,7 @@ class UniversalCacheManager {
         result[entityType] = baseValue;
       } else {
         // Apply multiplier with max cap
-        const multiplied = Math.floor(baseValue * this.ttlMultiplier);
+        const multiplied = Math.floor(baseValue * TTL_MULTIPLIER);
         result[entityType] = Math.min(multiplied, MAX_TTL_SECONDS);
       }
     }
@@ -530,9 +514,7 @@ class UniversalCacheManager {
 
     const onClose = () => {
       this.isConnected = false;
-      if (!this.isShuttingDown) {
-        // Auto-reconnect will be handled by ioredis
-      }
+      // Auto-reconnect (when not shutting down) is handled by ioredis
     };
 
     const onEnd = () => {
@@ -1187,17 +1169,7 @@ class UniversalCacheManager {
       case "grid": {
         // Grid key format: grid:v7tenant:{dateKey}:{sortedAsiakasIds}:{outputMode}
         const dateKey = pumppuAika ? this.formatGridDate(pumppuAika) : null;
-        const datePattern = dateKey || "*";
-
-        const patterns = [`grid:v7tenant:${datePattern}:*`];
-
-        // Invalidate all patterns and return combined count
-        const results = await Promise.all(
-          patterns.map((p) => this.invalidateByPattern(p)),
-        );
-        const totalDeleted = results.reduce((sum, c) => sum + c, 0);
-
-        return totalDeleted;
+        return await this.invalidateByPattern(`grid:v7tenant:${dateKey || "*"}:*`);
       }
       case "attachment": {
         // Attachments have multiple key formats:
@@ -1287,28 +1259,13 @@ class UniversalCacheManager {
 
     switch (operation) {
       case "KEIKKA_UPDATE": {
-        let totalInvalidated = 0;
-
         if (newDate) {
-          totalInvalidated += await this.invalidate(operation, "grid", {
-            asiakasId,
-            pumppuAika: newDate,
-          });
-          return totalInvalidated;
+          return await this.invalidate(operation, "grid", { asiakasId, pumppuAika: newDate });
         }
-
         if (pumppuAika) {
-          totalInvalidated += await this.invalidate(operation, "grid", {
-            asiakasId,
-            pumppuAika,
-          });
-        } else {
-          totalInvalidated += await this.invalidate(operation, "grid", {
-            asiakasId,
-          });
+          return await this.invalidate(operation, "grid", { asiakasId, pumppuAika });
         }
-
-        return totalInvalidated;
+        return await this.invalidate(operation, "grid", { asiakasId });
       }
 
       case "KEIKKA_COPY":

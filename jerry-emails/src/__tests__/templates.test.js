@@ -97,12 +97,18 @@ describe("jerry email templates", () => {
 
     it("wrapJerryLayout tags the document with the requested language", () => {
         expect(templates.wrapJerryLayout("<p>x</p>")).toContain("<html lang=\"fi\"");
-        expect(templates.wrapJerryLayout("<p>x</p>", "", "fi")).toContain("<html lang=\"fi\"");
-        expect(templates.wrapJerryLayout("<p>x</p>", "", "en")).toContain("<html lang=\"en\"");
+        expect(templates.wrapJerryLayout("<p>x</p>", "fi")).toContain("<html lang=\"fi\"");
+        expect(templates.wrapJerryLayout("<p>x</p>", "en")).toContain("<html lang=\"en\"");
     });
 
     it("wrapJerryLayout falls back to Finnish for an unknown language", () => {
-        expect(templates.wrapJerryLayout("<p>x</p>", "", "de")).toContain("<html lang=\"fi\"");
+        expect(templates.wrapJerryLayout("<p>x</p>", "de")).toContain("<html lang=\"fi\"");
+    });
+
+    it("copyFor is safe on prototype-key languages (falls back to Finnish)", () => {
+        const ctor = templates.customerOfferReceived(sample, "constructor");
+        const fi = templates.customerOfferReceived(sample, "fi");
+        expect(ctor.subject).toBe(fi.subject);
     });
 
     it("customerOfferReceived falls back to Finnish content for an unknown language", () => {
@@ -135,11 +141,10 @@ describe("formatters", () => {
 });
 
 describe("wrapJerryLayout", () => {
-  it("wraps content and injects the disclaimer when provided", () => {
-    const html = t.wrapJerryLayout("<p>Hei</p>", "<div>DEMO</div>");
+  it("wraps content in the brand chrome", () => {
+    const html = t.wrapJerryLayout("<p>Hei</p>");
     expect(html).toContain("BetoniJerry");
     expect(html).toContain("<p>Hei</p>");
-    expect(html).toContain("<div>DEMO</div>");
   });
 });
 

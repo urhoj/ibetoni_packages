@@ -52,14 +52,13 @@ Or use file reference in package.json (recommended):
 
 ## Usage
 
-### Basic Setup
+### Basic Setup (Singleton)
 
 ```javascript
-const { createCacheManager } = require('@ibetoni/cache');
-// Create cache manager instance (logger is optional, falls back to console)
-const cacheManager = createCacheManager({
-  logger: console
-});
+const { getSingletonCacheManager } = require('@ibetoni/cache');
+
+// Initialize once, use anywhere — repeated calls return the same instance
+const cacheManager = getSingletonCacheManager();
 
 // Invalidate cache after database update
 await cacheManager.invalidateCrossEntity('KEIKKA_BULK_UPDATE', {
@@ -68,45 +67,15 @@ await cacheManager.invalidateCrossEntity('KEIKKA_BULK_UPDATE', {
 });
 ```
 
-### Using Singleton Pattern
-
-```javascript
-const { getSingletonCacheManager } = require('@ibetoni/cache');
-
-// Initialize once (logger is optional, falls back to console)
-const cacheManager = getSingletonCacheManager({
-  logger: console
-});
-
-// Use anywhere in your application
-const cacheManager2 = getSingletonCacheManager(); // Returns same instance
-```
-
-### Backward Compatibility
-
-For legacy code using `getCacheManager()`:
-
-```javascript
-const { getCacheManager } = require('@ibetoni/cache');
-
-// Works the same as getSingletonCacheManager()
-const cacheManager = getCacheManager({ logger: console });
-```
-
-**Note**: `getCacheManager()` is deprecated but supported for backward compatibility. New code should use `getSingletonCacheManager()`.
+**Note**: `getCacheManager()` is a deprecated alias supported for backward compatibility. New code should use `getSingletonCacheManager()`.
 
 ### Advanced Configuration
 
 ```javascript
-const { UniversalCacheManager, CacheMetrics } = require('@ibetoni/cache');
+const { UniversalCacheManager } = require('@ibetoni/cache');
 
-// Custom metrics implementation
-const customMetrics = new CacheMetrics();
-
-// Custom Redis configuration
+// Custom Redis configuration (bypasses the singleton)
 const cacheManager = new UniversalCacheManager({
-  logger: myLogger,
-  cacheMetrics: customMetrics,
   redisConfig: {
     host: 'custom-redis-host',
     port: 6379,
@@ -155,14 +124,14 @@ try {
 
 ## API Reference
 
-### `createCacheManager(options)`
+### `getSingletonCacheManager(options)`
 
-Create a new cache manager instance.
+Get (or create on first call) the shared cache manager instance.
 
-**Parameters:**
-- `options.logger` (Object) - Winston logger instance (required)
+**Parameters (first call only):**
 - `options.cacheMetrics` (Object) - Optional custom metrics instance
 - `options.redisConfig` (Object) - Optional Redis configuration override
+- `options.keyNamespace` (String) - Optional per-build key-namespace override
 
 **Returns:** `UniversalCacheManager` instance
 
@@ -308,14 +277,6 @@ The lock manager automatically releases all active locks when the process receiv
 - On SIGTERM/SIGINT: All active locks are released before exit
 - Useful for: nodemon restarts, container stops, deployments
 
-**Manual cleanup (if needed):**
-```javascript
-const { releaseAllLocks } = require('@ibetoni/cache');
-
-// Release all active locks manually
-await releaseAllLocks();
-```
-
 ## Environment Variables
 
 The cache manager uses these environment variables for Redis connection:
@@ -339,13 +300,10 @@ SIMPLIFIED_REDIS_PORT=6379
 ### Example 1: Cron Job with Cache Invalidation
 
 ```javascript
-const { createCacheManager } = require('@ibetoni/cache');
+const { getSingletonCacheManager } = require('@ibetoni/cache');
 const database = require('./database');
-const logger = require('./logger');
 
-const cacheManager = createCacheManager({
-  logger: logger.categories.CACHE
-});
+const cacheManager = getSingletonCacheManager();
 
 // Cron job that updates delivery statuses
 async function deliveryStatusSync() {
@@ -504,8 +462,8 @@ await cacheSystem.UniversalCacheManager.invalidate(...);
 
 **After:**
 ```javascript
-const { createCacheManager } = require('@ibetoni/cache');
-const cacheManager = createCacheManager({ logger: myLogger });
+const { getSingletonCacheManager } = require('@ibetoni/cache');
+const cacheManager = getSingletonCacheManager();
 await cacheManager.invalidate(...);
 ```
 

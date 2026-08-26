@@ -1,12 +1,12 @@
 # @ibetoni/ocr-utils
 
-Reusable OCR utilities for betoni.online - classification, confidence scoring, and validation.
+Reusable OCR utilities for betoni.online - classification and confidence display.
 
 ## Overview
 
 This shared package provides common OCR-related utilities used across:
-- **Frontend** (puminet4) - UI confidence indicators, field validation
-- **Backend** (puminet5api) - Document classification, field extraction, status transitions
+- **Frontend** (puminet4) - UI confidence indicators
+- **Backend** (puminet5api) - Document classification, field extraction
 
 ## Installation
 
@@ -51,100 +51,6 @@ const kuormakirjanumero = extractKuormakirjanumero(ocrText);
 // null
 ```
 
-### Document Classification (Convenience Wrapper)
-
-`classifyDocumentType` calls all three extractors and combines the results:
-
-```javascript
-import { classifyDocumentType } from '@ibetoni/ocr-utils';
-
-// Rudus kuormakirja WITH "pumpun siirto" → pump type (15)
-const rudusWithPump = "Kuormakirja\nwww.rudus.fi\npumpun siirto\n28386640 / 20152";
-classifyDocumentType(rudusWithPump);
-// {
-//   attachmentTypeId: 15,      // KUORMAKIRJA_PUMP
-//   attachmentGroupId: 1,
-//   sourceAsiakasId: 30,       // Rudus
-//   kuormakirjanumero: "28386640 / 20152",
-//   confidence: 0.92,
-//   reason: 'Rudus kuormakirja with "pumpun siirto"'
-// }
-
-// Rudus kuormakirja WITHOUT "pumpun siirto" → truck type (16)
-const rudusNoTransfer = "Kuormakirja\nwww.rudus.fi\n27962502 / 20073";
-classifyDocumentType(rudusNoTransfer);
-// {
-//   attachmentTypeId: 16,      // KUORMAKIRJA_TRUCK
-//   attachmentGroupId: 1,
-//   sourceAsiakasId: 30,
-//   kuormakirjanumero: "27962502 / 20073",
-//   confidence: 0.92,
-//   reason: 'Rudus kuormakirja without pump transfer keyword'
-// }
-
-// PEAB kuormakirja → always pump type (15)
-const peab = "Kuormakirja\nPEAB Betoni\nbetoni 32-2";
-classifyDocumentType(peab);
-// {
-//   attachmentTypeId: 15,      // KUORMAKIRJA_PUMP
-//   attachmentGroupId: 1,
-//   sourceAsiakasId: 28,       // PEAB
-//   kuormakirjanumero: null,
-//   confidence: 0.90,
-//   reason: 'Contains "kuormakirja" and "peab"'
-// }
-```
-
-### Confidence Scoring
-
-```javascript
-import {
-  calculateFieldConfidence,
-  getConfidenceColor,
-  getConfidenceIcon
-} from '@ibetoni/ocr-utils';
-
-const ocrConfidence = 0.92;
-const validationResult = { isValid: true, errors: [] };
-const fieldConfidence = calculateFieldConfidence(ocrConfidence, validationResult);
-
-// UI helpers
-const color = getConfidenceColor(fieldConfidence); // 'success.main'
-const icon = getConfidenceIcon(fieldConfidence);   // 'CheckCircle'
-```
-
-### Field Validation
-
-```javascript
-import { validateNumeric, validateTime, validateText } from '@ibetoni/ocr-utils';
-
-// Validate m³ value
-const volumeResult = validateNumeric('3.5', { min: 0, max: 20, decimals: 2 });
-// { isValid: true, errors: [], normalizedValue: 3.5 }
-
-// Validate time
-const timeResult = validateTime('14:30');
-// { isValid: true, errors: [], normalizedValue: '14:30' }
-
-// Validate text
-const commentResult = validateText('Toimitus sujui hyvin', { maxLength: 500 });
-// { isValid: true, errors: [], normalizedValue: 'Toimitus sujui hyvin' }
-```
-
-### Status Transitions
-
-```javascript
-import { canTransitionStatus, PROCESSING_STATUSES } from '@ibetoni/ocr-utils';
-
-const currentStatus = PROCESSING_STATUSES.PENDING;
-const nextStatus = PROCESSING_STATUSES.PROCESSING;
-
-if (canTransitionStatus(currentStatus, nextStatus)) {
-  // Transition is allowed
-  updateStatus(nextStatus);
-}
-```
-
 ## Modules
 
 ### `constants.js`
@@ -169,7 +75,7 @@ getSourceAsiakasName(null);                     // 'Unknown'
 - `extractDocumentType(ocrText)` - Detect document type → `{ attachmentTypeId, attachmentGroupId, confidence, reason }`. Returns safe default if `ocrText` is falsy.
 - `extractSourceAsiakasId(ocrText)` - Detect source company → `number | null`
 - `extractKuormakirjanumero(ocrText)` - Extract delivery note number → `string | null`. Returns `null` if `ocrText` is falsy. Does NOT extract Tilausnumero values from Kalle Urho internal documents as KK numbers.
-- `classifyDocumentType(ocrText)` - Convenience wrapper: calls all three, returns combined result
+- `needsClassificationReview(classification)` - `true` when confidence < 0.75 or type is UNKNOWN
 
 **Classification rules (priority order):**
 
@@ -193,62 +99,13 @@ getSourceAsiakasName(null);                     // 'Unknown'
 - Generic label match: `kuormakirja`/`kk` + label words + `\d{6,10}` — rejects values starting with `0` (prevents matching Finnish phone numbers)
 
 ### `confidence.js`
-- `calculateFieldConfidence(ocrConfidence, validationResult)` - Calculate adjusted confidence
-- `calculateAverageConfidence(fields)` - Average confidence across fields
-- `getConfidenceColor(confidence)` - MUI theme color for confidence level
-- `getConfidenceIcon(confidence)` - MUI icon name for confidence level
-- `getConfidenceLabelFi(confidence)` - Finnish confidence label
-- `needsReview(confidence)` - Check if field needs human review
-- `canAutoApprove(confidence)` - Check if field can be auto-approved
 - `formatConfidencePercent(confidence)` - Format as percentage string
-- `getConfidenceStatistics(extractedFields)` - Get statistics for all fields
 
-### `validation.js`
-- `validateNumeric(value, options)` - Validate numeric fields
-- `validateTime(value, options)` - Validate time fields (HH:mm)
-- `validateDate(value, options)` - Validate date fields
-- `validateText(value, options)` - Validate text fields
-- `validateVehicleRegistration(value, options)` - Validate Finnish registration numbers
-- `validateKuormakirjaNumber(value, options)` - Validate kuormakirja numbers
-- `normalizeFieldValue(value)` - Clean and normalize values
-- `validateExtractedFields(fields, definitions)` - Batch validate all fields
-- `allRequiredFieldsValid(validationResults)` - Check if all required fields valid
-
-### `statusTransitions.js`
-- `canTransitionStatus(currentStatus, nextStatus)` - Check if transition allowed
-- `getAllowedNextStatuses(currentStatus)` - Get valid next statuses
-- `validateStatusTransition(currentStatus, nextStatus)` - Validate with error message
-- `isTerminalStatus(status)` - Check if processing complete
-- `isErrorStatus(status)` - Check if error state
-- `isInProgressStatus(status)` - Check if in-progress state
-- `requiresHumanAction(status)` - Check if human action needed
-- `getTransitionDescription(fromStatus, toStatus, reason)` - Audit log description
+> Earlier phase-0 modules (`validation.js`, `statusTransitions.js`, most confidence helpers,
+> `classifyDocumentType`/`classifyPages`) were removed 2026-08-26 as never-consumed scaffolding;
+> recover from git history if the OCR project's later phases need them.
 
 ## Examples
-
-### Frontend: Confidence-Based Field Styling
-
-```jsx
-import { getConfidenceColor, formatConfidencePercent } from '@ibetoni/ocr-utils';
-import { Box } from '@mui/material';
-
-function OCRField({ field, value, confidence }) {
-  return (
-    <Box
-      sx={{
-        borderLeft: '3px solid',
-        borderColor: getConfidenceColor(confidence),
-        padding: 1
-      }}
-    >
-      <strong>{field}:</strong> {value}
-      <span style={{ marginLeft: 8, color: 'gray' }}>
-        ({formatConfidencePercent(confidence)})
-      </span>
-    </Box>
-  );
-}
-```
 
 ### Backend: Per-Page Extraction
 

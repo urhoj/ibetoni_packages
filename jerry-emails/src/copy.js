@@ -168,8 +168,11 @@ const COPY = {
   },
 };
 
+// Own-property check, not truthiness: `COPY["constructor"]` is a prototype hit,
+// and falling back through `||` would still index into a function. hasOwn makes
+// copyFor safe on ANY input, so builders can pass `lang` through unnormalized.
 function copyFor(lang, template) {
-  return (COPY[lang] || COPY.fi)[template];
+  return COPY[Object.hasOwn(COPY, lang) ? lang : "fi"][template];
 }
 
 module.exports = { COPY, copyFor };

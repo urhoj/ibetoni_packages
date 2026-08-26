@@ -2,6 +2,7 @@
   "name": "@ibetoni/messaging-ui",
   "version": "1.0.0",
   "description": "Shared chat / message-thread React components for betoni.online + betonijerry.fi",
+  "type": "module",
   "main": "src/index.js",
   "exports": {
     ".": {
@@ -12,6 +13,9 @@
   "files": [
     "src"
   ],
+  "scripts": {
+    "test": "vitest run"
+  },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
     "@mui/material": "^9.0.0",

@@ -191,10 +191,6 @@ function setUser(user) {
   Sentry.setUser(user);
 }
 
-function isEnabled() {
-  return enabled;
-}
-
 module.exports = {
   Sentry,
   init,
@@ -203,5 +199,4 @@ module.exports = {
   captureMessage,
   addBreadcrumb,
   setUser,
-  isEnabled,
 };

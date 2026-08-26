@@ -24,8 +24,11 @@
  */
 
 const jwtUtils = require("./jwt/jwtUtils");
-const jwtPayloadCodec = require("./jwt/jwtPayloadCodec.cjs");
 const { GoogleAuth, createGoogleAuth, INVALID_OAUTH_TOKEN } = require("./oauth/googleAuth");
+
+// The JWT payload codec (v2 short shape) is NOT re-exported here — consume it via
+// the dedicated subpath `@ibetoni/auth/codec`, which routes ESM callers to the .js
+// half and CJS callers to the .cjs half. The root barrel would pin everyone to CJS.
 
 module.exports = {
   // JWT utilities
@@ -34,18 +37,9 @@ module.exports = {
   getTokenData: jwtUtils.getTokenData,
   hashPassword: jwtUtils.hashPassword,
   comparePassword: jwtUtils.comparePassword,
-  isTokenExpiringSoon: jwtUtils.isTokenExpiringSoon,
   refreshToken: jwtUtils.refreshToken,
   deriveAsiakasList: jwtUtils.deriveAsiakasList,
   deriveCompanyRoles: jwtUtils.deriveCompanyRoles,
-
-  // JWT payload codec (v2 short shape)
-  compressPayload: jwtPayloadCodec.compressPayload,
-  expandPayload: jwtPayloadCodec.expandPayload,
-  isShortShape: jwtPayloadCodec.isShortShape,
-  PAYLOAD_VERSION: jwtPayloadCodec.PAYLOAD_VERSION,
-  GLOBAL_ROLE_FLAGS: jwtPayloadCodec.GLOBAL_ROLE_FLAGS,
-  COMPANY_FLAGS: jwtPayloadCodec.COMPANY_FLAGS,
 
   // Google OAuth
   GoogleAuth,

@@ -2,12 +2,11 @@
 
 ✅ **@ibetoni/auth** - JWT token management, Google OAuth, password hashing (2025-11-10)
 ✅ **@ibetoni/cache** - Redis cache invalidation patterns
-✅ **@ibetoni/permissions** - Permission validation logic (CRITICAL)
 ✅ **@ibetoni/betoni-utils** - Betoni string formatting, validation, and constants (2025-11-03)
 ✅ **@ibetoni/constants** - Shared CORS origins, domain constants (2025-11-10)
 ✅ **@ibetoni/sentry** - Shared Sentry init, captureError/captureException, PII redaction
 ✅ **@ibetoni/health-monitor** - Deployment health checks and response-time monitoring
-✅ **@ibetoni/ocr-utils** - OCR document classification, confidence scoring, status transitions
+✅ **@ibetoni/ocr-utils** - OCR document classification and confidence display
 ✅ **@ibetoni/fennoa-utils** - Fennoa invoice parsing and payment status computation
 ✅ **@ibetoni/utils** - General-purpose utilities (HTML escaping)
 ✅ **@ibetoni/api-utils** - Express response helpers + request validators (2026-04-28)
@@ -24,6 +23,7 @@
 ## Notes
 
 - The previously-planned @ibetoni/validation was superseded by @ibetoni/api-utils (validateRequiredFields, validateId, validateIntegerFields, validateDateFormat, asyncHandler).
+- **@ibetoni/permissions was REMOVED 2026-08-26**: its two behaviours (`canReadKeikka`/`canEditKeikka`) had zero call sites anywhere — superseded by `puminet5api/modules/utils/authUtils.js` + `COMPANY_ROLE_TO_TYPE_ID` from @ibetoni/constants. Recover from git history if ever needed.
 
 ### Recent Additions
 
@@ -45,7 +45,7 @@
 - JWT token creation and verification (`createToken`, `verifyToken`)
 - Google OAuth verification (`createGoogleAuth`, `verifyGoogleToken`)
 - Password hashing utilities (`hashPassword`, `comparePassword`)
-- Token refresh logic (`isTokenExpiringSoon`, `refreshToken`)
+- Token refresh logic (`refreshToken`)
 - Supports both sync (process.env) and async (Key Vault) configuration
 - Eliminates 270 lines of duplicate authentication code
 - Used by: puminet5api, puminet7-functions-app

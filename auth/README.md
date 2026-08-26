@@ -175,20 +175,12 @@ const isValid = await comparePassword('mySecurePassword123', hashed);
 ### Token Refresh
 
 ```javascript
-const { refreshToken, isTokenExpiringSoon } = require('@ibetoni/auth');
+const { refreshToken } = require('@ibetoni/auth');
 
-// Check if token is expiring soon
-const status = await isTokenExpiringSoon(currentToken, {
-  hoursBeforeExpiry: 24 // default
+// Issue new token with same claims but fresh expiration
+const newToken = await refreshToken(currentToken, {
+  getEnvVar: environmentHelper.getEnvVar
 });
-
-if (status.isExpiringSoon) {
-  // Issue new token with same claims
-  const newToken = await refreshToken(currentToken, {
-    logger: logger.categories.AUTH,
-    getEnvVar: environmentHelper.getEnvVar
-  });
-}
 ```
 
 ## API Reference
@@ -221,13 +213,6 @@ if (status.isExpiringSoon) {
 **`comparePassword(password, hashedPassword)`**
 - Compares password with its hash
 - Returns: Promise<boolean> True if match
-
-**`isTokenExpiringSoon(token, options)`**
-- Checks if token is close to expiration
-- Options:
-  - `hoursBeforeExpiry`: Hours threshold (default: 24)
-  - `getEnvVar`: Optional async function
-- Returns: Promise<{isExpiringSoon, expiresAt, hoursUntilExpiry}>
 
 **`refreshToken(token, options)`**
 - Issues new token with same claims but fresh expiration

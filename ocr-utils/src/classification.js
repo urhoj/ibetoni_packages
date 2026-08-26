@@ -1,8 +1,7 @@
 /**
  * @ibetoni/ocr-utils - Classification Module
  *
- * Three standalone extractors + a convenience wrapper.
- * Each extractor can be used independently or via classifyDocumentType().
+ * Three standalone extractors + a review-need check.
  */
 
 import {
@@ -125,56 +124,9 @@ export function extractKuormakirjanumero(ocrText) {
 }
 
 /**
- * Classify document — convenience wrapper calling all three extractors
- *
- * @param {string} ocrText - Full text content from OCR
- * @returns {{ attachmentTypeId, attachmentGroupId, sourceAsiakasId, kuormakirjanumero, confidence, reason }}
- */
-export function classifyDocumentType(ocrText) {
-  const { attachmentTypeId, attachmentGroupId, confidence, reason } = extractDocumentType(ocrText);
-  const sourceAsiakasId = extractSourceAsiakasId(ocrText);
-  const kuormakirjanumero = extractKuormakirjanumero(ocrText);
-  return { attachmentTypeId, attachmentGroupId, sourceAsiakasId, kuormakirjanumero, confidence, reason };
-}
-
-/**
- * Extract potential keikka number from OCR text
- * Looks for common keikka/tilaus number patterns in our order system
- *
- * @param {string} ocrText - Full text content from OCR
- * @returns {string|null}
- */
-export function extractKeikkaNumber(ocrText) {
-  if (!ocrText) return null;
-  const match = ocrText.match(/(?:tilaus(?:numero)?|keikka(?:numero)?|order)[:\s]+(\d{4,10})/i);
-  return match ? match[1] : null;
-}
-
-/**
- * @param {number} confidence
- * @returns {boolean}
- */
-export function isHighConfidenceClassification(confidence) {
-  return confidence >= 0.85;
-}
-
-/**
  * @param {{ confidence: number, attachmentTypeId: number }} classification
  * @returns {boolean}
  */
 export function needsClassificationReview(classification) {
   return classification.confidence < 0.75 || classification.attachmentTypeId === DOCUMENT_TYPES.UNKNOWN;
-}
-
-/**
- * Classify multiple pages from a multi-page PDF
- *
- * @param {Array<{pageNumber: number, text: string}>} pages
- * @returns {Array<{ pageNumber, attachmentTypeId, attachmentGroupId, sourceAsiakasId, kuormakirjanumero, confidence, reason }>}
- */
-export function classifyPages(pages) {
-  return pages.map(({ pageNumber, text }) => ({
-    pageNumber,
-    ...classifyDocumentType(text),
-  }));
 }

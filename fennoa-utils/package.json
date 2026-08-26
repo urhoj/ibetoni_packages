@@ -15,6 +15,9 @@
   "author": "betoni.online",
   "license": "UNLICENSED",
   "private": true,
+  "dependencies": {
+    "@ibetoni/constants": "file:../constants"
+  },
   "engines": {
     "node": "^22.18.0 || >=24.11.0"
   }

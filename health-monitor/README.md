@@ -41,18 +41,13 @@ npm install @ibetoni/health-monitor
 ```javascript
 import {
   getAllEndpoints,
-  checkMultipleEndpoints,
-  getStatusSummary
+  checkMultipleEndpoints
 } from '@ibetoni/health-monitor';
 
 async function checkHealth() {
   const endpoints = getAllEndpoints();
   const results = await checkMultipleEndpoints(endpoints);
-  const summary = getStatusSummary(results);
-
-  console.log(`Overall status: ${summary.overallStatus}`);
-  console.log(`Healthy: ${summary.healthy}, Down: ${summary.down}`);
-
+  // each result: { name, url, status, responseTime, version, error, lastChecked }
   return results;
 }
 ```
@@ -103,42 +98,14 @@ Checks health of multiple endpoints in parallel.
 
 **Returns:** `Promise<Array<Object>>` - Array of health check results
 
-#### `getStatusSummary(results)`
-Calculates summary statistics from health check results.
-
-**Returns:** `Object` - Summary with counts and overall status
-
 #### `getAllEndpoints()`
 Gets all configured endpoints.
 
 **Returns:** `Array<Object>` - All endpoint configurations
 
-#### `getEndpointsByType(type)`
-Gets endpoints by type ('frontend', 'backend', or 'functions').
-
-**Returns:** `Array<Object>` - Filtered endpoints
-
-#### `getEndpointsByEnvironment(environment)`
-Gets endpoints by environment ('production' or 'staging').
-
-**Returns:** `Array<Object>` - Filtered endpoints
-
-### Utility Functions
-
-#### `formatResponseTime(ms)`
-Formats response time for display (e.g., "245ms" or "2.45s").
-
-#### `formatTimestamp(isoString)`
-Formats timestamp as relative time (e.g., "5 minutes ago").
-
-#### `getStatusIcon(status)`
-Returns emoji for status level (🟢/🟡/🔴/⚪).
-
-#### `getStatusColor(status)`
-Returns color code for status level.
-
-#### `sortByStatus(results)`
-Sorts results with down services first.
+> Dashboard-formatting helpers (`getStatusSummary`, `formatResponseTime`, `getStatusIcon`,
+> `getStatusColor`, `utils.js` grouping/sorting) were removed 2026-08-26 as never-consumed
+> scaffolding for a status dashboard that was not built; recover from git history if needed.
 
 ## Integration Examples
 
