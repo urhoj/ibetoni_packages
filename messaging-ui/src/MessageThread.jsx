@@ -22,7 +22,6 @@ import {
     Alert, Avatar, Box, CircularProgress, IconButton, Stack, TextField, Typography,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
-import PropTypes from "prop-types";
 import { appendUnique } from "./appendUnique.js";
 
 const POLL_INTERVAL_MS = 8000;
@@ -289,15 +288,3 @@ export default function MessageThread({
         </Stack>
     );
 }
-
-MessageThread.propTypes = {
-    threadId: PropTypes.number,
-    currentPersonId: PropTypes.number.isRequired,
-    token: PropTypes.string.isRequired,
-    apiBaseUrl: PropTypes.string.isRequired,
-    socket: PropTypes.object,
-    height: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-    // (error, { operation, threadId }) — wire the host app's error reporter
-    // (puminet4: captureError). Default no-op keeps the package dependency-free.
-    onError: PropTypes.func,
-};

@@ -19,8 +19,7 @@
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
     "@mui/material": "^9.0.0",
-    "@mui/icons-material": "^9.0.0",
-    "prop-types": "^15.0.0"
+    "@mui/icons-material": "^9.0.0"
   },
   "keywords": [
     "messaging",

@@ -6,6 +6,18 @@ Shared chat / message-thread React components used by `puminet4` (provider-side,
 
 - `MessageThread` — list + composer + optional Socket.IO live updates / 8-second polling fallback. App-agnostic: takes `threadId`, `currentPersonId`, `token`, `apiBaseUrl`, and an optional `socket`.
 
+### `MessageThread` props
+
+| Prop | Type | Notes |
+| --- | --- | --- |
+| `threadId` | number | |
+| `currentPersonId` | number | required |
+| `token` | string | required |
+| `apiBaseUrl` | string | required |
+| `socket` | object | optional — omit to fall back to 8s polling |
+| `height` | number \| string | |
+| `onError` | function | `(error, { operation, threadId })` — wire the host app's error reporter (puminet4: `captureError`). Defaults to a no-op, which is what keeps this package dependency-free. |
+
 ## Usage
 
 ```jsx
@@ -25,7 +37,7 @@ The backend REST endpoints the component consumes live at `/api/messages/threads
 
 ## Peer dependencies
 
-`react`, `@mui/material`, `@mui/icons-material`, `prop-types`. The consuming app supplies all of them.
+`react`, `@mui/material`, `@mui/icons-material`. The consuming app supplies all of them.
 
 ## Spec
 
