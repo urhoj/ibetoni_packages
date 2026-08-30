@@ -1257,6 +1257,15 @@ class UniversalCacheManager {
     const { pumppuAika, newDate } = body;
     const asiakasId = params.asiakasId;
 
+    // fb#761: compliance dates never render on the grid — the stored procedure
+    // grid_keikkaList2_v7tenant_arrays references no *Date or *RequiredDateType
+    // table — and the *_DATE_* route extractors carry no date field, so any such
+    // op that reached the `default:` branch below swept `grid:v7tenant:*:*`:
+    // every tenant, every date, on the hottest read path. The four callers were
+    // removed; this guard is what stops a future "make it consistent with its
+    // siblings" edit from silently restoring the global wipe.
+    if (operation && operation.includes("_DATE_")) return 0;
+
     switch (operation) {
       case "KEIKKA_UPDATE": {
         if (newDate) {
@@ -1510,7 +1519,7 @@ class UniversalCacheManager {
           this.invalidate(operation, "vehicleDate", params),
           this.invalidate(operation, "vehicle", params),
           this.invalidate(operation, "vehicleRequiredDateType", params),
-          this.invalidateGridSmart(operation, params.body || {}, params),
+          // fb#761: no invalidateGridSmart — it swept every tenant's grid, at every date.
           // /api/compliance/dashboard-summary aggregates across all *_DATE entities.
           this.invalidateByPattern(`complianceDashboard:*`),
         ]);
@@ -1528,7 +1537,7 @@ class UniversalCacheManager {
           this.invalidate(operation, "personDate", params),
           this.invalidate(operation, "person", params),
           this.invalidate(operation, "personRequiredDateType", params),
-          this.invalidateGridSmart(operation, params.body || {}, params),
+          // fb#761: no invalidateGridSmart — it swept every tenant's grid, at every date.
           this.invalidate(operation, "keikka", params),
           this.invalidateByPattern(`complianceDashboard:*`),
         ]);
@@ -1546,7 +1555,7 @@ class UniversalCacheManager {
           this.invalidate(operation, "tyomaaDate", params),
           this.invalidate(operation, "tyomaa", params),
           this.invalidate(operation, "tyomaaRequiredDateType", params),
-          this.invalidateGridSmart(operation, params.body || {}, params),
+          // fb#761: no invalidateGridSmart — it swept every tenant's grid, at every date.
           this.invalidate(operation, "keikka", params),
           this.invalidateByPattern(`complianceDashboard:*`),
         ]);
@@ -1563,7 +1572,7 @@ class UniversalCacheManager {
           this.invalidate(operation, "asiakasDate", params),
           this.invalidate(operation, "asiakas", params),
           this.invalidate(operation, "asiakasRequiredDateType", params),
-          this.invalidateGridSmart(operation, params.body || {}, params),
+          // fb#761: no invalidateGridSmart — it swept every tenant's grid, at every date.
           this.invalidateByPattern(`complianceDashboard:*`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
@@ -1578,9 +1587,10 @@ class UniversalCacheManager {
         // Deliberately NARROWER than its VEHICLE/PERSON/TYOMAA/ASIAKAS siblings:
         // - no complianceDashboard:* sweep — complianceDashboardSql hardcodes
         //   vehicle + person CTEs, so property dates are not in that rollup;
-        // - no invalidateGridSmart — it has no *_DATE_* case, so it would fall to
-        //   its own default and wipe grid:v7tenant:*:* on every property-date
-        //   write, and property dates never render on the keikka grid.
+        // - no invalidateGridSmart — property dates never render on the keikka
+        //   grid. This case got that right first; fb#761 later removed the same
+        //   call from the four siblings, which HAD been wiping
+        //   grid:v7tenant:*:* on every compliance-date write.
         const counts = await Promise.all([
           this.invalidate(operation, "sijaintiDate", params),
           this.invalidate(operation, "sijaintiRequiredDateType", params),
