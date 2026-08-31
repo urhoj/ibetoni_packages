@@ -66,7 +66,7 @@ function validateDateFormat(dateStr, format = "YYYYMMDD") {
  * @returns {boolean} True if a real calendar date in the given format
  */
 function isValidCalendarDate(dateStr, format = "YYYYMMDD") {
-  if (!validateDateFormat(dateStr, format)) return false;
+  if (typeof dateStr !== "string" || !validateDateFormat(dateStr, format)) return false;
   const [y, m, d] =
     format === "YYYY-MM-DD"
       ? dateStr.split("-").map(Number)
