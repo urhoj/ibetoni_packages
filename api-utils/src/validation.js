@@ -61,7 +61,8 @@ function validateDateFormat(dateStr, format = "YYYYMMDD") {
  * shape — validateDateFormat() above only checks digit positions, so
  * "2026-02-30" passes it and silently rolls over downstream (JS Date /
  * SQL Server date parsing both do this) instead of failing loudly (fb#1090).
- * @param {string} dateStr - Date string to validate
+ * @param {string} dateStr - Date string to validate. Non-string input returns
+ *   false rather than throwing (fb#1113).
  * @param {"YYYYMMDD"|"YYYY-MM-DD"} format - Expected format
  * @returns {boolean} True if a real calendar date in the given format
  */

@@ -34,6 +34,7 @@ guard upstream, which is worth seeing. An explicit `error.statusCode` still wins
 | `validateId(id, fieldName?)` | Error message string, or `null` if valid positive integer. |
 | `validateIntegerFields(body, fields[])` | Array of field names that aren't integers. |
 | `validateDateFormat(str, "YYYYMMDD" \| "YYYY-MM-DD")` | Boolean. |
+| `isValidCalendarDate(str, "YYYYMMDD" \| "YYYY-MM-DD")` | Boolean — true only for a real calendar date; rejects format-correct-but-invalid dates like `"2026-02-30"` that `validateDateFormat` accepts. Returns `false` (never throws) on non-string input. |
 | `asyncHandler(fn)` | Wraps async route handlers so unhandled errors flow to `next()`. |
 
 ## Usage
