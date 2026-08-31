@@ -57,6 +57,25 @@ function validateDateFormat(dateStr, format = "YYYYMMDD") {
 }
 
 /**
+ * Validate that a date string is a REAL calendar date, not just the right
+ * shape — validateDateFormat() above only checks digit positions, so
+ * "2026-02-30" passes it and silently rolls over downstream (JS Date /
+ * SQL Server date parsing both do this) instead of failing loudly (fb#1090).
+ * @param {string} dateStr - Date string to validate
+ * @param {"YYYYMMDD"|"YYYY-MM-DD"} format - Expected format
+ * @returns {boolean} True if a real calendar date in the given format
+ */
+function isValidCalendarDate(dateStr, format = "YYYYMMDD") {
+  if (!validateDateFormat(dateStr, format)) return false;
+  const [y, m, d] =
+    format === "YYYY-MM-DD"
+      ? dateStr.split("-").map(Number)
+      : [dateStr.slice(0, 4), dateStr.slice(4, 6), dateStr.slice(6, 8)].map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+}
+
+/**
  * Wrap async route handlers to catch errors and pass to next().
  * @param {Function} fn - Async function to wrap
  * @returns {Function} Express route handler with error catching
@@ -72,5 +91,6 @@ module.exports = {
   validateId,
   validateIntegerFields,
   validateDateFormat,
+  isValidCalendarDate,
   asyncHandler,
 };
