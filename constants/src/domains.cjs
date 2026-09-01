@@ -5,7 +5,7 @@
  * to betoni.online backend services. Used by CORS middleware in both
  * puminet5api (main backend) and puminet7-functions-app (cron jobs).
  *
- * Last Updated: 2026-04-28
+ * Last Updated: 2026-09-01
  *
  * Maintenance:
  * - When adding new environment, add all domain variants
@@ -61,6 +61,7 @@ const allowedOrigins = [
   "https://www.betoni.online",
   "https://ibetoni.fi",
   "https://www.ibetoni.fi",
+  "https://app.ibetoni.fi", // app alias for corporate users whose filters block the .online TLD
   "https://betonijerry.fi",
   "https://www.betonijerry.fi",
 
