@@ -132,6 +132,18 @@ async function main() {
       `KEIKKA_UPDATE must still invalidate the grid, got ${JSON.stringify(scopedCalls)}`);
   });
 
+  // fb#1031: the guard is ANCHORED to the five compliance-date families. An
+  // unanchored `includes("_DATE_")` would also swallow a future KEIKKA_DATE_*
+  // op that genuinely belongs on the grid — returning 0 and leaving the grid
+  // stale, a silent failure — so a new family must be added deliberately.
+  await test("the _DATE_ guard is anchored — a hypothetical KEIKKA_DATE_UPDATE still reaches the grid path", async () => {
+    const { mgr, scopedCalls } = newMgr();
+    await mgr.invalidateGridSmart("KEIKKA_DATE_UPDATE", { pumppuAika: "2026-08-30T09:00:00.000Z" },
+      { asiakasId: 8 });
+    assert.ok(scopedCalls.some((c) => c.entityType === "grid"),
+      `KEIKKA_DATE_UPDATE must not be swallowed by the compliance-date guard, got ${JSON.stringify(scopedCalls)}`);
+  });
+
   if (failures > 0) { console.error(`\n${failures} test(s) failed`); process.exit(1); }
   console.log(`\nAll tests passed`);
 }
