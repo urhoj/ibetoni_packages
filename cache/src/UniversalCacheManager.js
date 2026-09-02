@@ -1248,9 +1248,10 @@ class UniversalCacheManager {
    *
    * The `formatGridDate` method handles both YYYYMMDD and ISO datetime formats.
    *
-   * Compliance-date ops (VEHICLE/PERSON/TYOMAA/ASIAKAS/SIJAINTI_DATE_*) return 0
-   * without touching the grid — they never render there, and their route
-   * extractors carry no date, so the fallback would sweep every tenant (fb#761).
+   * Compliance-date ops (`*_DATE_*`, `*_REQUIRED_DATE_TYPE_*` — see the guard
+   * regex below) return 0 without touching the grid: they never render there,
+   * and their route extractors carry no date, so the fallback would sweep
+   * every tenant (fb#761).
    *
    * @param {string} operation - Operation type (KEIKKA_UPDATE, KEIKKA_COPY, PERSON_PVM_*, PALKKI_*)
    * @param {Object} body - Request body containing date fields
@@ -1268,11 +1269,9 @@ class UniversalCacheManager {
     // every tenant, every date, on the hottest read path. The four callers were
     // removed; this guard is what stops a future "make it consistent with its
     // siblings" edit from silently restoring the global wipe.
-    // Anchored to the five families on purpose (fb#1031): an unanchored
-    // `includes("_DATE_")` would also swallow a future KEIKKA_DATE_* op that
-    // genuinely belongs on the grid — returning 0 and leaving the grid stale,
-    // a silent failure. A new family must be added here deliberately.
-    if (/^(VEHICLE|PERSON|TYOMAA|ASIAKAS|SIJAINTI)_DATE_/.test(operation)) return 0;
+    // Anchored to the compliance-date families on purpose (fb#1031, fb#1207): an
+    // unanchored `includes("_DATE_")` would also swallow a future KEIKKA_DATE_* op.
+    if (/^(VEHICLE|PERSON|TYOMAA|ASIAKAS|SIJAINTI)_(REQUIRED_DATE_TYPE|DATE)_/.test(operation)) return 0;
 
     switch (operation) {
       case "KEIKKA_UPDATE": {

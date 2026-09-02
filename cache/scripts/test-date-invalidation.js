@@ -111,11 +111,17 @@ async function main() {
   }
 
   // The class-wide guard, so a future "make it consistent with its siblings"
-  // edit that re-adds the call cannot silently restore the global wipe.
-  for (const fam of FAMILIES) {
-    await test(`invalidateGridSmart is inert for ${fam.prefix}_UPDATE`, async () => {
+  // edit that re-adds the call cannot silently restore the global wipe. The
+  // *_REQUIRED_DATE_TYPE_* ops (routes/*RequiredDateTypeRoutes.js) never render
+  // on the grid either, so the guard covers them too (fb#1207).
+  const INERT = [
+    ...FAMILIES.map((fam) => [`${fam.prefix}_UPDATE`, fam.params]),
+    ...["PERSON", "VEHICLE", "SIJAINTI"].map((e) => [`${e}_REQUIRED_DATE_TYPE_CREATE`, { asiakasId: 8 }]),
+  ];
+  for (const [op, params] of INERT) {
+    await test(`invalidateGridSmart is inert for ${op}`, async () => {
       const { mgr, patterns, scopedCalls } = newMgr();
-      const count = await mgr.invalidateGridSmart(`${fam.prefix}_UPDATE`, {}, fam.params);
+      const count = await mgr.invalidateGridSmart(op, {}, params);
       assert.strictEqual(count, 0, `expected 0 invalidated, got ${count}`);
       assert.deepStrictEqual(patterns, [], `expected no sweeps, got ${JSON.stringify(patterns)}`);
       assert.deepStrictEqual(scopedCalls, [], `expected no scoped calls, got ${JSON.stringify(scopedCalls)}`);
@@ -132,10 +138,7 @@ async function main() {
       `KEIKKA_UPDATE must still invalidate the grid, got ${JSON.stringify(scopedCalls)}`);
   });
 
-  // fb#1031: the guard is ANCHORED to the five compliance-date families. An
-  // unanchored `includes("_DATE_")` would also swallow a future KEIKKA_DATE_*
-  // op that genuinely belongs on the grid — returning 0 and leaving the grid
-  // stale, a silent failure — so a new family must be added deliberately.
+  // fb#1031: the guard is anchored, so a hypothetical KEIKKA_DATE_* op is not swallowed.
   await test("the _DATE_ guard is anchored — a hypothetical KEIKKA_DATE_UPDATE still reaches the grid path", async () => {
     const { mgr, scopedCalls } = newMgr();
     await mgr.invalidateGridSmart("KEIKKA_DATE_UPDATE", { pumppuAika: "2026-08-30T09:00:00.000Z" },
