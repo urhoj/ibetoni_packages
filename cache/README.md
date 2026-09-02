@@ -182,6 +182,19 @@ Invalidate cache for complex cross-entity operations.
 - `ASIAKAS_PERSON_SETTING_*` - Role/permission changes (invalidates auth cache)
 - And many more...
 
+**`authz:` lookup memo sweep.** After the per-operation switch, every operation whose
+family (the prefix before the first `_`, lowercased) is `asiakas`, `tyomaa`, `vehicle`,
+`sijainti` or `person` also sweeps `authz:*:<family>:<params.entityId>*` (or
+`authz:*:<family>:*` when `params.entityId` is absent — never a double wildcard). Those keys
+are written by `puminet5api/modules/cache/authzLookupCache.js` (entity owner, sijainti
+`{asiakasId,isPublic}`, company module flags) for the pre-cache read gates. The sweep is
+keyed on `params.entityId` (the TARGET); `params.asiakasId` is the writer's tenant and is
+never used as a fallback. `SIJAINTI_LATLNG_UPDATE` is excluded (loop op, geocode-only), and
+so are the family's own compliance-date sub-ops (`*_DATE_*`, `*_REQUIRED_DATE_TYPE_*` —
+same anchored-family regex `invalidateGridSmart` uses for fb#761/fb#1031): they touch only
+compliance-date rows, never the owner/isPublic/module flags this memo caches.
+Pinned by `scripts/test-authz-invalidation.js`.
+
 ### `cacheManager.invalidate(operation, entityType, params)`
 
 Invalidate cache for a specific entity type.

@@ -112,6 +112,14 @@ const TTL_MULTIPLIER_EXCLUDED = new Set([
  */
 const MAX_TTL_SECONDS = 604800; // 7 days
 
+// Op families whose entity OWNER or module flags can change through their own
+// write op. The pre-cache read gates in puminet5api memoise those lookups under
+// authz:<kind>:<family>:<id>[...] (modules/cache/authzLookupCache.js) and rely on
+// invalidateCrossEntity to sweep them. Families absent here (attachment, tuote,
+// laskupohja, keikkaLasku, betoniHinta, ...) have an owner fixed at insert time
+// and age out by the memo's own TTL alone.
+const AUTHZ_SWEPT_FAMILIES = new Set(["asiakas", "tyomaa", "vehicle", "sijainti", "person"]);
+
 class UniversalCacheManager {
   /**
    * @param {Object} options - Configuration options
@@ -2270,6 +2278,29 @@ class UniversalCacheManager {
       }
     }
 
+    // See AUTHZ_SWEPT_FAMILIES. params.entityId names the TARGET entity (every
+    // route extractor sets it); params.asiakasId is the WRITER's tenant and must
+    // never be the fallback, or a cross-tenant admin edit would sweep the wrong
+    // company. No id → wildcard, never skip. SIJAINTI_LATLNG_UPDATE is excluded:
+    // it runs per row in a loop and is kept geocode-only on purpose. Compliance-date
+    // sub-ops (*_DATE_*, *_REQUIRED_DATE_TYPE_*) are excluded too — they touch only
+    // the entity's compliance-date rows, never its owner/isPublic/module flags, so an
+    // authz sweep there is a no-op at best; the regex mirrors invalidateGridSmart's
+    // anchored guard above for the same families (fb#761, fb#1031) and is anchored
+    // for the same reason: an unanchored "_DATE_" check would swallow a future
+    // KEIKKA_DATE_* op that legitimately should sweep authz.
+    const authzFamily = String(operation).split("_")[0].toLowerCase();
+    const isComplianceDateOp = /^(VEHICLE|PERSON|TYOMAA|ASIAKAS|SIJAINTI)_(REQUIRED_DATE_TYPE|DATE)_/.test(operation);
+    if (
+      operation !== "SIJAINTI_LATLNG_UPDATE" &&
+      !isComplianceDateOp &&
+      AUTHZ_SWEPT_FAMILIES.has(authzFamily)
+    ) {
+      const authzId = params.entityId ? `${params.entityId}*` : "*";
+      totalInvalidated += await this.invalidateByPattern(
+        `authz:*:${authzFamily}:${authzId}`,
+      );
+    }
     return totalInvalidated;
   }
 
