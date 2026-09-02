@@ -1167,7 +1167,16 @@ class UniversalCacheManager {
         // Use simple prefix pattern to catch all stat keys
         return await this.invalidateByPattern(`stat:*`);
       case "grid": {
-        // Grid key format: grid:v7tenant:{dateKey}:{sortedAsiakasIds}:{outputMode}
+        // Grid key format: grid:v7tenant:{dateKey}:{sortedAsiakasIds}:{outputMode}:p{personId}:h.a.
+        // With a resolved gridScope (the tenants whose readers can see the changed row —
+        // modules/cache/gridScope.js in puminet5api) sweep only keys whose CSV contains one of
+        // them, every date and both modes (list-mode keys hold a multi-day range under their
+        // START date, so the date segment cannot be used). Without one, today's broad sweep.
+        const scoped = this._gridScopePatterns(params.gridScope);
+        if (scoped) {
+          const counts = await Promise.all(scoped.map((p) => this.invalidateByPattern(p)));
+          return counts.reduce((sum, c) => sum + c, 0);
+        }
         const dateKey = pumppuAika ? this.formatGridDate(pumppuAika) : null;
         return await this.invalidateByPattern(`grid:v7tenant:${dateKey || "*"}:*`);
       }
@@ -1258,6 +1267,23 @@ class UniversalCacheManager {
    * @param {Object} params - Additional parameters including asiakasId
    * @returns {Promise<number>} Number of cache keys invalidated
    */
+  /**
+   * Globs selecting every grid:v7tenant key whose visible-tenant CSV contains one of the
+   * scoped tenants. A tenant sits in the CSV alone, first, in the middle or last — four
+   * shapes, each anchored on ":" or "," so 8 never matches 18 or 80. Null (= "sweep broadly")
+   * when the scope is absent or names no tenant: missing knowledge must never narrow a sweep.
+   */
+  _gridScopePatterns(scope) {
+    const tenants = [...new Set((scope?.tenants || []).map(Number).filter((n) => Number.isInteger(n) && n > 0))];
+    if (!tenants.length) return null;
+    return tenants.flatMap((t) => [
+      `grid:v7tenant:*:${t}:*`,
+      `grid:v7tenant:*:${t},*`,
+      `grid:v7tenant:*:*,${t},*`,
+      `grid:v7tenant:*:*,${t}:*`,
+    ]);
+  }
+
   async invalidateGridSmart(operation, body = {}, params = {}) {
     const { pumppuAika, newDate } = body;
     const asiakasId = params.asiakasId;
@@ -1272,6 +1298,12 @@ class UniversalCacheManager {
     // Anchored to the compliance-date families on purpose (fb#1031, fb#1207): an
     // unanchored `includes("_DATE_")` would also swallow a future KEIKKA_DATE_* op.
     if (/^(VEHICLE|PERSON|TYOMAA|ASIAKAS|SIJAINTI)_(REQUIRED_DATE_TYPE|DATE)_/.test(operation)) return 0;
+
+    // A resolved scope is authoritative: it already unions the old and new rows, so the
+    // date guessing below (which only ever narrowed by date, never by tenant) is bypassed.
+    if (this._gridScopePatterns(params.gridScope)) {
+      return await this.invalidate(operation, "grid", params);
+    }
 
     switch (operation) {
       case "KEIKKA_UPDATE": {
@@ -1357,8 +1389,12 @@ class UniversalCacheManager {
             pumppuAika: tyomaaDate,
           });
         }
-        // No date available - return 0, caller handles broad invalidation
-        return 0;
+        // A new worksite is on no keikka yet — nothing cached renders it.
+        if (operation === "TYOMAA_CREATE") return 0;
+        // No date and no scope: a worksite rename/delete is on every cached grid that lists
+        // one of its keikkas. This used to return 0 (and the caller added nothing), so the
+        // rename never reached a cached grid until the TTL ran out.
+        return await this.invalidate(operation, "grid", { asiakasId });
       }
 
       default:
@@ -1454,7 +1490,11 @@ class UniversalCacheManager {
               asiakasId: params.asiakasId,
               pumppuAika: params.pumppuAika || params.body?.pumppuAika,
             }),
-            this.invalidateByPattern(`grid:v7tenant:${datePattern}:*`),
+            // Redundant with the scoped sweep above when a scope resolved; the tenant-blind
+            // date sweep is the fallback only.
+            this._gridScopePatterns(params.gridScope)
+              ? Promise.resolve(0)
+              : this.invalidateByPattern(`grid:v7tenant:${datePattern}:*`),
           ]);
 
         // Invalidate palkki list cache - DATE-SPECIFIC when frontend provides data
@@ -1707,7 +1747,9 @@ class UniversalCacheManager {
           params.vehicleId
             ? this.invalidate(operation, "vehicle", params)
             : Promise.resolve(0),
-          this.invalidateByPattern(`grid:v7tenant:${datePattern}:*`),
+          this._gridScopePatterns(params.gridScope)
+            ? Promise.resolve(0)
+            : this.invalidateByPattern(`grid:v7tenant:${datePattern}:*`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         break;
@@ -1866,6 +1908,40 @@ class UniversalCacheManager {
         // Lightweight person update (e.g. tenant selection change)
         // Does not affect grid, keikkas, or other entities
         totalInvalidated += await this.invalidate(operation, "person", params);
+        break;
+      }
+
+      // A person write that renders nothing on the grid or on any keikka/asiakas/tyomaa
+      // payload: dark mode, password, dontAsks, settings, emails, foreign keys, logout.
+      // Sweeps the person's own reads only. PERSON_UPDATE (name, phone, membership) keeps
+      // its broad fan-out.
+      case "PERSON_PREFS_UPDATE": {
+        const prefsPersonId = params.entityId || params.personId;
+        const counts = await Promise.all([
+          this.invalidate(operation, "person", params),
+          prefsPersonId ? this.invalidateByPattern(`auth:*:${prefsPersonId}*`) : Promise.resolve(0),
+          prefsPersonId ? this.invalidateByPattern(`asiakas:myRoles:*:${prefsPersonId}`) : Promise.resolve(0),
+        ]);
+        totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
+        break;
+      }
+
+      // Driver / contact assignment on ONE keikka (keikkaPerson rows). The grid renders it on
+      // that keikka's row only, so the grid sweep is scoped to the keikka's tenants
+      // (params.gridScope) instead of PERSON_UPDATE's every-tenant wipe.
+      case "KEIKKA_PERSON_UPDATE": {
+        // A keikkaPerson row can also carry delegated rights (authView/authEdit), so the
+        // assigned person's auth cache is swept like PERSON_UPDATE does.
+        const assignedPersonId = params.entityId || params.personId;
+        const counts = await Promise.all([
+          this.invalidate(operation, "person", params),
+          this.invalidate(operation, "keikkaPerson", params),
+          this.invalidate(operation, "keikka", params),
+          params.keikkaId ? this.invalidateByPattern(`person:forKeikka:get:${params.keikkaId}*`) : Promise.resolve(0),
+          assignedPersonId ? this.invalidateByPattern(`auth:*:${assignedPersonId}*`) : Promise.resolve(0),
+          this.invalidate(operation, "grid", params),
+        ]);
+        totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         break;
       }
 
