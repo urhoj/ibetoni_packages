@@ -72,6 +72,22 @@ async function main() {
     assert.ok(!patterns.some((p) => p.startsWith("authz:")), JSON.stringify(patterns));
   });
 
+  for (const op of ["VEHICLE_DATE_UPDATE", "PERSON_DATE_CREATE", "SIJAINTI_DATE_DELETE"]) {
+    await test(`${op} does not sweep authz keys (a date op never changes an owner)`, async () => {
+      const { mgr, patterns } = newMgr();
+      await mgr.invalidateCrossEntity(op, { asiakasId: 8, entityId: 77 });
+      assert.ok(!patterns.some((p) => p.startsWith("authz:")), JSON.stringify(patterns));
+    });
+  }
+
+  for (const op of ["ASIAKAS_MERGE", "PERSON_MERGE"]) {
+    await test(`${op} sweeps the WHOLE authz namespace (a merge re-points every family)`, async () => {
+      const { mgr, patterns } = newMgr();
+      await mgr.invalidateCrossEntity(op, { asiakasId: 8 });
+      assert.ok(patterns.includes("authz:*"), JSON.stringify(patterns));
+    });
+  }
+
   if (failures) {
     console.error(`\n${failures} failing`);
     process.exit(1);

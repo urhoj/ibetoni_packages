@@ -116,9 +116,21 @@ const MAX_TTL_SECONDS = 604800; // 7 days
 // write op. The pre-cache read gates in puminet5api memoise those lookups under
 // authz:<kind>:<family>:<id>[...] (modules/cache/authzLookupCache.js) and rely on
 // invalidateCrossEntity to sweep them. Families absent here (attachment, tuote,
-// laskupohja, keikkaLasku, betoniHinta, ...) have an owner fixed at insert time
-// and age out by the memo's own TTL alone.
+// laskupohja, keikkaLasku, betoniHinta, ...) are refreshed by the memo's own TTL
+// alone — EXCEPT on a `*_MERGE` op, which re-points ownership across every family
+// at once (see the whole-namespace merge sweep in invalidateCrossEntity) and so
+// clears them too.
 const AUTHZ_SWEPT_FAMILIES = new Set(["asiakas", "tyomaa", "vehicle", "sijainti", "person"]);
+
+/**
+ * Shared by invalidateGridSmart's compliance-date guard and invalidateCrossEntity's
+ * authz sweep: a `*_DATE_*`/`*_REQUIRED_DATE_TYPE_*` op touches only an entity's
+ * compliance-date rows, never its owner/isPublic/module flags or grid rendering, so
+ * both invalidations treat it as a no-op. Anchored to the compliance-date families
+ * on purpose (fb#761, fb#1031, fb#1207): an unanchored `includes("_DATE_")` would
+ * also swallow a future KEIKKA_DATE_* op that legitimately should sweep both.
+ */
+const COMPLIANCE_DATE_OP = /^(VEHICLE|PERSON|TYOMAA|ASIAKAS|SIJAINTI)_(REQUIRED_DATE_TYPE|DATE)_/;
 
 class UniversalCacheManager {
   /**
@@ -1301,7 +1313,7 @@ class UniversalCacheManager {
     // siblings" edit from silently restoring the global wipe.
     // Anchored to the compliance-date families on purpose (fb#1031, fb#1207): an
     // unanchored `includes("_DATE_")` would also swallow a future KEIKKA_DATE_* op.
-    if (/^(VEHICLE|PERSON|TYOMAA|ASIAKAS|SIJAINTI)_(REQUIRED_DATE_TYPE|DATE)_/.test(operation)) return 0;
+    if (COMPLIANCE_DATE_OP.test(operation)) return 0;
 
     // A resolved scope is authoritative: it already unions the old and new rows, so the
     // date guessing below (which only ever narrowed by date, never by tenant) is bypassed.
@@ -2274,6 +2286,15 @@ class UniversalCacheManager {
       }
     }
 
+    // A merge re-points ownership across EVERY family at once (see puminet5api
+    // sql/procedures/asiakasCombinator/asiakas_combinator_reassign_refs.sql: tyomaa,
+    // sijainti, vehicle, tuotteet, attachments, keikkaLasku, grid_palkit), and carries
+    // no entityId to scope by. Merges are rare admin operations, so the whole authz
+    // namespace goes — a stale owner here decides a WRITE gate, not a freshness question.
+    if (/_MERGE$/.test(operation)) {
+      totalInvalidated += await this.invalidateByPattern("authz:*");
+    }
+
     // See AUTHZ_SWEPT_FAMILIES. params.entityId names the TARGET entity (every
     // route extractor sets it); params.asiakasId is the WRITER's tenant and must
     // never be the fallback, or a cross-tenant admin edit would sweep the wrong
@@ -2281,12 +2302,12 @@ class UniversalCacheManager {
     // it runs per row in a loop and is kept geocode-only on purpose. Compliance-date
     // sub-ops (*_DATE_*, *_REQUIRED_DATE_TYPE_*) are excluded too — they touch only
     // the entity's compliance-date rows, never its owner/isPublic/module flags, so an
-    // authz sweep there is a no-op at best; the regex mirrors invalidateGridSmart's
+    // authz sweep there is a no-op at best; COMPLIANCE_DATE_OP mirrors invalidateGridSmart's
     // anchored guard above for the same families (fb#761, fb#1031) and is anchored
     // for the same reason: an unanchored "_DATE_" check would swallow a future
     // KEIKKA_DATE_* op that legitimately should sweep authz.
     const authzFamily = String(operation).split("_")[0].toLowerCase();
-    const isComplianceDateOp = /^(VEHICLE|PERSON|TYOMAA|ASIAKAS|SIJAINTI)_(REQUIRED_DATE_TYPE|DATE)_/.test(operation);
+    const isComplianceDateOp = COMPLIANCE_DATE_OP.test(operation);
     if (
       operation !== "SIJAINTI_LATLNG_UPDATE" &&
       !isComplianceDateOp &&
