@@ -169,9 +169,9 @@ Invalidate cache for complex cross-entity operations.
 - `VEHICLE_CREATE` - Vehicle creation
 - `VEHICLE_DELETE` - Vehicle deletion
 - `VEHICLE_VISIBILITY_*` - Vehicle visibility operations (cross-tenant)
-- `ASIAKAS_UPDATE` - Customer updates (with cross-entity: keikka if keikkaId, linked customer if linkedAsiakasId)
-- `ASIAKAS_CREATE` - Customer creation
-- `ASIAKAS_DELETE` - Customer deletion
+- `ASIAKAS_UPDATE` - Customer updates (with cross-entity: keikka if keikkaId, linked customer if linkedAsiakasId, and the edited customer via entityId when it differs from the caller's tenant - e.g. a system admin editing a different company)
+- `ASIAKAS_CREATE` - Customer creation (same cross-entity rules)
+- `ASIAKAS_DELETE` - Customer deletion (same cross-entity rules)
 - `TYOMAA_UPDATE` - Worksite updates
 - `TYOMAA_CREATE` - Worksite creation
 - `TYOMAA_DELETE` - Worksite deletion
