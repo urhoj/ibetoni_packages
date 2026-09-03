@@ -75,6 +75,15 @@ const { ERROR_CODES } = require('@ibetoni/constants');
 throw new Error(ERROR_CODES.VALIDATION_ERROR);
 ```
 
+- **isUniqueViolation(err)**: true when a `mssql` error is a SQL Server unique-index/constraint violation (2601 or 2627)
+
+```javascript
+const { isUniqueViolation } = require('@ibetoni/constants/errors');
+if (isUniqueViolation(err)) {
+  // treat as an expected race loser, not a failure
+}
+```
+
 ### Cache TTL (`src/cache.js`)
 
 - **CACHE_TTL**: Default Time-To-Live values for cached entities (in seconds)

@@ -13,7 +13,7 @@
  */
 
 import { allowedOrigins } from "./domains.js";
-import { ERROR_CODES } from "./errors.js";
+import { ERROR_CODES, isUniqueViolation } from "./errors.js";
 import {
   CACHE_TTL,
   DEFAULT_KEIKKA_TTL,
@@ -122,4 +122,7 @@ export {
 
   // Geo / proximity constants
   DASHBOARD_CLOSE_RADIUS_M,
+
+  // Error helpers
+  isUniqueViolation,
 };

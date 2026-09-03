@@ -9,7 +9,7 @@
  */
 
 const { allowedOrigins } = require("./src/domains.cjs");
-const { ERROR_CODES } = require("./src/errors.cjs");
+const { ERROR_CODES, isUniqueViolation } = require("./src/errors.cjs");
 const {
   CACHE_TTL,
   DEFAULT_KEIKKA_TTL,
@@ -118,4 +118,7 @@ module.exports = {
 
   // Geo / proximity constants
   DASHBOARD_CLOSE_RADIUS_M,
+
+  // Error helpers
+  isUniqueViolation,
 };

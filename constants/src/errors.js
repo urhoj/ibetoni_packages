@@ -89,6 +89,16 @@ const ERROR_CODES = {
   TEST_ADDRESS: "TEST_ADDRESS", // Test/placeholder address detected
 };
 
+/**
+ * True when a `mssql` error is a SQL Server unique-index/constraint violation:
+ * 2601 (CREATE UNIQUE INDEX) or 2627 (a named UNIQUE/PRIMARY KEY constraint).
+ * Names a fact that was previously repeated ad hoc across 18+ call sites.
+ */
+function isUniqueViolation(err) {
+  return err?.number === 2601 || err?.number === 2627;
+}
+
 export {
   ERROR_CODES,
+  isUniqueViolation,
 };
