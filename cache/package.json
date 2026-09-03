@@ -4,8 +4,7 @@
   "description": "Shared Redis cache and invalidation system for betoni.online",
   "main": "src/index.js",
   "scripts": {
-    "test": "node scripts/test-onError.js && node scripts/test-getOrCompute.js && node scripts/test-legal-invalidation.js && node scripts/test-sijainti-invalidation.js && node scripts/test-date-invalidation.js && node scripts/test-ping-report.js && node scripts/test-namespace.js && node scripts/test-authz-invalidation.js && node scripts/test-asiakas-target-invalidation.js",
-    "type-check": "node scripts/type-check.js"
+    "test": "node scripts/test-onError.js && node scripts/test-getOrCompute.js && node scripts/test-legal-invalidation.js && node scripts/test-sijainti-invalidation.js && node scripts/test-date-invalidation.js && node scripts/test-ping-report.js && node scripts/test-namespace.js && node scripts/test-authz-invalidation.js && node scripts/test-asiakas-target-invalidation.js"
   },
   "keywords": [
     "redis",
