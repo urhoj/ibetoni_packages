@@ -13,6 +13,7 @@
 const UniversalCacheManager = require('./UniversalCacheManager');
 const CacheMetrics = require('./CacheMetrics');
 const { DistributedLockManager } = require('./DistributedLockManager');
+const { AUTHZ_PREFIX, authzKey, authzSweepGlob } = require('./authzKeys');
 
 /** Singleton cache manager instance */
 let singletonInstance = null;
@@ -42,4 +43,10 @@ module.exports = {
   getSingletonCacheManager,
   getCacheManager: getSingletonCacheManager, // Legacy alias
   DistributedLockManager,
+  // The authz lookup-memo key contract. puminet5api's authzLookupCache builds its
+  // keys with authzKey so the sweep glob below (authzSweepGlob, used by
+  // invalidateCrossEntity) cannot drift out of alignment with them — see authzKeys.js.
+  AUTHZ_PREFIX,
+  authzKey,
+  authzSweepGlob,
 };

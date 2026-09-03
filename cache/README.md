@@ -203,7 +203,15 @@ never used as a fallback. `SIJAINTI_LATLNG_UPDATE` is excluded (loop op, geocode
 so are the family's own compliance-date sub-ops (`*_DATE_*`, `*_REQUIRED_DATE_TYPE_*` —
 same anchored-family regex `invalidateGridSmart` uses for fb#761/fb#1031): they touch only
 compliance-date rows, never the owner/isPublic/module flags this memo caches.
-Pinned by `scripts/test-authz-invalidation.js`.
+
+Both halves of that contract — the keys `authzLookupCache` writes and the glob swept here —
+are built from **`src/authzKeys.js`** (`authzKey()` / `authzSweepGlob()`, re-exported from the
+package root), so a renamed segment moves both at once. Before fb#1261 they were independent
+template literals in two repos, each pinned by hand-typed strings, so a rename on either side
+left both suites green while the sweep quietly became a no-op — and this sweep backs an
+authorization gate, not a freshness one, so that failure mode is fail-OPEN. Pinned by
+`scripts/test-authz-invalidation.js`, whose closing block glob-matches the emitted sweep
+against keys `authzKey()` produced rather than comparing typed strings.
 
 ### `cacheManager.invalidate(operation, entityType, params)`
 

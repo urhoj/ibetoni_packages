@@ -46,6 +46,7 @@ const path = require("path");
 const Redis = require("ioredis");
 const { LRUCache } = require("lru-cache");
 const { captureError } = require("@ibetoni/sentry");
+const { AUTHZ_PREFIX, authzSweepGlob } = require("./authzKeys");
 
 /** First segment of every namespaced cache key. Kept to one char — it is on every key. */
 const NAMESPACE_PREFIX = "r";
@@ -115,7 +116,9 @@ const MAX_TTL_SECONDS = 604800; // 7 days
 // Op families whose entity OWNER or module flags can change through their own
 // write op. The pre-cache read gates in puminet5api memoise those lookups under
 // authz:<kind>:<family>:<id>[...] (modules/cache/authzLookupCache.js) and rely on
-// invalidateCrossEntity to sweep them. Families absent here (attachment, tuote,
+// invalidateCrossEntity to sweep them. Both halves — the keys that module writes and
+// the glob swept below — are built from ./authzKeys, so a segment rename cannot make
+// the sweep a silent no-op (fb#1261). Families absent here (attachment, tuote,
 // laskupohja, keikkaLasku, betoniHinta, ...) are refreshed by the memo's own TTL
 // alone — EXCEPT on a `*_MERGE` op, which re-points ownership across every family
 // at once (see the whole-namespace merge sweep in invalidateCrossEntity) and so
@@ -2310,7 +2313,7 @@ class UniversalCacheManager {
     // no entityId to scope by. Merges are rare admin operations, so the whole authz
     // namespace goes — a stale owner here decides a WRITE gate, not a freshness question.
     if (/_MERGE$/.test(operation)) {
-      totalInvalidated += await this.invalidateByPattern("authz:*");
+      totalInvalidated += await this.invalidateByPattern(`${AUTHZ_PREFIX}:*`);
     }
 
     // See AUTHZ_SWEPT_FAMILIES. params.entityId names the TARGET entity (every
@@ -2331,9 +2334,8 @@ class UniversalCacheManager {
       !isComplianceDateOp &&
       AUTHZ_SWEPT_FAMILIES.has(authzFamily)
     ) {
-      const authzId = params.entityId ? `${params.entityId}*` : "*";
       totalInvalidated += await this.invalidateByPattern(
-        `authz:*:${authzFamily}:${authzId}`,
+        authzSweepGlob(authzFamily, params.entityId),
       );
     }
     return totalInvalidated;
