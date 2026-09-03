@@ -26,6 +26,7 @@ const allowedOrigins = [
   "https://functions.ibetoni.fi",
   "https://puminet7functions.azurewebsites.net",
   "https://status.ibetoni.fi",
+  "https://status.betoni.online",
 
   // staging environment
   "https://wonderful-rock-08f826703-staging.westeurope.3.azurestaticapps.net",
