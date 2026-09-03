@@ -1703,6 +1703,24 @@ class UniversalCacheManager {
           totalInvalidated += linkedAsiakasCount;
         }
 
+        // params.asiakasId is the CALLER's tenant (route extractors set it from
+        // req.user.ownerAsiakasId); params.entityId is the customer actually being
+        // written (req.params.asiakasId / req.body.asiakasId). They normally coincide
+        // (a company editing itself), but diverge when a sysadmin edits a company they
+        // are not active on — without this, the edited customer's asiakas:*-namespaced
+        // cache survives the write until TTL (fb#1270).
+        if (params.entityId && String(params.entityId) !== String(params.asiakasId)) {
+          const targetAsiakasCount = await this.invalidate(
+            operation,
+            "asiakas",
+            {
+              ...params,
+              asiakasId: params.entityId,
+            },
+          );
+          totalInvalidated += targetAsiakasCount;
+        }
+
         // Invalidate grid cache - asiakas settings affect grid visibility
         // (e.g., setting 33 controls betoni manufacturer visibility)
         const gridCount = await this.invalidate(operation, "grid", params);
