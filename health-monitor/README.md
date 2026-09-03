@@ -16,7 +16,7 @@ This package provides comprehensive health checking functionality for monitoring
 ## Monitored Endpoints
 
 ### Frontend (puminet4)
-- Production: `https://ibetoni.fi`
+- Production: `https://wonderful-rock-08f826703.3.azurestaticapps.net` (direct Azure SWA origin — bypasses Cloudflare, which returns a bot-challenge 403 to server-to-server requests against the public betoni.online domain)
 - Staging: `https://wonderful-rock-08f826703-staging.westeurope.3.azurestaticapps.net`
 
 ### Backend API (puminet5api)

@@ -42,7 +42,7 @@ const { allowedOrigins } = require('@ibetoni/constants/domains');
 
 ### Domains (`src/domains.js`)
 
-- **allowedOrigins**: Array of 44+ trusted domains for CORS configuration
+- **allowedOrigins**: Array of 55 trusted domains for CORS configuration
   - Production environments (betoni.online, ibetoni.fi)
   - Staging, Latest, Stable environments
   - Functions app domains
@@ -153,7 +153,7 @@ See `puminet5api/docs/tech/DOMAIN_WHITELIST_CHECKLIST.md` for comprehensive doma
 
 **Before:**
 ```javascript
-// Local allowedOrigins array (44+ lines)
+// Local allowedOrigins array (55 lines)
 const allowedOrigins = [
   "https://stable.ibetoni.fi",
   "https://stable.betoni.online",
@@ -194,7 +194,7 @@ app.use(cors({
 
 **Before:**
 ```javascript
-// Local allowedOrigins array (44+ lines)
+// Local allowedOrigins array (55 lines)
 const allowedOrigins = [
   "https://stable.ibetoni.fi",
   // ... many more

@@ -6,6 +6,10 @@ export const ENDPOINTS = {
   frontend: [
     {
       name: "Production Frontend",
+      // Direct Azure SWA origin, not the public betoni.online custom domain: that
+      // domain is Cloudflare-proxied, and Cloudflare's Managed Challenge returns a
+      // 403 bot-check page to this checker's server-to-server request, falsely
+      // reporting the frontend as down. Do not "fix" this back to betoni.online.
       url: "https://wonderful-rock-08f826703.3.azurestaticapps.net",
       versionEndpoint: "https://wonderful-rock-08f826703.3.azurestaticapps.net/version",
       type: "frontend",
