@@ -194,8 +194,13 @@ Invalidate cache for complex cross-entity operations.
 
 **`authz:` lookup memo sweep.** After the per-operation switch, every operation whose
 family (the prefix before the first `_`, lowercased) is `asiakas`, `tyomaa`, `vehicle`,
-`sijainti` or `person` also sweeps `authz:*:<family>:<params.entityId>*` (or
-`authz:*:<family>:*` when `params.entityId` is absent — never a double wildcard). Those keys
+`sijainti` or `person` also sweeps `authz:*:<family>:<params.entityId>` (or
+`authz:*:<family>:*` when `params.entityId` is absent — never a double wildcard). The id
+segment is matched EXACTLY: keys are shaped `authz:<kind>[.<qualifier>]:<family>:<id>` with
+the id always last, so the glob needs no trailing `*`. It used to have one, which made the
+id a prefix match — sweeping entity 12 also cleared 123, 124, 1200. Safe but wasteful, and
+each pattern costs a full SCAN, so reaching qualified keys via a second pattern would have
+cost more than moving the qualifier into the `kind` segment (`module.ecofleet`). Those keys
 are written by `puminet5api/modules/cache/authzLookupCache.js` (entity owner, sijainti
 `{asiakasId,isPublic}`, company module flags) for the pre-cache read gates. The sweep is
 keyed on `params.entityId` (the TARGET); `params.asiakasId` is the writer's tenant and is

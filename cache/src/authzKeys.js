@@ -20,30 +20,38 @@
 const AUTHZ_PREFIX = "authz";
 
 /**
- * Build one lookup-memo key. `family` sits in the third segment and `id` in the
- * fourth because that is where `authzSweepGlob` matches them — the two are one
- * definition on purpose.
+ * Build one lookup-memo key: `authz:<kind>[.<qualifier>]:<family>:<id>`.
+ *
+ * THE INVARIANT: the target id is ALWAYS the final segment, and any per-key
+ * qualifier (the module name) rides the `kind` segment as `module.ecofleet`
+ * rather than trailing the id. That is what lets `authzSweepGlob` be an EXACT
+ * match instead of a prefix one — see there for why that matters.
  *
  * @param {string} kind - the fact being memoised: `owner` | `row` | `module`
  * @param {string} family - op family the sweep keys on (asiakas|tyomaa|vehicle|sijainti|person)
  * @param {number|string} id - the TARGET entity id (never the writer's tenant)
- * @param {string} [suffix] - optional trailing segment (the module name, for kind `module`)
+ * @param {string} [qualifier] - optional discriminator (the module name, for kind `module`)
  * @returns {string}
  */
-const authzKey = (kind, family, id, suffix) =>
-  `${AUTHZ_PREFIX}:${kind}:${family}:${Number(id)}${suffix === undefined ? "" : `:${suffix}`}`;
+const authzKey = (kind, family, id, qualifier) =>
+  `${AUTHZ_PREFIX}:${kind}${qualifier === undefined ? "" : `.${qualifier}`}:${family}:${Number(id)}`;
 
 /**
- * Build the sweep glob for one family + target entity. The trailing `*` is what
- * reaches `authzKey`'s optional suffix (`authz:module:asiakas:8:ecofleet`); it also
- * over-matches id prefixes (sweeping id 12 clears 123 too), which is deliberate —
- * over-invalidation fails CLOSED, a missed sweep does not.
+ * Build the sweep glob for one family + target entity.
+ *
+ * Exact in the id segment, deliberately. A trailing `*` here would be a PREFIX
+ * match, so sweeping entity 12 would also clear 123, 124, 1200… — safe (over-
+ * invalidation never under-invalidates) but wasteful, and it silently widened
+ * every sweep on a low-numbered tenant. The id-last invariant in `authzKey`
+ * removes the need for it: nothing trails the id, so nothing has to be globbed
+ * past. Each pattern costs a full Redis SCAN, so one exact pattern also beats
+ * emitting an extra one to reach suffixed keys.
  *
  * @param {string} family
  * @param {number|string} [entityId] - absent/falsy → whole-family wildcard, never a skip
  * @returns {string}
  */
 const authzSweepGlob = (family, entityId) =>
-  `${AUTHZ_PREFIX}:*:${family}:${entityId ? `${entityId}*` : "*"}`;
+  `${AUTHZ_PREFIX}:*:${family}:${entityId || "*"}`;
 
 module.exports = { AUTHZ_PREFIX, authzKey, authzSweepGlob };

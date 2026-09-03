@@ -125,6 +125,28 @@ async function main() {
     });
   }
 
+  await test("a sweep is EXACT in the id segment — entity 12 does not drag 123 with it", async () => {
+    // The glob used to end in `*`, making the id a PREFIX match: sweeping tyomaa 12
+    // also cleared 123, 124, 1200… Safe (over-invalidation), but it silently widened
+    // every sweep on a low-numbered tenant. authzKey's id-last invariant is what lets
+    // the glob drop that `*`; a qualifier now rides the kind segment (module.ecofleet).
+    for (const neighbour of [123, 124, 1200]) {
+      assert.ok(
+        !globMatches(authzSweepGlob("tyomaa", 12), authzKey("owner", "tyomaa", neighbour)),
+        `sweeping 12 must not reach ${neighbour}`,
+      );
+    }
+    // ...while the qualified key for the swept entity itself is still reached.
+    assert.ok(
+      globMatches(authzSweepGlob("asiakas", 8), authzKey("module", "asiakas", 8, "ecofleet")),
+      "a qualified key for the swept entity must still be reached",
+    );
+    assert.ok(
+      !globMatches(authzSweepGlob("asiakas", 8), authzKey("module", "asiakas", 80, "ecofleet")),
+      "a qualified key for a DIFFERENT entity must not be reached",
+    );
+  });
+
   await test("a sweep does not reach another family's or another entity's keys", async () => {
     const key = authzKey("owner", "tyomaa", 123);
     assert.ok(!globMatches(authzSweepGlob("vehicle", 123), key), "wrong family must not match");
