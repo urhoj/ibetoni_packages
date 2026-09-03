@@ -142,6 +142,12 @@ Invalidate cache for complex cross-entity operations.
 **Parameters:**
 - `operation` (String) - Operation type (e.g., 'KEIKKA_BULK_UPDATE', 'KEIKKA_UPDATE')
 - `params` (Object) - Parameters for invalidation (asiakasId, entityId, etc.)
+- `params.gridScope` (Object, optional) - `{ tenants: number[] }`, the visible-tenant set a caller
+  (puminet5api's `modules/cache/gridScope.js`) resolved for the changed row. When present, grid
+  sweeps for `KEIKKA_*`, `PALKKI_*`, `PERSON_PVM_*`, `KEIKKA_PERSON_UPDATE` and worksite ops narrow
+  to keys whose visible-tenant CSV contains one of those tenants, at any date, instead of the
+  date-scoped or tenant-blind fallback. Absent or empty → today's broader sweep (never narrower
+  than what the caller can prove).
 
 **Returns:** `Promise<number>` - Number of keys invalidated
 
@@ -150,11 +156,15 @@ Invalidate cache for complex cross-entity operations.
 - `KEIKKA_UPDATE` - Single delivery order update
 - `KEIKKA_CREATE` - New delivery order creation
 - `KEIKKA_DELETE` - Delivery order deletion
+- `KEIKKA_PERSON_UPDATE` - Person assigned/removed/added on a keikka (or a palkki, via a
+  `"p<palkkiId>"` keikkaId) - scoped to that row's tenants, not a tenant-wide person sweep
 - `PALKKI_UPDATE` - Grid bar update (targeted, ~95% fewer cache keys than KEIKKA_UPDATE)
 - `PALKKI_DELETE` - Grid bar deletion
 - `PALKKI_CREATE` - Grid bar creation
 - `GRID_UPDATE` - Grid-only cache invalidation (for visibility changes)
 - `PERSON_UPDATE` - Person/user updates
+- `PERSON_PREFS_UPDATE` - A person's own preferences (dark mode, password, dontAsks, settings) -
+  invalidates only that person + their auth/role caches, never the grid
 - `VEHICLE_UPDATE` - Vehicle updates
 - `VEHICLE_CREATE` - Vehicle creation
 - `VEHICLE_DELETE` - Vehicle deletion

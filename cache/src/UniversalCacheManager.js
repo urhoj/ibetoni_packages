@@ -1256,6 +1256,19 @@ class UniversalCacheManager {
   }
 
   /**
+   * Globs selecting every grid:v7tenant key whose visible-tenant CSV contains one of the
+   * scoped tenants — one glob per tenant, `[:,]` a one-character class matching either
+   * boundary so a tenant sitting alone, first, middle or last in the CSV all match; anchored
+   * on both sides so 8 never matches 18 or 80. Null (= "sweep broadly") when the scope is
+   * absent or names no tenant: missing knowledge must never narrow a sweep.
+   */
+  _gridScopePatterns(scope) {
+    const tenants = [...new Set((scope?.tenants || []).map(Number).filter((n) => Number.isInteger(n) && n > 0))];
+    if (!tenants.length) return null;
+    return tenants.map((t) => `grid:v7tenant:*[:,]${t}[:,]*`);
+  }
+
+  /**
    * Smart grid invalidation based on operation type and request body.
    *
    * Date extraction priority for different operations:
@@ -1275,23 +1288,6 @@ class UniversalCacheManager {
    * @param {Object} params - Additional parameters including asiakasId
    * @returns {Promise<number>} Number of cache keys invalidated
    */
-  /**
-   * Globs selecting every grid:v7tenant key whose visible-tenant CSV contains one of the
-   * scoped tenants. A tenant sits in the CSV alone, first, in the middle or last — four
-   * shapes, each anchored on ":" or "," so 8 never matches 18 or 80. Null (= "sweep broadly")
-   * when the scope is absent or names no tenant: missing knowledge must never narrow a sweep.
-   */
-  _gridScopePatterns(scope) {
-    const tenants = [...new Set((scope?.tenants || []).map(Number).filter((n) => Number.isInteger(n) && n > 0))];
-    if (!tenants.length) return null;
-    return tenants.flatMap((t) => [
-      `grid:v7tenant:*:${t}:*`,
-      `grid:v7tenant:*:${t},*`,
-      `grid:v7tenant:*:*,${t},*`,
-      `grid:v7tenant:*:*,${t}:*`,
-    ]);
-  }
-
   async invalidateGridSmart(operation, body = {}, params = {}) {
     const { pumppuAika, newDate } = body;
     const asiakasId = params.asiakasId;
