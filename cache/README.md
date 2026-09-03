@@ -210,8 +210,12 @@ same anchored-family regex `invalidateGridSmart` uses for fb#761/fb#1031): they 
 compliance-date rows, never the owner/isPublic/module flags this memo caches.
 
 Both halves of that contract — the keys `authzLookupCache` writes and the glob swept here —
-are built from **`src/authzKeys.js`** (`authzKey()` / `authzSweepGlob()`, re-exported from the
-package root), so a renamed segment moves both at once. Before fb#1261 they were independent
+are built from **`src/authzKeys.js`** (`authzKey()` / `authzSweepGlob()`), so a renamed segment
+moves both at once — and both normalise the entity id through the same `normId`, so a write
+carrying `'08'` still sweeps the key stored under `8` (fb#1297). Require that module by its
+direct path, **not** through the package root: a `jest.mock("@ibetoni/cache")` double replaces
+the root and omits these helpers, which makes the read gates throw and deny (phantom 403s).
+Before fb#1261 they were independent
 template literals in two repos, each pinned by hand-typed strings, so a rename on either side
 left both suites green while the sweep quietly became a no-op — and this sweep backs an
 authorization gate, not a freshness one, so that failure mode is fail-OPEN. Pinned by

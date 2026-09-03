@@ -115,7 +115,8 @@ const MAX_TTL_SECONDS = 604800; // 7 days
 
 // Op families whose entity OWNER or module flags can change through their own
 // write op. The pre-cache read gates in puminet5api memoise those lookups under
-// authz:<kind>:<family>:<id>[...] (modules/cache/authzLookupCache.js) and rely on
+// authz:<kind>[.<qualifier>]:<family>:<id> — id ALWAYS last, which is what lets the
+// sweep below match it exactly (modules/cache/authzLookupCache.js) — and rely on
 // invalidateCrossEntity to sweep them. Both halves — the keys that module writes and
 // the glob swept below — are built from ./authzKeys, so a segment rename cannot make
 // the sweep a silent no-op (fb#1261). Families absent here (attachment, tuote,

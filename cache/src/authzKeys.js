@@ -16,8 +16,25 @@
  *           builder produced instead of comparing hand-typed strings.
  */
 
-/** Namespace every authz lookup-memo key lives under. */
 const AUTHZ_PREFIX = "authz";
+
+/**
+ * Normalise an entity id to its canonical key form. BOTH builders below go through
+ * this — the id is half the contract, so it needs one definition just as the segment
+ * layout does (fb#1297).
+ *
+ * The writer and the sweeper see the id in different forms: a key is built from a
+ * value the read gate resolved, while a sweep is built from `params.entityId`, which
+ * comes straight off `req.params` (always a string) or `req.body` (JSON, often a
+ * number). Coercing on only one side made `'08'`, `' 8'`, `'8.0'` and `'+8'` produce
+ * a glob that could not match its own key — and `validateId` admits every one of
+ * those, since it only does `parseInt` and rejects NaN or <= 0. The result was a
+ * sweep that silently cleared nothing, i.e. fail-OPEN on an authorization memo.
+ *
+ * A non-numeric id yields `NaN` on both sides, so key and glob still agree; unknown
+ * ids are never memoised anyway (`getOrCompute` does not store null).
+ */
+const normId = (id) => Number(id);
 
 /**
  * Build one lookup-memo key: `authz:<kind>[.<qualifier>]:<family>:<id>`.
@@ -29,12 +46,13 @@ const AUTHZ_PREFIX = "authz";
  *
  * @param {string} kind - the fact being memoised: `owner` | `row` | `module`
  * @param {string} family - op family the sweep keys on (asiakas|tyomaa|vehicle|sijainti|person)
- * @param {number|string} id - the TARGET entity id (never the writer's tenant)
+ * @param {number|string} id - the TARGET entity id (never the writer's tenant); normalised
+ *   by `normId`, so a non-numeric value yields a literal `NaN` segment rather than throwing
  * @param {string} [qualifier] - optional discriminator (the module name, for kind `module`)
- * @returns {string}
+ * @returns {string} the physical-key suffix, e.g. `authz:module.ecofleet:asiakas:8`
  */
 const authzKey = (kind, family, id, qualifier) =>
-  `${AUTHZ_PREFIX}:${kind}${qualifier === undefined ? "" : `.${qualifier}`}:${family}:${Number(id)}`;
+  `${AUTHZ_PREFIX}:${kind}${qualifier === undefined ? "" : `.${qualifier}`}:${family}:${normId(id)}`;
 
 /**
  * Build the sweep glob for one family + target entity.
@@ -47,11 +65,14 @@ const authzKey = (kind, family, id, qualifier) =>
  * past. Each pattern costs a full Redis SCAN, so one exact pattern also beats
  * emitting an extra one to reach suffixed keys.
  *
+ * The id goes through the same `normId` the key builder uses, so the two agree on
+ * what "entity 8" looks like whatever form the request carried it in (fb#1297).
+ *
  * @param {string} family
  * @param {number|string} [entityId] - absent/falsy → whole-family wildcard, never a skip
- * @returns {string}
+ * @returns {string} a Redis glob, e.g. `authz:*:asiakas:8`
  */
 const authzSweepGlob = (family, entityId) =>
-  `${AUTHZ_PREFIX}:*:${family}:${entityId || "*"}`;
+  `${AUTHZ_PREFIX}:*:${family}:${entityId ? normId(entityId) : "*"}`;
 
 module.exports = { AUTHZ_PREFIX, authzKey, authzSweepGlob };

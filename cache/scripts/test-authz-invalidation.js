@@ -4,7 +4,7 @@ const { AUTHZ_PREFIX, authzKey, authzSweepGlob } = require("../src/authzKeys");
 
 // The pre-cache read gates in puminet5api (middleware/require*ReadAccess) memoise
 // TARGET-side lookups — "who owns tyomaa 123", "is sijainti 45 public", "is the
-// ecofleet module on for company 8" — under authz:<kind>:<family>:<id>[...]
+// ecofleet module on for company 8" — under authz:<kind>[.<qualifier>]:<family>:<id>
 // (puminet5api/modules/cache/authzLookupCache.js). Those facts change only through
 // the family's own write op, so invalidateCrossEntity sweeps them by op family +
 // entity id after the per-op switch. These tests pin that sweep so an op refactor
@@ -144,6 +144,28 @@ async function main() {
     assert.ok(
       !globMatches(authzSweepGlob("asiakas", 8), authzKey("module", "asiakas", 80, "ecofleet")),
       "a qualified key for a DIFFERENT entity must not be reached",
+    );
+  });
+
+  await test("the sweep normalises its id the same way the key builder does (fb#1297)", async () => {
+    // The two sides see the id in different forms: a key is built from what the read
+    // gate resolved, a sweep from params.entityId — req.params (always a string) or
+    // req.body (JSON number). Coercing on only one side produced a glob that could not
+    // match its own key, i.e. a sweep that cleared nothing: fail-OPEN on an authz memo.
+    // validateId admits every form below (it only parseInt's and rejects NaN / <= 0).
+    const key = authzKey("owner", "tyomaa", 8);
+    for (const form of [8, "8", "08", " 8", "8.0", "+8"]) {
+      assert.ok(
+        globMatches(authzSweepGlob("tyomaa", form), key),
+        `a write carrying entityId ${JSON.stringify(form)} must still sweep ${key}, got ${authzSweepGlob("tyomaa", form)}`,
+      );
+    }
+    // Normalising must not blunt the exactness won above: 80 is still a different entity.
+    assert.ok(!globMatches(authzSweepGlob("tyomaa", "80"), key), "entity 80 must not sweep entity 8");
+    // A non-numeric id degrades identically on both sides, so they still agree.
+    assert.ok(
+      globMatches(authzSweepGlob("tyomaa", "abc"), authzKey("owner", "tyomaa", "abc")),
+      "a non-numeric id must normalise the same way on both sides",
     );
   });
 
