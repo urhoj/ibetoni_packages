@@ -43,6 +43,35 @@ export function createTarjouspyyntoApi({ query, mutate }) {
                 body: { token: reqd(previewToken, "previewToken") },
             }),
 
+        // PUBLIC tokenized BID from the preview page — no login (fb#1268).
+        // Call with a TOKENLESS transport: the capability token IS the auth, and
+        // it travels in the BODY because it now authorizes a write (a token in
+        // the query string leaks into referrers, history and analytics).
+        // Submitting the bid is what releases the customer's contact details, so
+        // the resolved envelope carries the revealed preview DTO.
+        offerViaPreview: (previewToken, body) =>
+            mutate("/api/pumppuRequests/preview/offer", {
+                method: "POST",
+                body: { token: reqd(previewToken, "previewToken"), ...body },
+            }),
+
+        // PUBLIC tokenized DECLINE from the preview page — no login (fb#1268).
+        // `reason` is required and is shown to the customer: a silent decline
+        // tells them nothing, and until this existed the decline path was
+        // login-gated and had never once been used.
+        declineViaPreview: (previewToken, reason) => {
+            const token = reqd(previewToken, "previewToken");
+            // Not reqd(): that only rejects null/undefined, and a BLANK reason is
+            // just as useless here — it is shown verbatim to the customer.
+            if (typeof reason !== "string" || reason.trim() === "") {
+                throw new TypeError("reason required");
+            }
+            return mutate("/api/pumppuRequests/preview/decline", {
+                method: "POST",
+                body: { token, reason: reason.trim() },
+            });
+        },
+
         // Post-login access check for the preview flow. Requires an
         // authenticated transport; returns { ok, asiakasId? } (never the denial case).
         checkPreviewAccess: (pumppuRequestId, previewToken) =>

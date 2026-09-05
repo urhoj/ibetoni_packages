@@ -93,6 +93,37 @@ describe("preview endpoints", () => {
         expect(mutate).not.toHaveBeenCalled();
     });
 
+    // fb#1268: bidding and declining used to be login-gated while the lead was
+    // free. These two are the no-login reply paths.
+    it("offerViaPreview posts the token in the body alongside the bid", async () => {
+        const mutate = vi.fn(async () => ({ success: true, data: {} }));
+        const api = createTarjouspyyntoApi({ query: vi.fn(), mutate });
+        await api.offerViaPreview("tok", { priceCents: 150000, extraNotes: "Puomi 32m" });
+        expect(mutate).toHaveBeenCalledWith(
+            "/api/pumppuRequests/preview/offer",
+            { method: "POST", body: { token: "tok", priceCents: 150000, extraNotes: "Puomi 32m" } },
+        );
+    });
+
+    it("declineViaPreview requires both the token and a reason", () => {
+        const mutate = vi.fn();
+        const api = createTarjouspyyntoApi({ query: vi.fn(), mutate });
+        expect(() => api.declineViaPreview(undefined, "syy")).toThrow(/previewToken/);
+        // A silent decline tells the customer nothing, so the reason is not optional.
+        expect(() => api.declineViaPreview("tok", "")).toThrow(/reason/);
+        expect(mutate).not.toHaveBeenCalled();
+    });
+
+    it("declineViaPreview posts token + reason", async () => {
+        const mutate = vi.fn(async () => ({ success: true, data: {} }));
+        const api = createTarjouspyyntoApi({ query: vi.fn(), mutate });
+        await api.declineViaPreview("tok", "Kalusto varattu");
+        expect(mutate).toHaveBeenCalledWith(
+            "/api/pumppuRequests/preview/decline",
+            { method: "POST", body: { token: "tok", reason: "Kalusto varattu" } },
+        );
+    });
+
     it("checkPreviewAccess posts the preview token", async () => {
         const mutate = vi.fn(async () => ({ success: true, data: { ok: true } }));
         const api = createTarjouspyyntoApi({ query: vi.fn(), mutate });
