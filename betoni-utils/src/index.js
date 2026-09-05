@@ -13,6 +13,7 @@ const { RasitusLuokatArr, WEATHER_RESISTANT_CLASSES } = require("./constants.js"
 const { formatPersonName } = require("./personUtils.js");
 const { isEmail, parseMultipleEmails, validateMultipleEmails } = require("./emailUtils.js");
 const { getText, HAVERSINE_DISTANCE_M } = require("./ecofleetUtils.js");
+const { parseHelsinkiLocal, helsinkiOffsetMinutes } = require("./helsinkiTime.js");
 
 module.exports = {
   betoni_getString,
@@ -30,4 +31,6 @@ module.exports = {
   validateMultipleEmails,
   getText,
   HAVERSINE_DISTANCE_M,
+  parseHelsinkiLocal,
+  helsinkiOffsetMinutes,
 };
