@@ -281,9 +281,16 @@ describe("providerNewRequest (#1) — open-details copy", () => {
     kayttokohde: "Laatta", totalM3: 12, maskedAddress: "Sarkatie, 01720 Vantaa",
     operatorUrl: "https://betonijerry.fi/tarjouspyynnot",
   });
-  it("tells the provider full contact details are visible after login, in html AND text", () => {
-    expect(out.html).toContain("kirjautumalla");
-    expect(out.text).toContain("kirjautumalla");
+  // fb#1268: contact details follow the BID now, not a login. Promising them
+  // "by logging in" was both untrue after the change and the reason the funnel
+  // stalled — the old copy handed the lead away before any commitment.
+  it("tells the provider the contact details come with the offer, in html AND text", () => {
+    expect(out.html).toContain("kun olet lähettänyt tarjouksen");
+    expect(out.text).toContain("kun olet lähettänyt tarjouksen");
+  });
+  it("says replying needs no login, in html AND text", () => {
+    expect(out.html).toContain("kirjautumista ei tarvita");
+    expect(out.text).toContain("kirjautumista ei tarvita");
   });
   it("no longer promises reveal only on acceptance", () => {
     expect(out.html).not.toContain("asiakas hyväksyy sen");

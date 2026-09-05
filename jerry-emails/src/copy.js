@@ -14,10 +14,10 @@ const COPY = {
     providerNewRequest: {
       subject: "Uusi tarjouspyyntö alueellasi – BetoniJerry",
       heading: "Uusi tarjouspyyntö alueellasi",
-      intro: "Alueellesi saapui uusi betonipumppauksen tarjouspyyntö. Tee tarjous palvelussa, niin asiakas näkee hintasi ja yrityksesi tiedot samassa näkymässä ja voi hyväksyä tarjouksen suoraan. Hintasi näkyy vain asiakkaalle — muut pumppuyritykset eivät näe sitä. Asiakkaan täydet yhteystiedot ja kohteen tarkat tiedot näet kirjautumalla palveluun. Ensimmäisellä kerralla kirjautuminen käy sähköpostiin lähetettävällä kertakoodilla – salasanaa ei tarvita.",
+      intro: "Alueellesi saapui uusi betonipumppauksen tarjouspyyntö. Voit tehdä tarjouksen tai kieltäytyä suoraan alla olevasta linkistä — kirjautumista ei tarvita. Asiakas näkee hintasi ja yrityksesi tiedot samassa näkymässä ja voi hyväksyä tarjouksen suoraan. Hintasi näkyy vain asiakkaalle — muut pumppuyritykset eivät näe sitä. Asiakkaan yhteystiedot ja kohteen tarkat tiedot saat heti, kun olet lähettänyt tarjouksen. Liitteitä varten voit myös kirjautua: ensimmäisellä kerralla kirjautuminen käy sähköpostiin lähetettävällä kertakoodilla – salasanaa ei tarvita.",
       labels: { kayttokohde: "Käyttökohde", maara: "Määrä", pumppausaika: "Pumppausaika", sijainti: "Sijainti", puomi: "Puomi", linja: "Linja" },
       cta: "Katso tarjouspyyntö ja tee tarjous",
-      contactHint: "Asiakkaan täydet yhteystiedot näet kirjautumalla palveluun.",
+      contactHint: "Asiakkaan yhteystiedot saat heti, kun lähetät tarjouksen.",
       ctaTextPrefix: "Tee tarjous",
     },
     customerNoSupply: {
@@ -92,10 +92,10 @@ const COPY = {
     providerNewRequest: {
       subject: "New quote request in your area – BetoniJerry",
       heading: "New quote request in your area",
-      intro: "A new concrete pumping quote request has arrived in your area. Submit your offer in the service and the customer sees your price and company details together, and can accept it directly. Your price is shown only to the customer — other pumping companies never see it. Sign in to see the customer's full contact details and the exact site information. Signing in for the first time works with a one-time code sent to your email — no password needed.",
+      intro: "A new concrete pumping quote request has arrived in your area. You can submit an offer — or decline — straight from the link below, with no login. The customer sees your price and company details together and can accept directly. Your price is shown only to the customer — other pumping companies never see it. You get the customer's contact details and the exact site information as soon as you send your offer. To add attachments you can also sign in: the first time works with a one-time code sent to your email — no password needed.",
       labels: { kayttokohde: "Application", maara: "Volume", pumppausaika: "Pumping time", sijainti: "Location", puomi: "Boom", linja: "Line" },
       cta: "View the request and submit an offer",
-      contactHint: "Sign in to see the customer's full contact details.",
+      contactHint: "You get the customer's contact details as soon as you send your offer.",
       ctaTextPrefix: "Submit an offer",
     },
     customerNoSupply: {
