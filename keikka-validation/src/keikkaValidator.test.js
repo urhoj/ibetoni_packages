@@ -484,7 +484,10 @@ describe("keikkaValidator", () => {
       expect(typeof issue.priority).toBe("number");
     });
 
-    test("attaches autofix when vehicle has vehiclePuomi > 0", () => {
+    // The required MINIMUM boom is a site requirement, not a property of
+    // whichever vehicle happens to be assigned, so there is no one-click fix
+    // even when that vehicle has a boom. The UI offers a preset picker.
+    test("never attaches autofix, even when the vehicle has vehiclePuomi > 0", () => {
       const keikka = createTestKeikka({
         keikkaTilaId: 4,
         vehicleId: 2, // vehiclePuomi: 25
@@ -493,10 +496,8 @@ describe("keikkaValidator", () => {
       });
       const result = validateKeikka(keikka, testContext);
       const issue = result.issues.find((i) => i.type === "MISSING_BOOM_LENGTH");
-      expect(issue.actions.autoFix).toBeDefined();
-      expect(issue.actions.autoFix.field).toBe("pumppuPuomi");
-      expect(issue.actions.autoFix.value).toBe(25);
-      expect(issue.actions.autoFix.label).toBe("Aseta 25m (ajoneuvon puomi)");
+      expect(issue).toBeDefined();
+      expect(issue.actions.autoFix).toBeUndefined();
     });
 
     test("omits autofix when vehicle has no vehiclePuomi", () => {
@@ -573,7 +574,9 @@ describe("keikkaValidator", () => {
       expect(typeof issue.priority).toBe("number");
     });
 
-    test("omits autofix when boom is null (per spec)", () => {
+    // How much hose a pour needs is a site fact the boom value cannot imply, so
+    // no boom value earns a one-click fix. The UI offers a preset picker.
+    test("omits autofix when boom is null", () => {
       const keikka = createTestKeikka({
         keikkaTilaId: 4,
         vehicleId: 1,
@@ -586,7 +589,7 @@ describe("keikkaValidator", () => {
       expect(issue.actions.autoFix).toBeUndefined();
     });
 
-    test("autofix sets line=30 when boom == 0", () => {
+    test("omits autofix when boom == 0", () => {
       const keikka = createTestKeikka({
         keikkaTilaId: 4,
         vehicleId: 1,
@@ -595,13 +598,11 @@ describe("keikkaValidator", () => {
       });
       const result = validateKeikka(keikka, testContext);
       const issue = result.issues.find((i) => i.type === "MISSING_LINE_LENGTH");
-      expect(issue.actions.autoFix).toBeDefined();
-      expect(issue.actions.autoFix.field).toBe("pumppuLinja");
-      expect(issue.actions.autoFix.value).toBe(30);
-      expect(issue.actions.autoFix.label).toBe("Laita 30m linjaa");
+      expect(issue).toBeDefined();
+      expect(issue.actions.autoFix).toBeUndefined();
     });
 
-    test("autofix sets line=0 when boom > 0", () => {
+    test("omits autofix when boom > 0", () => {
       const keikka = createTestKeikka({
         keikkaTilaId: 4,
         vehicleId: 1,
@@ -610,10 +611,8 @@ describe("keikkaValidator", () => {
       });
       const result = validateKeikka(keikka, testContext);
       const issue = result.issues.find((i) => i.type === "MISSING_LINE_LENGTH");
-      expect(issue.actions.autoFix).toBeDefined();
-      expect(issue.actions.autoFix.field).toBe("pumppuLinja");
-      expect(issue.actions.autoFix.value).toBe(0);
-      expect(issue.actions.autoFix.label).toBe("Laita roikosta, 0m linjaa");
+      expect(issue).toBeDefined();
+      expect(issue.actions.autoFix).toBeUndefined();
     });
 
     test("does NOT fire when pumppuLinja is 0 (intentional 'no line')", () => {

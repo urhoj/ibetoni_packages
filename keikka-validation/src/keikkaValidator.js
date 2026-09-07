@@ -1792,8 +1792,10 @@ function validateVehicle(keikka, issues, vehicleMap, validationSettings, ownerAs
     keikka.pumppuPuomi == null &&
     isRuleEnabled("MISSING_BOOM_LENGTH", validationSettings, keikka, ownerAsiakasId)
   ) {
-    const vehicleForBoom = vehicleMap.get(keikka.vehicleId);
-    const vehicleBoomLength = vehicleForBoom?.vehiclePuomi || 0;
+    // No autoFix: the required MINIMUM boom is what the customer's site needs,
+    // which the assigned vehicle's own boom does not tell us — a taller vehicle
+    // happening to be free that day is not the order's requirement. The chip
+    // opens a preset picker (the fleet's real boom lengths) instead.
     const boomIssue = {
       id: "MISSING_BOOM_LENGTH",
       type: "MISSING_BOOM_LENGTH",
@@ -1809,14 +1811,6 @@ function validateVehicle(keikka, issues, vehicleMap, validationSettings, ownerAs
         },
       },
     };
-    if (vehicleBoomLength > 0) {
-      boomIssue.actions.autoFix = {
-        field: "pumppuPuomi",
-        value: vehicleBoomLength,
-        label: `Aseta ${vehicleBoomLength}m (ajoneuvon puomi)`,
-        description: "Aseta puomiksi ajoneuvon puomin pituus",
-      };
-    }
     issues.push(boomIssue);
   }
 
@@ -1825,6 +1819,9 @@ function validateVehicle(keikka, issues, vehicleMap, validationSettings, ownerAs
     keikka.pumppuLinja == null &&
     isRuleEnabled("MISSING_LINE_LENGTH", validationSettings, keikka, ownerAsiakasId)
   ) {
+    // No autoFix: how much hose a pour needs is a site fact, not something the
+    // boom value implies — "boom is 0, so 30 m of line" was a guess that wrote a
+    // wrong number in one click. The chip opens a preset picker instead.
     const lineIssue = {
       id: "MISSING_LINE_LENGTH",
       type: "MISSING_LINE_LENGTH",
@@ -1840,18 +1837,6 @@ function validateVehicle(keikka, issues, vehicleMap, validationSettings, ownerAs
         },
       },
     };
-    // Autofix only when boom is filled. Spec: null boom -> no line autofix.
-    if (keikka.pumppuPuomi != null) {
-      const lineValue = keikka.pumppuPuomi === 0 ? 30 : 0;
-      const lineLabel =
-        keikka.pumppuPuomi === 0 ? "Laita 30m linjaa" : "Laita roikosta, 0m linjaa";
-      lineIssue.actions.autoFix = {
-        field: "pumppuLinja",
-        value: lineValue,
-        label: lineLabel,
-        description: lineLabel,
-      };
-    }
     issues.push(lineIssue);
   }
 }
