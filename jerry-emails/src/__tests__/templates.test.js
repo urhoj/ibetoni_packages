@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
 import * as t from "../index.js";
+// index.js deliberately does not re-export the copy table (nothing outside the
+// package consumes it). The parity test below is the one legitimate reader, so
+// it reaches into the module directly rather than widening the public surface.
+import { COPY } from "../copy.js";
 
 // Merged from the two jest suites that covered this module while it lived in
 // puminet5api (modules/betonijerry/__tests__/ and test/betonijerry/). They were
@@ -156,7 +160,10 @@ describe("providerNewRequest (#1) — no customer PII", () => {
     customerName: "Salainen Asiakas", customerPhone: "+358401234567",
   });
   it("has the Finnish subject + masked address + CTA, and no phone field", () => {
-    expect(out.subject).toBe("Uusi tarjouspyyntö alueellasi – BetoniJerry");
+    // The subject names the job now. It used to be one constant string for every
+    // request, so a provider holding several could not tell them apart, search
+    // them, or stop Gmail collapsing them into a single thread.
+    expect(out.subject).toBe("Tarjouspyyntö: 12 m³, Laatta, Vantaa – BetoniJerry");
     expect(out.html).toContain("Sarkatie, 01720 Vantaa");
     expect(out.html).toContain("https://betoni.online/tarjouspyynnot");
     expect(out.html).toContain("12");
@@ -308,5 +315,128 @@ describe("providerNewRequest (#1) — open-details copy", () => {
   it("does not invite the provider to answer the customer directly instead", () => {
     expect(out.html).not.toContain("myös suoraan");
     expect(out.text).not.toContain("myös suoraan");
+  });
+});
+
+describe("providerNewRequest (#1) — link capability is per RECIPIENT, not policy", () => {
+  const base = {
+    kayttokohde: "Laatta", totalM3: 12, maskedAddress: "Sarkatie, 01720 Vantaa",
+    operatorUrl: "https://betonijerry.fi/tarjouspyynnot",
+  };
+  // A preview token minted without a personId — every recipient resolved via
+  // offerNotificationEmail (shared inbox) or laskutusEmail — is refused by
+  // POST /preview/offer. Telling that cohort "kirjautumista ei tarvita" was a
+  // promise the page broke only AFTER they had filled in and submitted a price.
+  it("tells a recipient who cannot bid by link that offering needs a sign-in", () => {
+    const out = t.providerNewRequest({ ...base, canBidWithLink: false });
+    expect(out.html).toContain("vaatii kirjautumisen");
+    expect(out.text).toContain("vaatii kirjautumisen");
+    expect(out.html).not.toContain("kirjautumista ei tarvita");
+    expect(out.text).not.toContain("kirjautumista ei tarvita");
+  });
+  it("keeps the no-login promise for a recipient who can bid by link", () => {
+    const out = t.providerNewRequest({ ...base, canBidWithLink: true });
+    expect(out.html).toContain("kirjautumista ei tarvita");
+    expect(out.text).toContain("kirjautumista ei tarvita");
+  });
+  // Default-ALLOW. If the backend ships before this package — or an older caller
+  // simply omits the field — the inverted default would tell EVERY provider to
+  // log in, which is both untrue and the copy that suppresses quotes outright.
+  it("defaults to the no-login promise when the flag is absent", () => {
+    const out = t.providerNewRequest(base);
+    expect(out.html).toContain("kirjautumista ei tarvita");
+  });
+});
+
+describe("providerNewRequest (#1) — both MIME parts carry the same job", () => {
+  const out = t.providerNewRequest({
+    pumppuRequestId: 412, kayttokohde: "Anturat", totalM3: 7.5,
+    pumppuKesto: 2.5, maskedAddress: "Vanha Porvoontie, 01490 Vantaa",
+    requiredPuomi: 27, requiredLinja: 40,
+    createdAt: new Date("2026-09-09T05:00:00Z"),
+    expiresAt: new Date("2026-09-23T05:00:00Z"),
+    operatorUrl: "https://betonijerry.fi/tarjouspyynnot/esikatselu?token=abc",
+    declineUrl: "https://betonijerry.fi/tarjouspyynnot/esikatselu?token=abc&action=decline",
+  });
+  // The two parts were written out separately and had drifted: text/plain
+  // omitted Puomi and Linja — the two fields that decide which machine can take
+  // the job — so a plain-text reader saw a job they could not size.
+  it.each([
+    ["Puomi", "27 m"],
+    ["Linja", "40 m"],
+    ["Kesto (arvio)", "2,5 h"],
+    ["Määrä", "7,5 m³"],
+    ["Vastaa viimeistään", "23.09.2026"],
+  ])("carries %s in html AND text", (label, value) => {
+    expect(out.html).toContain(label);
+    expect(out.html).toContain(value);
+    expect(out.text).toContain(label);
+    expect(out.text).toContain(value);
+  });
+  it("offers the decline action alongside the quote CTA", () => {
+    expect(out.html).toContain("action=decline");
+    expect(out.text).toContain("action=decline");
+    expect(out.html).toContain("En tarjoa tähän");
+  });
+  it("identifies the request so the mail is searchable and matches the page", () => {
+    expect(out.html).toContain("Pyyntö #412");
+    expect(out.text).toContain("Pyyntö #412");
+  });
+  it("falls back to the generic subject when there are no facts to name", () => {
+    const bare = t.providerNewRequest({ operatorUrl: "https://x" });
+    expect(bare.subject).toBe("Uusi tarjouspyyntö alueellasi – BetoniJerry");
+  });
+});
+
+// fi and en are two hand-maintained tables and nothing compared their KEYS. The
+// existing guards cannot catch a missing en key: `en.subject !== fi.subject`
+// passes when en.subject is undefined, and the diacritics guard only fires if
+// the untranslated Finnish happens to contain ä/ö. A key added to fi alone
+// renders the literal "undefined" into an English-preference provider's inbox.
+describe("copy table fi/en key parity", () => {
+  const keyPaths = (obj, prefix = "") =>
+    Object.entries(obj).flatMap(([k, v]) =>
+      v && typeof v === "object" && !Array.isArray(v)
+        ? keyPaths(v, `${prefix}${k}.`)
+        : [`${prefix}${k}`]);
+
+  it("en defines exactly the keys fi defines", () => {
+    const fi = keyPaths(COPY.fi).sort();
+    const en = keyPaths(COPY.en).sort();
+    expect(en).toEqual(fi);
+  });
+
+  it("no copy value is empty in either language", () => {
+    for (const lang of ["fi", "en"]) {
+      for (const path of keyPaths(COPY[lang])) {
+        const value = path.split(".").reduce((o, k) => o[k], COPY[lang]);
+        expect(typeof value === "string" && value.length > 0).toBe(true);
+      }
+    }
+  });
+});
+
+describe("formatFiNumber / formatFiDate", () => {
+  it("writes Finnish decimals with a comma and English with a dot", () => {
+    expect(t.formatFiNumber(7.5)).toBe("7,5");
+    expect(t.formatFiNumber(7.5, "en")).toBe("7.5");
+    expect(t.formatFiNumber(3)).toBe("3");
+    expect(t.formatFiNumber(27.0)).toBe("27");
+  });
+  it("returns empty for missing or non-numeric input", () => {
+    expect(t.formatFiNumber(null)).toBe("");
+    expect(t.formatFiNumber(undefined)).toBe("");
+    expect(t.formatFiNumber("nope")).toBe("");
+  });
+  // The dates these emails show are UTC datetime2 values and the process zone is
+  // UTC on Azure. 22:30 UTC is already the NEXT day in Helsinki, so a naive read
+  // prints the wrong deadline.
+  it("renders the Helsinki calendar day, not the UTC one", () => {
+    expect(t.formatFiDate(new Date("2026-09-22T22:30:00Z"))).toBe("23.09.2026");
+    expect(t.formatFiDate(new Date("2026-09-23T05:00:00Z"))).toBe("23.09.2026");
+  });
+  it("returns a dash for missing or invalid input", () => {
+    expect(t.formatFiDate(null)).toBe("—");
+    expect(t.formatFiDate("not-a-date")).toBe("—");
   });
 });

@@ -12,13 +12,39 @@
 const COPY = {
   fi: {
     providerNewRequest: {
+      // Fallback subject, used only when the request carries no facts to name.
+      // The en-dash separator matches every other subject in this table.
       subject: "Uusi tarjouspyyntö alueellasi – BetoniJerry",
+      subjectPrefix: "Tarjouspyyntö: ",
+      subjectSuffix: " – BetoniJerry",
       heading: "Uusi tarjouspyyntö alueellasi",
-      intro: "Alueellesi saapui uusi betonipumppauksen tarjouspyyntö. Voit tehdä tarjouksen tai kieltäytyä suoraan alla olevasta linkistä — kirjautumista ei tarvita. Asiakas näkee hintasi ja yrityksesi tiedot samassa näkymässä ja voi hyväksyä tarjouksen suoraan. Hintasi näkyy vain asiakkaalle — muut pumppuyritykset eivät näe sitä. Asiakkaan yhteystiedot ja kohteen tarkat tiedot saat heti, kun olet lähettänyt tarjouksen. Liitteitä varten voit myös kirjautua: ensimmäisellä kerralla kirjautuminen käy sähköpostiin lähetettävällä kertakoodilla – salasanaa ei tarvita.",
-      labels: { kayttokohde: "Käyttökohde", maara: "Määrä", pumppausaika: "Pumppausaika", sijainti: "Sijainti", puomi: "Puomi", linja: "Linja" },
+      // The 90-word onboarding block that used to live here was shown on EVERY
+      // request forever and outweighed the job itself. The rules it recited
+      // (pricing privacy, no-login replies, attachments behind a sign-in) are all
+      // stated again on the preview page the CTA leads to, so the email keeps only
+      // the line a provider needs before deciding to quote.
+      trustLine: "Hintasi näkyy vain asiakkaalle — muut pumppuyritykset eivät näe sitä.",
+      // Which of these two renders is decided by the RECIPIENT's token, not by
+      // policy: a preview token minted without a personId (shared inbox via
+      // offerNotificationEmail, or laskutusEmail) cannot bid — POST /preview/offer
+      // refuses it — but can still decline. Promising "kirjautumista ei tarvita"
+      // to that cohort was a lie the page only revealed after they had filled in
+      // and submitted a price.
+      linkLineCanBid: "Voit tehdä tarjouksen tai kieltäytyä suoraan alla olevasta linkistä — kirjautumista ei tarvita.",
+      linkLineNeedsLogin: "Voit kieltäytyä suoraan alla olevasta linkistä. Tarjouksen lähettäminen vaatii kirjautumisen samalta sivulta.",
+      // True of the emailed link path, which is where the CTA leads. Says nothing
+      // about the signed-in provider-detail view, which reveals on open.
+      contactLine: "Asiakkaan yhteystiedot avautuvat, kun olet lähettänyt tarjouksen.",
+      labels: {
+        kayttokohde: "Käyttökohde", maara: "Määrä", pumppausaika: "Pumppausaika",
+        kesto: "Kesto (arvio)", sijainti: "Sijainti", puomi: "Puomi", linja: "Linja",
+        respondBy: "Vastaa viimeistään",
+      },
       cta: "Katso tarjouspyyntö ja tee tarjous",
-      contactHint: "Asiakkaan yhteystiedot saat heti, kun lähetät tarjouksen.",
+      declineCta: "En tarjoa tähän",
       ctaTextPrefix: "Tee tarjous",
+      declineTextPrefix: "En tarjoa tähän",
+      footerLine: "Pyyntö #{id} · Saapunut {date}",
     },
     customerNoSupply: {
       subject: "Emme löytäneet pumppaajaa juuri nyt – BetoniJerry",
@@ -91,12 +117,23 @@ const COPY = {
   en: {
     providerNewRequest: {
       subject: "New quote request in your area – BetoniJerry",
+      subjectPrefix: "Quote request: ",
+      subjectSuffix: " – BetoniJerry",
       heading: "New quote request in your area",
-      intro: "A new concrete pumping quote request has arrived in your area. You can submit an offer — or decline — straight from the link below, with no login. The customer sees your price and company details together and can accept directly. Your price is shown only to the customer — other pumping companies never see it. You get the customer's contact details and the exact site information as soon as you send your offer. To add attachments you can also sign in: the first time works with a one-time code sent to your email — no password needed.",
-      labels: { kayttokohde: "Application", maara: "Volume", pumppausaika: "Pumping time", sijainti: "Location", puomi: "Boom", linja: "Line" },
+      trustLine: "Your price is shown only to the customer — other pumping companies never see it.",
+      linkLineCanBid: "You can submit an offer — or decline — straight from the link below, with no login.",
+      linkLineNeedsLogin: "You can decline straight from the link below. Submitting an offer needs a sign-in from the same page.",
+      contactLine: "The customer's contact details unlock as soon as you send your offer.",
+      labels: {
+        kayttokohde: "Application", maara: "Volume", pumppausaika: "Pumping time",
+        kesto: "Duration (est.)", sijainti: "Location", puomi: "Boom", linja: "Line",
+        respondBy: "Respond by",
+      },
       cta: "View the request and submit an offer",
-      contactHint: "You get the customer's contact details as soon as you send your offer.",
+      declineCta: "I will not offer",
       ctaTextPrefix: "Submit an offer",
+      declineTextPrefix: "Decline",
+      footerLine: "Request #{id} · Received {date}",
     },
     customerNoSupply: {
       subject: "We could not find a pumping company right now – BetoniJerry",

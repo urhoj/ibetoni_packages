@@ -44,6 +44,49 @@ function formatPourTime(date, lang = "fi") {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} klo ${pad(d.getHours())}.${pad(d.getMinutes())}`;
 }
 
+// Finnish writes decimals with a COMMA. Every numeric field these emails carry
+// (totalM3, requiredPuomi, requiredLinja, pumppuKesto) is a SQL `decimal`, so
+// mssql hands us 3 or 7.5 and a bare interpolation printed "7.5 m³" into Finnish
+// copy. Latent while the fixtures were whole numbers; wrong on the first half-cube.
+function formatFiNumber(value, lang = "fi") {
+  if (value == null) return "";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "";
+  // decimal(8,2) at most — trim the trailing zeros a raw String() would keep.
+  const s = String(Math.round(n * 100) / 100);
+  return normalizeLang(lang) === "en" ? s : s.replace(".", ",");
+}
+
+// Date-only, in Helsinki. Deliberately NOT formatPourTime: that one reads
+// `d.getHours()` in the PROCESS zone, which is UTC on Azure. Every date these
+// emails show is a UTC datetime2 (`expiresAt` is SYSUTCDATETIME() + 14 d), so a
+// naive read lands on the wrong day for anything stamped late in the evening.
+// Output matches betonijerry's own formatSentDate (DD.MM.YYYY, "—" on bad input)
+// so the email and the preview page print the same date the same way.
+function formatFiDate(date, lang = "fi") {
+  // `new Date(null)` is the EPOCH, not an invalid date — without this guard a
+  // null expiresAt/createdAt prints "01.01.1970" into a live email.
+  if (date == null) return "—";
+  const d = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(d.getTime())) return "—";
+  const p = {};
+  for (const part of new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Helsinki", day: "2-digit", month: "2-digit", year: "numeric",
+  }).formatToParts(d)) p[part.type] = part.value;
+  return normalizeLang(lang) === "en"
+    ? `${p.day}/${p.month}/${p.year}`
+    : `${p.day}.${p.month}.${p.year}`;
+}
+
+// "Vanha Porvoontie, 01490 Vantaa" -> "Vantaa"; "Helsinki" -> "Helsinki".
+// Used for the subject line only, so a provider can tell two open requests apart
+// in the inbox. Returns "" when the address yields nothing town-shaped.
+function townFromMaskedAddress(address) {
+  if (!address) return "";
+  const segments = String(address).split(",");
+  return segments[segments.length - 1].replace(/^\s*\d{5}\s*/, "").trim();
+}
+
 // Shared brand chrome.
 function wrapJerryLayout(contentHtml, lang = "fi") {
   const year = new Date().getFullYear();
@@ -52,11 +95,11 @@ function wrapJerryLayout(contentHtml, lang = "fi") {
 <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:#f5f5f5;">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f5f5f5;"><tr><td align="center" style="padding:40px 20px;">
 <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background:#fff;border-radius:12px;box-shadow:0 4px 6px rgba(0,0,0,.07);overflow:hidden;">
-<tr><td style="background:linear-gradient(135deg,#F59E0B 0%,#D97706 100%);padding:36px 30px;text-align:center;">
+<tr><td bgcolor="#D97706" style="background-color:#D97706;background:linear-gradient(135deg,#F59E0B 0%,#D97706 100%);padding:36px 30px;text-align:center;">
 <h1 style="margin:0;color:#fff;font-size:30px;font-weight:700;">BetoniJerry</h1></td></tr>
 <tr><td style="padding:40px;color:#1a202c;font-size:16px;line-height:1.6;">${contentHtml}</td></tr>
-<tr><td style="background:#FEF9E7;padding:28px 40px;text-align:center;border-top:1px solid #f0e6c8;">
-<p style="margin:0;color:#a0aec0;font-size:11px;">© ${year} BetoniJerry</p></td></tr>
+<tr><td bgcolor="#FEF9E7" style="background-color:#FEF9E7;padding:28px 40px;text-align:center;border-top:1px solid #f0e6c8;">
+<p style="margin:0;color:#4b5563;font-size:11px;">© ${year} BetoniJerry</p></td></tr>
 </table></td></tr></table></body></html>`;
 }
 
@@ -64,31 +107,88 @@ function wrapJerryText(contentText) {
   return `BetoniJerry\n\n${contentText}\n\n— BetoniJerry`;
 }
 
+// Outlook's Word engine ignores `background:linear-gradient(...)` entirely and
+// paints NOTHING, so a white label on a gradient-only button rendered white on
+// white — the primary action was invisible. `bgcolor` + `background-color` give
+// it a real fill. The label is #1a202c rather than #fff because white on this
+// amber is ~2.15:1; the dark label is ~7.6:1 and keeps the brand colour intact.
 function cta(url, label) {
-  return `<p style="margin:28px 0 0 0;"><a href="${url}" style="background:linear-gradient(135deg,#F59E0B 0%,#D97706 100%);color:#fff;padding:14px 28px;text-decoration:none;border-radius:8px;display:inline-block;font-weight:600;">${escapeHtml(label)}</a></p>`;
+  return `<p style="margin:28px 0 0 0;"><a href="${escapeHtml(url)}" bgcolor="#F59E0B" style="background-color:#F59E0B;background:linear-gradient(135deg,#F59E0B 0%,#D97706 100%);color:#1a202c;padding:14px 28px;text-decoration:none;border-radius:8px;display:inline-block;font-weight:700;">${escapeHtml(label)}</a></p>`;
+}
+
+// Low-emphasis companion action. Deliberately a plain link, not a second button:
+// declining must be reachable from the mail (the copy promises it, and it is the
+// signal that closes the loop for the customer) without competing with the quote.
+function secondaryLink(url, label) {
+  return `<p style="margin:14px 0 0 0;"><a href="${escapeHtml(url)}" style="color:#92400E;font-size:14px;">${escapeHtml(label)}</a></p>`;
+}
+
+// Inbox preview line. Sits first in the content fragment so clients that show a
+// snippet get the job facts instead of the opening sentence of the body copy.
+function preheader(text) {
+  return `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;opacity:0;">${escapeHtml(text)}</div>`;
 }
 
 // --- #1 provider: new request (masked, NO customer PII) ---
+// Facts first, prose second: this is a job card, not a letter. A pump operator
+// triages it on "how much, where, what boom, by when" — burying those under
+// onboarding copy is what made the old version unreadable on a phone.
 function providerNewRequest(d, lang = "fi") {
-  const c = copyFor(lang, "providerNewRequest");
-  const lines = [
-    `<strong>${c.labels.kayttokohde}:</strong> ${escapeHtml(d.kayttokohde || "—")}`,
-    `<strong>${c.labels.maara}:</strong> ${escapeHtml(d.totalM3)} m³`,
-    d.pumppuAika ? `<strong>${c.labels.pumppausaika}:</strong> ${escapeHtml(d.pumppuAika)}` : null,
-    `<strong>${c.labels.sijainti}:</strong> ${escapeHtml(d.maskedAddress || "—")}`,
-    d.requiredPuomi ? `<strong>${c.labels.puomi}:</strong> ${escapeHtml(d.requiredPuomi)} m` : null,
-    d.requiredLinja ? `<strong>${c.labels.linja}:</strong> ${escapeHtml(d.requiredLinja)} m` : null,
-  ].filter(Boolean).map((l) => `<p style="margin:6px 0;">${l}</p>`).join("");
-  const html = `<h2 style="margin:0 0 16px;font-size:22px;">${c.heading}</h2>
-<p style="margin:0 0 16px;">${c.intro}</p>${lines}${cta(d.operatorUrl, c.cta)}`;
-  // text/plain mirrors the HTML order (heading → intro → details → CTA). It
-  // used to substitute the one-line `c.contactHint` for `c.intro`, so the two
-  // MIME parts said materially different things: the HTML carried the pricing-
-  // privacy guarantee and the call to quote, the text part carried neither.
-  // `c.contactHint` is left defined in ./copy.js — unused here now, but
-  // the in-flight English tier-1 plan still references it.
-  const text = `${c.heading}.\n\n${c.intro}\n\n${c.labels.kayttokohde}: ${d.kayttokohde || "—"}\n${c.labels.maara}: ${d.totalM3} m³\n${c.labels.sijainti}: ${d.maskedAddress || "—"}\n\n${c.ctaTextPrefix}: ${d.operatorUrl}`;
-  return { subject: c.subject, html, text };
+  const l = normalizeLang(lang);
+  const c = copyFor(l, "providerNewRequest");
+
+  // DEFAULT-ALLOW. An absent flag means an older caller, not "cannot bid" — the
+  // inverted default would tell every provider they must log in, which is both
+  // wrong and the exact copy that suppresses quotes.
+  const canBid = d.canBidWithLink !== false;
+
+  // ONE row list feeds both MIME parts. They used to be written out separately
+  // and had silently drifted: the text/plain half omitted Puomi and Linja, i.e.
+  // the two fields that decide which machine can take the job.
+  const rows = [
+    [c.labels.kayttokohde, d.kayttokohde || "—"],
+    [c.labels.maara, `${formatFiNumber(d.totalM3, l)} m³`],
+    d.pumppuAika ? [c.labels.pumppausaika, d.pumppuAika] : null,
+    d.pumppuKesto ? [c.labels.kesto, `${formatFiNumber(d.pumppuKesto, l)} h`] : null,
+    [c.labels.sijainti, d.maskedAddress || "—"],
+    d.requiredPuomi ? [c.labels.puomi, `${formatFiNumber(d.requiredPuomi, l)} m`] : null,
+    d.requiredLinja ? [c.labels.linja, `${formatFiNumber(d.requiredLinja, l)} m`] : null,
+    d.expiresAt ? [c.labels.respondBy, formatFiDate(d.expiresAt, l)] : null,
+  ].filter(Boolean);
+
+  // Every request used to carry a byte-identical subject, so a provider holding
+  // several open requests could not tell them apart, search them, or stop Gmail
+  // collapsing them into one thread.
+  const facts = [
+    d.totalM3 != null ? `${formatFiNumber(d.totalM3, l)} m³` : null,
+    d.kayttokohde || null,
+    townFromMaskedAddress(d.maskedAddress) || null,
+  ].filter(Boolean);
+  const subject = facts.length
+    ? `${c.subjectPrefix}${facts.join(", ")}${c.subjectSuffix}`
+    : c.subject;
+
+  const footer = d.pumppuRequestId
+    ? c.footerLine.replace("{id}", d.pumppuRequestId).replace("{date}", formatFiDate(d.createdAt, l))
+    : "";
+  const linkLine = canBid ? c.linkLineCanBid : c.linkLineNeedsLogin;
+
+  const rowsHtml = rows
+    .map(([k, v]) => `<p style="margin:6px 0;"><strong>${k}:</strong> ${escapeHtml(v)}</p>`)
+    .join("");
+  const html = `${preheader(facts.join(" · "))}<h2 style="margin:0 0 16px;font-size:22px;">${c.heading}</h2>
+${rowsHtml}
+<p style="margin:20px 0 0 0;">${linkLine}</p>
+<p style="margin:8px 0 0 0;">${c.trustLine}</p>
+<p style="margin:8px 0 0 0;">${c.contactLine}</p>${cta(d.operatorUrl, c.cta)}${
+    d.declineUrl ? secondaryLink(d.declineUrl, c.declineCta) : ""
+  }${footer ? `<p style="margin:24px 0 0 0;color:#4b5563;font-size:12px;">${escapeHtml(footer)}</p>` : ""}`;
+
+  const text = `${c.heading}.\n\n${rows.map(([k, v]) => `${k}: ${v}`).join("\n")}\n\n${linkLine}\n${c.trustLine}\n${c.contactLine}\n\n${c.ctaTextPrefix}: ${d.operatorUrl}${
+    d.declineUrl ? `\n${c.declineTextPrefix}: ${d.declineUrl}` : ""
+  }${footer ? `\n\n${footer}` : ""}`;
+
+  return { subject, html, text };
 }
 
 // --- #2 customer: no providers found ---
@@ -189,7 +289,8 @@ function customerProviderViewed(d, lang = "fi") {
 }
 
 module.exports = {
-  formatEuroFromCents, formatPourTime, wrapJerryLayout, wrapJerryText,
+  formatEuroFromCents, formatPourTime, formatFiNumber, formatFiDate,
+  wrapJerryLayout, wrapJerryText,
   providerNewRequest, customerNoSupply, customerOfferReceived,
   providerOfferAccepted, providerOfferRejected, customerProviderDeclined,
   customerPourConfirmed, customerProviderViewed,
