@@ -138,9 +138,20 @@ describe("formatters", () => {
     expect(t.formatEuroFromCents(null)).toBe("");
     expect(t.formatEuroFromCents("nope")).toBe("");
   });
-  it("formats pour time as dd.mm.yyyy klo HH.MM", () => {
-    expect(t.formatPourTime(new Date(2026, 6, 4, 8, 5))).toBe("04.07.2026 klo 08.05");
+  // Pinned to an explicit UTC instant, NOT `new Date(2026, 6, 4, 8, 5)`. The old
+  // fixture was local-to-the-runner, so getHours() round-tripped it on every
+  // machine and the suite stayed green while production (a UTC process) mailed
+  // customers a pour time three hours early.
+  it("formats pour time in Helsinki, not the process zone", () => {
+    // 05:05Z = 08:05 Helsinki (summer, +3)
+    expect(t.formatPourTime(new Date("2026-07-04T05:05:00Z"))).toBe("04.07.2026 klo 08.05");
+    // 06:05Z = 08:05 Helsinki (winter, +2) — same wall clock, different offset
+    expect(t.formatPourTime(new Date("2026-01-04T06:05:00Z"))).toBe("04.01.2026 klo 08.05");
+    expect(t.formatPourTime(new Date("2026-07-04T05:05:00Z"), "en")).toBe("4 Jul 2026 at 08.05");
+  });
+  it("returns empty for missing or invalid pour time", () => {
     expect(t.formatPourTime("not-a-date")).toBe("");
+    expect(t.formatPourTime(null)).toBe("");
   });
 });
 
@@ -246,7 +257,10 @@ describe("customerProviderDeclined", () => {
 
 describe("customerPourConfirmed (#6)", () => {
   const out = t.customerPourConfirmed({
-    providerName: "Pumppu Oy", scheduledAt: new Date(2026, 6, 4, 8, 0),
+    // Explicit UTC instant: 05:00Z is 08:00 in Helsinki. This is the mail that
+    // tells a customer when their concrete arrives, so the hour has to be the
+    // one the operator agreed, not the one the server happens to run in.
+    providerName: "Pumppu Oy", scheduledAt: new Date("2026-07-04T05:00:00Z"),
     address: "Sarkatie 7, 01720 Vantaa", totalM3: 12, keikkaId: 999,
     valutUrl: "https://betonijerry.fi/valut/5",
   });

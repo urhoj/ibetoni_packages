@@ -33,15 +33,31 @@ function formatEuroFromCents(cents, lang = "fi") {
   return `${grouped}\u00A0€`;
 }
 
+// Formats in Europe/Helsinki, NOT the process zone. `scheduledAt` is a genuine
+// UTC instant — the operator picks Helsinki wall clock in a datetime-local, the
+// browser converts, and the backend stores and reasons about it as an instant
+// (buildScheduledKeikkaFields derives a Helsinki-local yyyymmdd from it). This
+// function read `d.getHours()`, and the deployed Node process runs on UTC, so
+// customerPourConfirmed told the customer an 08:00 pour was "klo 05.00" — three
+// hours early in summer, two in winter, in the mail that confirms their pour.
+// The old unit test could not catch it: it built the fixture with
+// `new Date(2026, 6, 4, 8, 5)`, which is local in whatever zone the test runs in,
+// so getHours() round-tripped it on every machine.
 function formatPourTime(date, lang = "fi") {
+  // `new Date(null)` is the epoch, not an invalid date (see formatFiDate).
+  if (date == null) return "";
   const d = date instanceof Date ? date : new Date(date);
   if (Number.isNaN(d.getTime())) return "";
-  const pad = (n) => String(n).padStart(2, "0");
-  if (normalizeLang(lang) === "en") {
-    const month = new Intl.DateTimeFormat("en-GB", { month: "short" }).format(d);
-    return `${d.getDate()} ${month} ${d.getFullYear()} at ${pad(d.getHours())}.${pad(d.getMinutes())}`;
-  }
-  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} klo ${pad(d.getHours())}.${pad(d.getMinutes())}`;
+  const en = normalizeLang(lang) === "en";
+  const p = {};
+  for (const part of new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Helsinki", hourCycle: "h23",
+    day: "2-digit", month: en ? "short" : "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  }).formatToParts(d)) p[part.type] = part.value;
+  return en
+    ? `${Number(p.day)} ${p.month} ${p.year} at ${p.hour}.${p.minute}`
+    : `${p.day}.${p.month}.${p.year} klo ${p.hour}.${p.minute}`;
 }
 
 // Finnish writes decimals with a COMMA. Every numeric field these emails carry
