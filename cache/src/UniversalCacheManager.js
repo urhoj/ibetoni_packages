@@ -224,6 +224,15 @@ class UniversalCacheManager {
       invoiceStatus: 43200, // 12 hours - invoice status lookup table
       tyomaaPerson: 3600, // 1 hour - worksite-person relationships
       asiakasPerson: 3600, // 1 hour - customer-person relationships
+      // Per-company ROLE grants (asiakasPersonSettings). Registered explicitly
+      // even though 3600 equals the `default` it used to fall through to: the
+      // CLI's invalidate allowlist (VALID_ENTITIES in cacheCliRoutes.js) is
+      // derived from THESE KEYS, so an unregistered entity is one no operator
+      // can target — `ib dev cache invalidate asiakasPersonSetting` answered
+      // "Unknown entityType", forcing a raw glob + --force-prod against prod to
+      // clear a stale role cache (fb#1538). Membership here is the fix; the TTL
+      // is deliberately unchanged.
+      asiakasPersonSetting: 3600, // 1 hour - per-company role grants
       keikkaPerson: 3600, // 1 hour - delivery-person assignments
       keikkaBetoni: 3600, // 1 hour - delivery concrete assignments
       dailyMessage: 7200, // 2 hours - daily messages, frequently updated
