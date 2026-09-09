@@ -30,12 +30,24 @@ function main() {
   console.log("BASE_TTL invalidation-allowlist tests:");
   const { BASE_TTL } = new UniversalCacheManager({});
 
-  // Entity names puminet5api passes to universalCacheMiddleware. Each one MUST
-  // be registered, or it is cached-but-uninvalidatable. Add to this list when a
-  // new cached entity is introduced.
+  // A CURATED SUBSET of the entity names puminet5api passes to
+  // universalCacheMiddleware — not a mirror of it, and deliberately not claiming
+  // to be. Each one listed MUST be registered, or it is cached-but-uninvalidatable
+  // (see the assertion message). This package cannot import puminet5api's routes,
+  // so the list is hand-kept and will always lag; treating it as exhaustive is
+  // what let the gap below survive. Add an entity when you touch it.
+  //
+  // KNOWN STILL MISSING from BASE_TTL, i.e. cached but NOT invalidatable today
+  // (fb#1542): holidays, ilmoitustaulu, subscription, subscriptionItems.
+  // (`holiday` IS registered — singular; the routes cache under the PLURAL, so it
+  // falls through. `news` is missing too but is separately whitelisted in
+  // VALID_ENTITIES, alongside combinator and toimitus.) They are absent from this
+  // list on purpose — adding them here would just turn the suite red; each first
+  // needs a pattern that matches its key shape, e.g.
+  // `subscriptionItems:available:<tierId>` is tier-scoped, not tenant-scoped, so
+  // the generic `<entity>:*:<id>*` never reaches it.
   const CACHED_BY_API = [
     "asiakasPersonSetting", // asiakasPersonSettingRoutes.js — role grants (fb#1538)
-    "asiakasPerson",
     "person",
     "asiakas",
     "vehicle",
