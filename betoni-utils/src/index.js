@@ -14,6 +14,7 @@ const { formatPersonName } = require("./personUtils.js");
 const { isEmail, parseMultipleEmails, validateMultipleEmails } = require("./emailUtils.js");
 const { getText, HAVERSINE_DISTANCE_M } = require("./ecofleetUtils.js");
 const { parseHelsinkiLocal, helsinkiOffsetMinutes } = require("./helsinkiTime.js");
+const { FLEET_PROVIDERS, DEFAULT_FLEET_PROVIDER, MAPON_STATE_TO_ENGINESTATE, normalizeProvider, prefixObjectId, maponUnitToNode, isEngineOn } = require("./fleetProviders.js");
 
 module.exports = {
   betoni_getString,
@@ -33,4 +34,11 @@ module.exports = {
   HAVERSINE_DISTANCE_M,
   parseHelsinkiLocal,
   helsinkiOffsetMinutes,
+  FLEET_PROVIDERS,
+  DEFAULT_FLEET_PROVIDER,
+  MAPON_STATE_TO_ENGINESTATE,
+  normalizeProvider,
+  prefixObjectId,
+  maponUnitToNode,
+  isEngineOn,
 };
