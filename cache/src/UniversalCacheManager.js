@@ -259,6 +259,7 @@ class UniversalCacheManager {
       ilmoitustaulu: 3600, // 1 hour - notice-board posts (ilmoitustaulu:all|list:<asiakasId>...)
       subscription: 3600, // 1 hour - subscription status/history (subscription:<op>:<asiakasId>...)
       subscriptionItems: 3600, // 1 hour - subscription items/pricing (subscriptionItems:<op>:<asiakasId|tierId>...)
+      inventory: 3600, // 1 hour - inventory locations/items/deliveries (inventory:<op>:<asiakasId>...) — found by puminet5api audit:cache-entities
       notifications: 120, // 2 minutes - time-sensitive push notifications
       reminder: 7200, // 2 hours - reminder rules, infrequently changed
       keikkaTila: 43200, // 12 hours - delivery status types (static reference data)

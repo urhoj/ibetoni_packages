@@ -50,6 +50,7 @@ async function main() {
     "ilmoitustaulu",    // ilmoitustauluRoutes.js
     "subscription",     // subscription.js
     "subscriptionItems", // subscriptionItems.js
+    "inventory",        // inventoryRoutes.js — the first catch of the derived audit
   ];
 
   for (const entity of CACHED_BY_API) {
