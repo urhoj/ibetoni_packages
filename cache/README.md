@@ -448,7 +448,8 @@ TTLs are capped at **7 days** (604,800 seconds) regardless of multiplier to prev
 | config | 12hr | **48hr** | Configuration data |
 | help | 12hr | **48hr** | Help content |
 | legalDocument | 24hr | **96hr** | Legal documents |
-| holiday | 24hr | **96hr** | National holidays |
+| holidays | 24hr | **96hr** | National holidays |
+| ilmoitustaulu, subscription, subscriptionItems, inventory | 1hr | **4hr** | Registered 2026-09-11 (fb#1542) — were cached under `default` but not invalidatable |
 | notifications | 2min | **8min** | Push notifications (time-sensitive) |
 | auth | 5min | **~20min** | Login permissions / role cache (jitter via cache()) |
 | ecofleet | 1min | **1min** | Real-time GPS (excluded from multiplier) |
@@ -461,7 +462,7 @@ TTLs are capped at **7 days** (604,800 seconds) regardless of multiplier to prev
 
 Static reference data entity types are cached in an L1 in-memory LRU cache (max 500 entries, 30-minute TTL) in front of Redis. This eliminates Redis network round-trips for data that rarely changes.
 
-**L1-eligible entity types:** config, betoniReference, personpvmStatus, personDateType, personRequiredDateType, tyomaaDateType, asiakasDateType, vehicleDateType, vehicleRequiredDateType, attachmentTypes, productReference, barColor, invoiceStatus, laskuStatusType, help, holiday, keikkaTila
+**L1-eligible entity types:** config, betoniReference, personpvmStatus, personDateType, personRequiredDateType, tyomaaDateType, asiakasDateType, vehicleDateType, vehicleRequiredDateType, attachmentTypes, productReference, barColor, invoiceStatus, laskuStatusType, help, holidays, keikkaTila
 
 L1 entries are automatically cleared on pattern-based invalidation and during memory pressure cleanup via `memoryManager`.
 

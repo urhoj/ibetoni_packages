@@ -71,11 +71,10 @@ async function main() {
   // fb#1542: HOLIDAY_SYNC invalidated `holiday` (singular) while every route
   // cached under `holidays`, so the weekly sync swept a name nothing wrote and
   // the 24h TTL was the only thing clearing the holiday cache.
-  await test("every entity invalidateCrossEntity names is a BASE_TTL key", async () => {
+  await test("HOLIDAY_SYNC invalidates `holidays` and only registered names", async () => {
     const seen = [];
     const mgr = new UniversalCacheManager({});
     mgr.invalidate = async (_op, entity) => { seen.push(entity); return 0; };
-    mgr.invalidateByPattern = async () => 0;
     await mgr.invalidateCrossEntity("HOLIDAY_SYNC", {});
     assert.ok(seen.includes("holidays"), `HOLIDAY_SYNC invalidated ${JSON.stringify(seen)} — not 'holidays'`);
     for (const e of seen) {
@@ -91,4 +90,4 @@ async function main() {
   process.exit(failures === 0 ? 0 : 1);
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main();
