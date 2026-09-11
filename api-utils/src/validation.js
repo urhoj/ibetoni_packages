@@ -78,13 +78,17 @@ function isValidCalendarDate(dateStr, format = "YYYYMMDD") {
 
 /**
  * Wrap async route handlers to catch errors and pass to next().
+ *
+ * The wrapper RETURNS the settled promise (fb#1566). Express ignores a
+ * handler's return value, but a unit test that calls the wrapped handler
+ * directly can `await` it and know the body has finished — without the
+ * return, `await handler(req, res)` resolved before the body ran and every
+ * assertion after it inspected mocks nothing had called yet.
  * @param {Function} fn - Async function to wrap
  * @returns {Function} Express route handler with error catching
  */
 function asyncHandler(fn) {
-  return (req, res, next) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
+  return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 }
 
 module.exports = {

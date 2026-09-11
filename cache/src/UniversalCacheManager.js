@@ -249,7 +249,16 @@ class UniversalCacheManager {
       lasku: 3600, // 1 hour - invoice data
       laskupohja: 7200, // 2 hours - invoice templates (more stable than invoices)
       laskuStatusType: 43200, // 12 hours - invoice status types (static reference data)
-      holiday: 86400, // 24 hours - national holidays, changes rarely (weekly sync)
+      // PLURAL — every holidayRoutes.js GET caches under `holidays`. This was
+      // registered singular, so the weekly HOLIDAY_SYNC swept `holiday:*` (a
+      // name nothing wrote) and operators could not target it (fb#1542).
+      holidays: 86400, // 24 hours - national holidays, changes rarely (weekly sync)
+      // fb#1542: cached by universalCacheMiddleware but unregistered, so
+      // `ib dev cache invalidate <entity>` answered "Unknown entityType".
+      // Same 3600 they already fell through to via `default`.
+      ilmoitustaulu: 3600, // 1 hour - notice-board posts (ilmoitustaulu:all|list:<asiakasId>...)
+      subscription: 3600, // 1 hour - subscription status/history (subscription:<op>:<asiakasId>...)
+      subscriptionItems: 3600, // 1 hour - subscription items/pricing (subscriptionItems:<op>:<asiakasId|tierId>...)
       notifications: 120, // 2 minutes - time-sensitive push notifications
       reminder: 7200, // 2 hours - reminder rules, infrequently changed
       keikkaTila: 43200, // 12 hours - delivery status types (static reference data)
@@ -303,7 +312,7 @@ class UniversalCacheManager {
       "invoiceStatus",
       "laskuStatusType",
       "help",
-      "holiday",
+      "holidays",
       "keikkaTila",
     ]);
 
@@ -1869,7 +1878,7 @@ class UniversalCacheManager {
 
       case "HOLIDAY_SYNC":
         // National holiday sync - invalidate holiday and schedule caches
-        totalInvalidated += await this.invalidate(operation, "holiday", params);
+        totalInvalidated += await this.invalidate(operation, "holidays", params);
         totalInvalidated += await this.invalidate(
           operation,
           "personpvm",

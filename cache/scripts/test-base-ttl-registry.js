@@ -21,31 +21,21 @@ const assert = require("assert");
 const UniversalCacheManager = require("../src/UniversalCacheManager");
 
 let failures = 0;
-function test(name, fn) {
-  try { fn(); console.log(`  ok  ${name}`); }
+async function test(name, fn) {
+  try { await fn(); console.log(`  ok  ${name}`); }
   catch (e) { failures++; console.error(`  FAIL ${name}\n       ${e.message}`); }
 }
 
-function main() {
+async function main() {
   console.log("BASE_TTL invalidation-allowlist tests:");
   const { BASE_TTL } = new UniversalCacheManager({});
 
   // A CURATED SUBSET of the entity names puminet5api passes to
-  // universalCacheMiddleware — not a mirror of it, and deliberately not claiming
-  // to be. Each one listed MUST be registered, or it is cached-but-uninvalidatable
-  // (see the assertion message). This package cannot import puminet5api's routes,
-  // so the list is hand-kept and will always lag; treating it as exhaustive is
-  // what let the gap below survive. Add an entity when you touch it.
-  //
-  // KNOWN STILL MISSING from BASE_TTL, i.e. cached but NOT invalidatable today
-  // (fb#1542): holidays, ilmoitustaulu, subscription, subscriptionItems.
-  // (`holiday` IS registered — singular; the routes cache under the PLURAL, so it
-  // falls through. `news` is missing too but is separately whitelisted in
-  // VALID_ENTITIES, alongside combinator and toimitus.) They are absent from this
-  // list on purpose — adding them here would just turn the suite red; each first
-  // needs a pattern that matches its key shape, e.g.
-  // `subscriptionItems:available:<tierId>` is tier-scoped, not tenant-scoped, so
-  // the generic `<entity>:*:<id>*` never reaches it.
+  // universalCacheMiddleware — not a mirror of it. This package cannot import
+  // puminet5api's routes, so the EXHAUSTIVE check lives on the consumer side:
+  // puminet5api `npm run audit:cache-entities` greps every middleware call site
+  // against the real BASE_TTL (fb#1542). This list pins the ones that were once
+  // cached-but-uninvalidatable, so a rename here goes red before it ships.
   const CACHED_BY_API = [
     "asiakasPersonSetting", // asiakasPersonSettingRoutes.js — role grants (fb#1538)
     "person",
@@ -54,10 +44,16 @@ function main() {
     "sijainti",
     "keikka",
     "attachment",
+    // fb#1542 — the four that fell through to `default` and answered
+    // "Unknown entityType" to `ib dev cache invalidate`.
+    "holidays",         // holidayRoutes.js — PLURAL; the key was registered singular
+    "ilmoitustaulu",    // ilmoitustauluRoutes.js
+    "subscription",     // subscription.js
+    "subscriptionItems", // subscriptionItems.js
   ];
 
   for (const entity of CACHED_BY_API) {
-    test(`${entity} is registered (and therefore invalidatable)`, () => {
+    await test(`${entity} is registered (and therefore invalidatable)`, () => {
       assert.ok(
         Object.prototype.hasOwnProperty.call(BASE_TTL, entity),
         `BASE_TTL has no '${entity}' key — it will cache under the 'default' TTL but ` +
@@ -71,7 +67,22 @@ function main() {
     });
   }
 
-  test("default is still present (the fallback the unregistered relied on)", () => {
+  // fb#1542: HOLIDAY_SYNC invalidated `holiday` (singular) while every route
+  // cached under `holidays`, so the weekly sync swept a name nothing wrote and
+  // the 24h TTL was the only thing clearing the holiday cache.
+  await test("every entity invalidateCrossEntity names is a BASE_TTL key", async () => {
+    const seen = [];
+    const mgr = new UniversalCacheManager({});
+    mgr.invalidate = async (_op, entity) => { seen.push(entity); return 0; };
+    mgr.invalidateByPattern = async () => 0;
+    await mgr.invalidateCrossEntity("HOLIDAY_SYNC", {});
+    assert.ok(seen.includes("holidays"), `HOLIDAY_SYNC invalidated ${JSON.stringify(seen)} — not 'holidays'`);
+    for (const e of seen) {
+      assert.ok(Object.prototype.hasOwnProperty.call(BASE_TTL, e), `HOLIDAY_SYNC targets unregistered entity '${e}'`);
+    }
+  });
+
+  await test("default is still present (the fallback the unregistered relied on)", () => {
     assert.strictEqual(typeof BASE_TTL.default, "number");
   });
 
@@ -79,4 +90,4 @@ function main() {
   process.exit(failures === 0 ? 0 : 1);
 }
 
-main();
+main().catch((e) => { console.error(e); process.exit(1); });
