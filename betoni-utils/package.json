@@ -1,6 +1,6 @@
 {
   "name": "@ibetoni/betoni-utils",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Shared betoni (concrete) string formatting, validation, and utility functions for betoni.online",
   "main": "src/index.js",
   "scripts": {

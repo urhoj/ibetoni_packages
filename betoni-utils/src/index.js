@@ -15,8 +15,11 @@ const { isEmail, parseMultipleEmails, validateMultipleEmails } = require("./emai
 const { getText, HAVERSINE_DISTANCE_M } = require("./ecofleetUtils.js");
 const { parseHelsinkiLocal, helsinkiOffsetMinutes } = require("./helsinkiTime.js");
 const { FLEET_PROVIDERS, DEFAULT_FLEET_PROVIDER, MAPON_STATE_TO_ENGINESTATE, normalizeProvider, prefixObjectId, maponUnitToNode, isEngineOn } = require("./fleetProviders.js");
+const { estimatePumppuKesto, PUMPPU_KESTO_FIT } = require("./pumppuKestoEstimate.js");
 
 module.exports = {
+  estimatePumppuKesto,
+  PUMPPU_KESTO_FIT,
   betoni_getString,
   betoni_getString_noAttr,
   betoni_getStrings,
