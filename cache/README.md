@@ -163,11 +163,13 @@ Invalidate cache for complex cross-entity operations.
 - `PALKKI_CREATE` - Grid bar creation
 - `GRID_UPDATE` - Grid-only cache invalidation (for visibility changes)
 - `PERSON_UPDATE` - Person/user updates
-- `PERSON_PREFS_UPDATE` - A person's own preferences (dark mode, password, dontAsks, settings) -
-  invalidates only that person + their auth/role caches, never the grid
-- `VEHICLE_UPDATE` - Vehicle updates
-- `VEHICLE_CREATE` - Vehicle creation
-- `VEHICLE_DELETE` - Vehicle deletion
+- `PERSON_PREFS_UPDATE` - A person's own preferences (dark mode, password, dontAsks, settings,
+  foreign keys) - invalidates only that person + their auth/role caches + the owner-keyed
+  `person:foreignKeys:get:<personId>:*` read (fb#1683), never the grid
+- `VEHICLE_UPDATE` - Vehicle updates (also sweeps `vehicle:foreignKey:<vehicleId>:*`, which
+  carries no tenant segment — fb#1683)
+- `VEHICLE_CREATE` - Vehicle creation (same foreign-key sweep)
+- `VEHICLE_DELETE` - Vehicle deletion (same foreign-key sweep)
 - `VEHICLE_VISIBILITY_*` - Vehicle visibility operations (cross-tenant)
 - `ASIAKAS_UPDATE` - Customer updates (with cross-entity: keikka if keikkaId, linked customer if linkedAsiakasId, and the edited customer via entityId when it differs from the caller's tenant - e.g. a system admin editing a different company)
 - `ASIAKAS_CREATE` - Customer creation (same cross-entity rules)
