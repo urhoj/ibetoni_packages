@@ -2127,12 +2127,17 @@ class UniversalCacheManager {
       case "VEHICLE_CREATE":
       case "VEHICLE_DELETE": {
         const dateKey = this._extractYYYYMMDD(params);
+        // The foreign-key read (`vehicle:foreignKey:<vehicleId>:<sourceId>`) carries no
+        // tenant segment, so the generic `vehicle:*:<tenant>*` sweep never matches it
+        // (fb#1683) — sweep it by vehicle explicitly.
+        const vehicleId = params.entityId || params.vehicleId || params.body?.vehicleId;
         const counts = await Promise.all([
           this.invalidate(operation, "vehicle", params),
           this.invalidate(operation, "keikka", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
           this.invalidate(operation, "person", params),
           this.invalidateByPattern(`grid:v7tenant:${dateKey}:*`),
+          vehicleId ? this.invalidateByPattern(`vehicle:foreignKey:${vehicleId}:*`) : Promise.resolve(0),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         break;

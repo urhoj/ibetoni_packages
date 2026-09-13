@@ -9,6 +9,11 @@ const UniversalCacheManager = require("../src/UniversalCacheManager");
 // shape) left the read cached until TTL: `ib person fk list` answered [] after an
 // insert, and a second `set` inserted a duplicate. Pin: the operation sweeps the FK
 // read key for that person, whatever the caller's tenant.
+//
+// Same shape for vehicles: `vehicle:foreignKey:<vehicleId>:<sourceId>` carries no tenant
+// segment at all, so VEHICLE_UPDATE's `vehicle:*:<callerTenant>*` never matched it. It
+// only LOOKED invalidated because the read was mis-keyed as the vehicle record
+// (puminet5api generateVehicleKey, fixed alongside).
 
 let failures = 0;
 function test(name, fn) {
@@ -27,7 +32,7 @@ function newMgr() {
 }
 
 async function main() {
-  console.log("person foreign-key read invalidation tests:");
+  console.log("foreign-key read invalidation tests:");
 
   await test("PERSON_PREFS_UPDATE sweeps person:foreignKeys:get:<personId>:* for a cross-tenant write", async () => {
     const { mgr, patterns } = newMgr();
@@ -43,8 +48,18 @@ async function main() {
       `unexpected FK sweep in ${JSON.stringify(patterns)}`);
   });
 
+  for (const op of ["VEHICLE_UPDATE", "VEHICLE_CREATE", "VEHICLE_DELETE"]) {
+    await test(`${op} sweeps vehicle:foreignKey:<vehicleId>:* for the written vehicle`, async () => {
+      const { mgr, patterns } = newMgr();
+      mgr.invalidateGridSmart = async () => 0;
+      await mgr.invalidateCrossEntity(op, { asiakasId: 8, entityId: 135 });
+      assert.ok(patterns.includes("vehicle:foreignKey:135:*"),
+        `expected the vehicle FK read sweep, got ${JSON.stringify(patterns)}`);
+    });
+  }
+
   if (failures > 0) { console.error(`\n${failures} test(s) failed`); process.exit(1); }
-  console.log("\nAll person foreign-key invalidation tests passed");
+  console.log("\nAll foreign-key invalidation tests passed");
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
