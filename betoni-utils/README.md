@@ -263,7 +263,7 @@ SQL fragment computing great-circle distance in metres using the Haversine formu
 
 #### `estimatePumppuKesto(m3, fit = PUMPPU_KESTO_FIT)`
 
-Default `pumppuKesto` (whole on-site time, minutes) for a pour of `m3`: `60 × a × m3^b`, snapped to the 15-min slider step, floored at 60. Returns `null` when `m3` is unknown or not positive, so callers keep their own fallback. `PUMPPU_KESTO_FIT = { a: 1.185, b: 0.405, floorMin: 60, stepMin: 15 }` — a power law fitted in hours on 4404 invoiced Kalle Urho Oy keikkas (R² 0.46, 2026-09-12); pass a different `fit` for a per-tenant refit. 10 m3 → 180, 30 → 285, 60 → 375, 100 → 465.
+Default `pumppuKesto` (whole on-site time, minutes) for a pour of `m3`: `60 × a × m3^b`, snapped to the 15-min slider step, floored at 60; `null` when `m3` is unknown or not positive, so callers keep their own fallback. Provenance of `PUMPPU_KESTO_FIT` is in the source JSDoc; pass a different `fit` for a per-tenant refit. 10 m3 → 180, 30 → 285, 60 → 375, 100 → 465.
 
 ### Constants
 

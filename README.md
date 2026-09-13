@@ -199,28 +199,20 @@ app.use(cors({
 
 ### @ibetoni/betoni-utils
 
-Concrete specification utilities.
+Concrete specification strings and validation, plus small shared domain helpers (e.g. person names, e-mail lists, Helsinki time, fleet providers, pour-duration estimate — see the package README for the full list).
 
-```typescript
-import {
-  buildBetonName,
-  validateBetonSpec,
-  formatLujuusLuokka
-} from '@ibetoni/betoni-utils';
+```javascript
+const { betoni_getString, betoni_isComplete, estimatePumppuKesto } = require("@ibetoni/betoni-utils");
 
-// Build display name
-const name = buildBetonName({
-  lujuusLuokka: 'C30/37',
-  runkoaine: 16,
-  rasitusluokka: 'XC3'
-});
-// Result: "C30/37 16mm XC3"
+// Display string for one betoni (or an array of them)
+const name = betoni_getString(betoni);
+// Result: "Lattiabetoni hieno 16mm C25/30 S2 Lisä1, Lisä2"
 
-// Validate specifications
-const { isValid, errors } = validateBetonSpec(betonData);
+// Is the specification complete enough to order?
+const { isComplete, reason } = betoni_isComplete(betoni);
 
-// Format strength class
-const formatted = formatLujuusLuokka('C30/37'); // "C30/37"
+// Default pumppuKesto (minutes) for a 30 m3 pour
+const minutes = estimatePumppuKesto(30); // 285
 ```
 
 [Full Documentation →](./betoni-utils/README.md)
