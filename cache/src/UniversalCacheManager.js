@@ -1971,13 +1971,17 @@ class UniversalCacheManager {
       // A person write that renders nothing on the grid or on any keikka/asiakas/tyomaa
       // payload: dark mode, password, dontAsks, settings, emails, foreign keys, logout.
       // Sweeps the person's own reads only. PERSON_UPDATE (name, phone, membership) keeps
-      // its broad fan-out.
+      // its broad fan-out. The foreign-key read is keyed by the OWNER in the path
+      // (`person:foreignKeys:get:<personId>:<ownerAsiakasId>`), which the generic
+      // `person:*:<callerTenant>*` sweep misses when the caller acts on another tenant
+      // (fb#1683: active on 8, writing owner 27 left the read stale until TTL).
       case "PERSON_PREFS_UPDATE": {
         const prefsPersonId = params.entityId || params.personId;
         const counts = await Promise.all([
           this.invalidate(operation, "person", params),
           prefsPersonId ? this.invalidateByPattern(`auth:*:${prefsPersonId}*`) : Promise.resolve(0),
           prefsPersonId ? this.invalidateByPattern(`asiakas:myRoles:*:${prefsPersonId}`) : Promise.resolve(0),
+          prefsPersonId ? this.invalidateByPattern(`person:foreignKeys:get:${prefsPersonId}:*`) : Promise.resolve(0),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         break;
