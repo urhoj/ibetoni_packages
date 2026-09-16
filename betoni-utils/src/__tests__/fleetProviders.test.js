@@ -4,6 +4,7 @@ import {
   DEFAULT_FLEET_PROVIDER,
   normalizeProvider,
   prefixObjectId,
+  providerFromObjectId,
   maponUnitToNode,
   isEngineOn,
 } from "../fleetProviders.js";
@@ -47,6 +48,30 @@ describe("prefixObjectId", () => {
 
   it("stays inside vehicle_location_snapshots.objectId nvarchar(50)", () => {
     expect(prefixObjectId("mapon", "9".repeat(20)).length).toBeLessThanOrEqual(50);
+  });
+});
+
+describe("providerFromObjectId (fb#1587)", () => {
+  it("reads the vendor off a prefixed id", () => {
+    expect(providerFromObjectId("mapon:4711")).toBe("mapon");
+  });
+
+  it("treats a bare id as Ecofleet — the only vendor stored unprefixed", () => {
+    expect(providerFromObjectId("42")).toBe("ecofleet");
+    expect(providerFromObjectId(42)).toBe("ecofleet");
+  });
+
+  it("falls back to Ecofleet for empty and unknown-prefix ids rather than throwing", () => {
+    expect(providerFromObjectId(null)).toBe("ecofleet");
+    expect(providerFromObjectId(undefined)).toBe("ecofleet");
+    expect(providerFromObjectId("")).toBe("ecofleet");
+    expect(providerFromObjectId("acme:1")).toBe("ecofleet");
+  });
+
+  it("is the exact inverse of prefixObjectId for every provider", () => {
+    for (const provider of Object.values(FLEET_PROVIDERS)) {
+      expect(providerFromObjectId(prefixObjectId(provider, "12345"))).toBe(provider);
+    }
   });
 });
 

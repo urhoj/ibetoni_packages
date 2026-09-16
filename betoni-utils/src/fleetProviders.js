@@ -96,6 +96,22 @@ function prefixObjectId(provider, nativeId) {
   return provider === FLEET_PROVIDERS.ECOFLEET ? id : `${provider}:${id}`;
 }
 
+/**
+ * Inverse of prefixObjectId: which vendor WROTE a stored objectId (fb#1587).
+ *
+ * A bare id is Ecofleet BY CONSTRUCTION (prefixObjectId leaves only Ecofleet ids
+ * bare), so this never needs the tenant's current provider — and must not use
+ * it: history has to route to the vendor that produced it, or a vendor switch
+ * sends every pre-switch id to the wrong API. An unknown prefix falls back to
+ * Ecofleet the same way normalizeProvider does.
+ *
+ * @param {string|number|null|undefined} objectId - stored objectId
+ * @returns {"ecofleet"|"mapon"}
+ */
+function providerFromObjectId(objectId) {
+  return normalizeProvider(/^([a-z]+):/.exec(String(objectId ?? ""))?.[1]);
+}
+
 /** Number, or null for absent/unparseable — never NaN (NaN poisons SQL binds). */
 function num(value) {
   if (value === null || value === undefined || value === "") return null;
@@ -166,6 +182,7 @@ module.exports = {
   MAPON_STATE_TO_ENGINESTATE,
   normalizeProvider,
   prefixObjectId,
+  providerFromObjectId,
   maponUnitToNode,
   isEngineOn,
 };
