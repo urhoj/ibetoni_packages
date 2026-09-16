@@ -93,6 +93,15 @@ describe("maponUnitToNode", () => {
     expect(maponUnitToNode({ ...unit, state: undefined }).enginestate).toBe("0");
   });
 
+  it("reads the live shape — state is an OBJECT {name,start,duration} (Betomik, 2026-09-16)", () => {
+    // The docs-only first cut read `state` as a string; the real payload wraps it,
+    // so String(object) matched nothing and every truck reported engine-off.
+    expect(maponUnitToNode({ ...unit, state: { name: "driving", start: "2026-09-16 14:20:01", duration: 300 } }).enginestate).toBe("1");
+    expect(maponUnitToNode({ ...unit, state: { name: "standing", start: "x", duration: 1 } }).enginestate).toBe("0");
+    expect(maponUnitToNode({ ...unit, state: { name: "teleporting" } }).enginestate).toBe("0");
+    expect(maponUnitToNode({ ...unit, state: {} }).enginestate).toBe("0");
+  });
+
   it("is case-insensitive on state", () => {
     expect(maponUnitToNode({ ...unit, state: "Driving" }).enginestate).toBe("1");
   });

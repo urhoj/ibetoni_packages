@@ -59,8 +59,10 @@ function normalizeProvider(raw) {
  * stationary vehicle; "nodata"/"nogps"/"service" are absence of signal, which is
  * not evidence of a running engine.
  *
- * ⚠ UNVERIFIED against a live Mapon key (docs only, 2026-09-10). Confirm the
- * full value set before relying on the cadence; unknown values fail closed to "0".
+ * Verified against Betomik's live key on 2026-09-16: `state` is an OBJECT,
+ * `{name, start, duration}` — NOT the bare string the first cut read. That
+ * `String(object)` never matched, so every Mapon unit reported "0" (a truck at
+ * 10 km/h showed engine-off). Read `state.name`; unknown values fail closed to "0".
  */
 const MAPON_STATE_TO_ENGINESTATE = {
   driving: "1",
@@ -130,7 +132,7 @@ function str(value) {
  *   address: string|null, timestamp: string|null}}
  */
 function maponUnitToNode(unit) {
-  const state = String(unit?.state ?? "").trim().toLowerCase();
+  const state = String(unit?.state?.name ?? unit?.state ?? "").trim().toLowerCase();
   return {
     objectId: prefixObjectId(FLEET_PROVIDERS.MAPON, unit?.unit_id),
     // `label` is the human name in Mapon; `number` is the plate. Ecofleet's
