@@ -2015,6 +2015,9 @@ class UniversalCacheManager {
           this.invalidate(operation, "asiakas", params),
           this.invalidate(operation, "tyomaa", params),
           this.invalidate(operation, "grid", params),
+          // personPvm_list embeds the person's name; the Grid driver panel renders
+          // it from that row, so a rename "reverted" until the 1 h TTL.
+          this.invalidate(operation, "personpvm", params),
           personEntityId
             ? this.invalidateByPattern(`auth:*:${personEntityId}*`)
             : Promise.resolve(0),
@@ -2043,6 +2046,7 @@ class UniversalCacheManager {
           this.invalidate(operation, "asiakas", params),
           this.invalidate(operation, "tyomaa", params),
           this.invalidate(operation, "grid", params),
+          this.invalidate(operation, "personpvm", params), // same reason as PERSON_UPDATE
           deletedPersonId
             ? this.invalidateByPattern(`auth:*:${deletedPersonId}*`)
             : Promise.resolve(0),
