@@ -177,6 +177,7 @@ Invalidate cache for complex cross-entity operations.
 - `TYOMAA_UPDATE` - Worksite updates
 - `TYOMAA_CREATE` - Worksite creation
 - `TYOMAA_DELETE` - Worksite deletion
+- `TYOMAA_MERGE` - Admin combinator merge (sweeps like DELETE: tyomaa/keikka/tyomaaPerson/person/grid; fb#1820)
 - `TUOTE_UPDATE` - Product updates (with cross-entity: lasku, keikka - products affect invoice line items)
 - `TUOTE_CREATE` - Product creation
 - `TUOTE_DELETE` - Product deletion (also clears keikkaLaskuRivit references)
@@ -489,9 +490,13 @@ All TTLs include ±5% random jitter to prevent cache stampedes (synchronized exp
 ### Running Tests
 
 ```bash
-# Coming soon
-npm test
+npm test   # runs every scripts/test-*.js in sequence (plain node + assert, no jest)
 ```
+
+Each script pins one invalidation contract (e.g. `test-tyomaa-merge-invalidation.js`,
+`test-personpvm-name-invalidation.js`) by stubbing `invalidate`/`invalidateByPattern` on a
+`UniversalCacheManager` and asserting which entities/patterns an operation sweeps. Add a new
+script to the `test` chain in `package.json` — a script that is not in the chain runs nowhere.
 
 ## Migration Guide
 
