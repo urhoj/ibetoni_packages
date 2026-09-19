@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "@ibetoni/cache",
   "version": "1.0.3",
   "description": "Shared Redis cache and invalidation system for betoni.online",
