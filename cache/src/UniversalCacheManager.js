@@ -1412,6 +1412,7 @@ class UniversalCacheManager {
         return await this.invalidate(operation, "grid", { asiakasId });
       }
 
+      case "TYOMAA_MERGE":
       case "TYOMAA_UPDATE":
       case "TYOMAA_CREATE":
       case "TYOMAA_DELETE": {
@@ -2109,6 +2110,13 @@ class UniversalCacheManager {
         break;
       }
 
+      // TYOMAA_MERGE (fb#1820): the combinator router passes affectedEntities but
+      // only the ASIAKAS/PERSON merge cases read it, so a tyomaa merge fell to
+      // `default` → `invalidate(op, "default")` → pattern `default:*:<owner>*`,
+      // which names no key — `tyomaa:search:<owner>:…` kept listing the deleted
+      // secondary until TTL. A merge is a delete of the secondary plus an update
+      // of every keikka that pointed at it, so it sweeps what DELETE sweeps.
+      case "TYOMAA_MERGE":
       case "TYOMAA_UPDATE":
       case "TYOMAA_CREATE":
       case "TYOMAA_DELETE": {
