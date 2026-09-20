@@ -20,11 +20,22 @@
  *
  * @module @ibetoni/betoni-utils/fleetProviders
  */
+const { getText } = require("./ecofleetUtils.js");
 
 /** Provider tokens as stored in asiakasSettings.asiakasSettingString (type 15). */
 const FLEET_PROVIDERS = {
   ECOFLEET: "ecofleet",
   MAPON: "mapon",
+};
+
+/** apiKeySources.apiKeySourceId per provider — the other hardcoded copies of
+ * these ids (maponApi.js, ecoFleetApi.js, the cron's PROVIDER_CONFIG) should
+ * read from here instead of repeating the literal. The historical migration
+ * that first inserted these apiKeySources rows is NOT updated to use this —
+ * migrations are frozen once applied. */
+const FLEET_PROVIDER_SOURCE_ID = {
+  [FLEET_PROVIDERS.ECOFLEET]: 14,
+  [FLEET_PROVIDERS.MAPON]: 18,
 };
 
 /**
@@ -176,13 +187,67 @@ function maponUnitToNode(unit) {
  */
 const isEngineOn = (node) => String(node?.enginestate ?? "").trim() === "1";
 
+/**
+ * Map one Ecofleet `getLastData` XML node onto the canonical shape. This is the
+ * ORIGINAL vendor shape (all other providers normalize onto it), so every
+ * field is a straight `getText` passthrough — no coercion here, matching how
+ * both call sites already used it. Numeric coercion happens at the SQL bind,
+ * same as before this function existed.
+ * @param {object} node - one getLastData XML node (xml-js compact-mode)
+ * @returns {{objectId: string|null, objectName: string|null, plate: string|null,
+ *   timestamp: string|null, latitude: string|null, longitude: string|null,
+ *   speed: string|null, enginestate: string|null, direction: string|null,
+ *   lastEngineOnTime: string|null, address: string|null}}
+ */
+function ecofleetLastDataToNode(node) {
+  return {
+    objectId: getText(node.objectId),
+    timestamp: getText(node.timestamp),
+    latitude: getText(node.latitude),
+    longitude: getText(node.longitude),
+    speed: getText(node.speed),
+    enginestate: getText(node.enginestate),
+    direction: getText(node.direction),
+    lastEngineOnTime: getText(node.lastEngineOnTime),
+    address: getText(node.address),
+    objectName: getText(node.objectName),
+    plate: getText(node.plate),
+  };
+}
+
+/**
+ * Unwrap a Mapon `unit/list.json` response into canonical nodes, dropping units
+ * with no usable id (objectId is NOT NULL on vehicle_location_snapshots).
+ * ⚠ UNVERIFIED envelope (docs describe `data.units`); the fallbacks cover the
+ * shapes a JSON fleet API plausibly returns rather than throwing on a wrapper
+ * mismatch, which would look like "tenant has no vehicles".
+ * @param {unknown} responseData - the raw `response.data` from axios
+ * @param {number} [ownerAsiakasId] - only used for the console.error context on a shape miss
+ * @returns {Array<object>}
+ */
+function maponUnitsFromPayload(responseData, ownerAsiakasId) {
+  const units = responseData?.data?.units ?? responseData?.units ?? [];
+  if (!Array.isArray(units)) {
+    console.error("Unexpected Mapon unit/list payload shape", { asiakasId: ownerAsiakasId });
+    return [];
+  }
+  if (units.length === 0) {
+    console.error("Could not extract any vehicle data from Mapon response", { asiakasId: ownerAsiakasId });
+  }
+  return units.map(maponUnitToNode).filter((node) => node.objectId !== null);
+}
+
 module.exports = {
   FLEET_PROVIDERS,
+  FLEET_PROVIDER_SOURCE_ID,
   DEFAULT_FLEET_PROVIDER,
   MAPON_STATE_TO_ENGINESTATE,
   normalizeProvider,
   prefixObjectId,
   providerFromObjectId,
   maponUnitToNode,
+  maponUnitsFromPayload,
+  ecofleetLastDataToNode,
   isEngineOn,
+  toNumberOrNull: num,
 };

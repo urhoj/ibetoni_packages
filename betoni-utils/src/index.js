@@ -14,7 +14,7 @@ const { formatPersonName } = require("./personUtils.js");
 const { isEmail, parseMultipleEmails, validateMultipleEmails } = require("./emailUtils.js");
 const { getText, HAVERSINE_DISTANCE_M } = require("./ecofleetUtils.js");
 const { parseHelsinkiLocal, helsinkiOffsetMinutes } = require("./helsinkiTime.js");
-const { FLEET_PROVIDERS, DEFAULT_FLEET_PROVIDER, MAPON_STATE_TO_ENGINESTATE, normalizeProvider, prefixObjectId, providerFromObjectId, maponUnitToNode, isEngineOn } = require("./fleetProviders.js");
+const { FLEET_PROVIDERS, FLEET_PROVIDER_SOURCE_ID, DEFAULT_FLEET_PROVIDER, MAPON_STATE_TO_ENGINESTATE, normalizeProvider, prefixObjectId, providerFromObjectId, maponUnitToNode, maponUnitsFromPayload, ecofleetLastDataToNode, isEngineOn, toNumberOrNull } = require("./fleetProviders.js");
 const { estimatePumppuKesto, PUMPPU_KESTO_FIT } = require("./pumppuKestoEstimate.js");
 
 module.exports = {
@@ -38,11 +38,15 @@ module.exports = {
   parseHelsinkiLocal,
   helsinkiOffsetMinutes,
   FLEET_PROVIDERS,
+  FLEET_PROVIDER_SOURCE_ID,
   DEFAULT_FLEET_PROVIDER,
   MAPON_STATE_TO_ENGINESTATE,
   normalizeProvider,
   prefixObjectId,
   providerFromObjectId,
   maponUnitToNode,
+  maponUnitsFromPayload,
+  ecofleetLastDataToNode,
   isEngineOn,
+  toNumberOrNull,
 };

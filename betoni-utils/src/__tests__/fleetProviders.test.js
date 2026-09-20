@@ -1,12 +1,16 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   FLEET_PROVIDERS,
+  FLEET_PROVIDER_SOURCE_ID,
   DEFAULT_FLEET_PROVIDER,
   normalizeProvider,
   prefixObjectId,
   providerFromObjectId,
   maponUnitToNode,
+  maponUnitsFromPayload,
+  ecofleetLastDataToNode,
   isEngineOn,
+  toNumberOrNull,
 } from "../fleetProviders.js";
 
 describe("normalizeProvider", () => {
@@ -160,6 +164,91 @@ describe("maponUnitToNode", () => {
   it("survives a garbage/empty unit without throwing", () => {
     expect(() => maponUnitToNode({})).not.toThrow();
     expect(maponUnitToNode({}).objectId).toBeNull();
+  });
+});
+
+describe("FLEET_PROVIDER_SOURCE_ID", () => {
+  it("maps every provider to its apiKeySources.apiKeySourceId", () => {
+    expect(FLEET_PROVIDER_SOURCE_ID[FLEET_PROVIDERS.ECOFLEET]).toBe(14);
+    expect(FLEET_PROVIDER_SOURCE_ID[FLEET_PROVIDERS.MAPON]).toBe(18);
+  });
+});
+
+describe("toNumberOrNull", () => {
+  it("returns a finite number as-is", () => {
+    expect(toNumberOrNull(42)).toBe(42);
+    expect(toNumberOrNull("3.5")).toBe(3.5);
+  });
+
+  it("returns null — never NaN — for absent/unparseable input", () => {
+    expect(toNumberOrNull(null)).toBeNull();
+    expect(toNumberOrNull(undefined)).toBeNull();
+    expect(toNumberOrNull("")).toBeNull();
+    expect(toNumberOrNull("not a number")).toBeNull();
+  });
+});
+
+describe("ecofleetLastDataToNode", () => {
+  it("passes every field through getText untouched (no numeric coercion)", () => {
+    const node = {
+      objectId: { _text: "42" },
+      timestamp: { _text: "2026-09-10T05:12:08Z" },
+      latitude: { _text: "60.1699" },
+      longitude: { _text: "24.9384" },
+      speed: { _text: "0" },
+      enginestate: { _text: "1" },
+      direction: { _text: "180" },
+      lastEngineOnTime: { _text: "2026-09-10T05:00:00Z" },
+      address: { _text: "Pekanraitti 14" },
+      objectName: { _text: "Pumppu 1" },
+      plate: { _text: "ABC-123" },
+    };
+    expect(ecofleetLastDataToNode(node)).toEqual({
+      objectId: "42",
+      timestamp: "2026-09-10T05:12:08Z",
+      latitude: "60.1699",
+      longitude: "24.9384",
+      speed: "0",
+      enginestate: "1",
+      direction: "180",
+      lastEngineOnTime: "2026-09-10T05:00:00Z",
+      address: "Pekanraitti 14",
+      objectName: "Pumppu 1",
+      plate: "ABC-123",
+    });
+  });
+
+  it("returns null fields for a node with no text content, without throwing", () => {
+    expect(() => ecofleetLastDataToNode({})).not.toThrow();
+    expect(ecofleetLastDataToNode({}).objectId).toBeNull();
+  });
+});
+
+describe("maponUnitsFromPayload", () => {
+  const unit = { unit_id: 1, number: "ABC-123", state: "driving", last_update: "2026-09-10T05:12:08Z" };
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it("unwraps the documented data.units envelope", () => {
+    const nodes = maponUnitsFromPayload({ data: { units: [unit] } });
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0].objectId).toBe("mapon:1");
+  });
+
+  it("falls back to a bare units envelope", () => {
+    const nodes = maponUnitsFromPayload({ units: [unit] });
+    expect(nodes).toHaveLength(1);
+  });
+
+  it("drops units with no usable id", () => {
+    const nodes = maponUnitsFromPayload({ data: { units: [{ ...unit, unit_id: undefined }] } });
+    expect(nodes).toHaveLength(0);
+  });
+
+  it("returns [] and logs rather than throwing on an unexpected envelope shape", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(maponUnitsFromPayload({ nothingRecognizable: true })).toEqual([]);
+    expect(spy).toHaveBeenCalled();
   });
 });
 
