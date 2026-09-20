@@ -120,6 +120,31 @@ const value = getText(xmlNode?.SomeField); // returns _text or null
 const query = `SELECT *, ${HAVERSINE_DISTANCE_M} AS distanceM FROM vehicle_location_snapshots WHERE ...`;
 ```
 
+### Fleet Providers (multi-vendor GPS)
+
+The single copy of GPS-vendor field semantics, shared by puminet5api and puminet7-functions-app so
+neither owns a second copy of the field mapping. Deliberately PURE (no axios, no db) — each repo owns
+its own HTTP call and normalizes the response through this module. See `fleetProviders.js` for full
+JSDoc on every export, including the fb#1065 `enginestate` "1"/"0" contract and the fb#1587
+provider-id-prefixing rationale.
+
+```javascript
+const {
+  FLEET_PROVIDERS, // { ECOFLEET: "ecofleet", MAPON: "mapon" } — asiakasSettings.asiakasSettingString (type 15) tokens
+  FLEET_PROVIDER_SOURCE_ID, // { ecofleet: 14, mapon: 18 } — apiKeySources.apiKeySourceId per provider
+  DEFAULT_FLEET_PROVIDER, // FLEET_PROVIDERS.ECOFLEET — pre-existing tenants with no explicit provider
+  MAPON_STATE_TO_ENGINESTATE, // Mapon `state` -> Ecofleet's "1"/"0" enginestate literal
+  normalizeProvider, // (raw) => "ecofleet" | "mapon", falls back to Ecofleet on unknown/blank
+  prefixObjectId, // (provider, nativeId) => string|null — namespaces non-Ecofleet ids so they can't collide
+  providerFromObjectId, // (objectId) => "ecofleet" | "mapon" — inverse of prefixObjectId, for history (fb#1587)
+  maponUnitToNode, // (unit) => canonical Ecofleet-shaped node, for one Mapon unit/list.json entry
+  maponUnitsFromPayload, // (responseData, ownerAsiakasId?) => canonical node[], unwraps the Mapon envelope
+  ecofleetLastDataToNode, // (node) => canonical node, for one Ecofleet getLastData XML node
+  isEngineOn, // (node) => boolean — reads the normalized enginestate "1"/"0" literal
+  toNumberOrNull, // (value) => number|null, never NaN (NaN poisons SQL binds)
+} = require("@ibetoni/betoni-utils");
+```
+
 ## API Reference
 
 ### String Formatting Functions
