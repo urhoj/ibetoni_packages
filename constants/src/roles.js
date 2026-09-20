@@ -162,6 +162,13 @@ export function buildCompanyRoles(roles) {
  * in the JWT `asiakasesWithTypes[].roles` array (legacy shape) and that the
  * v2 short-shape codec encodes/decodes via `roles.r` typeId arrays.
  *
+ * Role-only, not every dbo.asiakasPersonSettingType row: it covers every
+ * typeId that is a company-assignable staff/editor/viewer role (matches
+ * adminCircleSql.js's STAFF_ROLE_TYPE_IDS). TypeId 23 (Työtuntien kirjaus,
+ * ASIAKAS_WORKING_HOURS_ROLE_TYPE_ID) is deliberately NOT here — it is a
+ * personal capability flag, never surfaced in the JWT roles array, and is
+ * absent from STAFF_ROLE_TYPE_IDS too (fb#1619).
+ *
  * Note: typeId 9 is `tyosuhteessa` (Finnish: työsuhteessa, "in employment").
  * Renamed from the typo `typisSuhteessa` on 2026-05-13. The typo lives on
  * as a backward-compat alias in ROLE_NAME_TO_KEY_MAP for legacy v1 JWTs
@@ -173,8 +180,11 @@ export function buildCompanyRoles(roles) {
 export const ROLE_NAME_BY_TYPEID = Object.freeze({
   1: "laskupohjaAdmin", // DB describes it as isTarjousAdmin; Jerry's "TarjousAdmin" is 5, not this (fb#418)
   2: "asiakasAdmin",
+  3: "saaNähdäTarjouksen",
+  4: "saaNähdäHinnat",
   5: "laskuAdmin",
   6: "asiakasEditor",
+  7: "saaNähdäLaskun",
   8: "pumppari",
   9: "tyosuhteessa",
   10: "attachmentHandler",
@@ -191,6 +201,7 @@ export const ROLE_NAME_BY_TYPEID = Object.freeze({
   21: "pumppuViewer",
   22: "asiakasOwner",
   24: "hrAdmin",
+  25: "ilmoitustauluEditor",
 });
 
 /**
@@ -355,8 +366,8 @@ export const ASIAKAS_LASKU_READ_ROLE_TYPE_IDS = [5, 7];
  * /tilaa wizard.
  *
  * Superset of admin/editor + invoice + keikka-handler + owner + HR. Includes
- * typeIds 3 and 4 (viewer-class roles present in asiakasPersonSettings data
- * but not yet named in ROLE_NAME_BY_TYPEID — see ASIAKAS_ANY_VIEWER_ROLE_TYPE_IDS).
+ * typeIds 3 and 4 (viewer-class roles — see ASIAKAS_ANY_VIEWER_ROLE_TYPE_IDS
+ * and ROLE_NAME_BY_TYPEID, which names both as of fb#1619).
  *
  * Spec: docs/superpowers/specs/2026-05-15-betonijerry-laskutus-permission-filter-design.md
  *

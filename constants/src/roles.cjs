@@ -67,8 +67,11 @@ function buildCompanyRoles(roles) {
 const ROLE_NAME_BY_TYPEID = Object.freeze({
   1: "laskupohjaAdmin",
   2: "asiakasAdmin",
+  3: "saaNähdäTarjouksen",
+  4: "saaNähdäHinnat",
   5: "laskuAdmin",
   6: "asiakasEditor",
+  7: "saaNähdäLaskun",
   8: "pumppari",
   9: "tyosuhteessa",
   10: "attachmentHandler",
@@ -85,6 +88,7 @@ const ROLE_NAME_BY_TYPEID = Object.freeze({
   21: "pumppuViewer",
   22: "asiakasOwner",
   24: "hrAdmin",
+  25: "ilmoitustauluEditor",
 });
 
 const ROLE_TYPEID_BY_NAME = Object.freeze(
