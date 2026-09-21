@@ -48,6 +48,10 @@ const ROLE_NAME_TO_KEY_MAP = {
   betoniViewer: "isBetoniViewer",
   asiakasOwner: "isAsiakasOwner",
   hrAdmin: "isHRAdmin",
+  // typeId 25. Was in ROLE_NAME_BY_TYPEID but not here, so buildCompanyRoles
+  // never set isIlmoitustauluEditor and modules/ilmoitustaulu's editor gate
+  // could not pass for a person holding only this role (fb#1919).
+  ilmoitustauluEditor: "isIlmoitustauluEditor",
 };
 
 const ALL_FALSE_ROLES = Object.freeze(
