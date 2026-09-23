@@ -579,6 +579,22 @@ class UniversalCacheManager {
       onEnd,
     };
 
+    // fb#1955: wait (capped like connectTimeout) for the NEW socket to become ready.
+    // Otherwise getClient() pings a still-connecting socket, which enableOfflineQueue:false
+    // rejects in ~0 ms, so the first caller of every process got null — and
+    // ApiTrackingManager cached that null and ran with no rate limiting. Only a fresh
+    // client waits; a reconnecting one still fails fast through the ping below.
+    await new Promise((resolve) => {
+      const done = () => {
+        clearTimeout(timer);
+        client.removeListener("ready", done);
+        resolve();
+      };
+      const timer = setTimeout(done, 2000);
+      timer.unref?.();
+      client.once("ready", done);
+    });
+
     return client;
   }
 
