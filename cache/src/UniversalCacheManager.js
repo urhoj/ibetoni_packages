@@ -41,6 +41,7 @@
  */
 
 const crypto = require("crypto");
+const { once } = require("events");
 const fs = require("fs");
 const path = require("path");
 const Redis = require("ioredis");
@@ -579,21 +580,13 @@ class UniversalCacheManager {
       onEnd,
     };
 
-    // fb#1955: wait (capped like connectTimeout) for the NEW socket to become ready.
+    // fb#1955: wait (capped at connectTimeout) for the NEW socket to become ready.
     // Otherwise getClient() pings a still-connecting socket, which enableOfflineQueue:false
     // rejects in ~0 ms, so the first caller of every process got null — and
-    // ApiTrackingManager cached that null and ran with no rate limiting. Only a fresh
-    // client waits; a reconnecting one still fails fast through the ping below.
-    await new Promise((resolve) => {
-      const done = () => {
-        clearTimeout(timer);
-        client.removeListener("ready", done);
-        resolve();
-      };
-      const timer = setTimeout(done, 2000);
-      timer.unref?.();
-      client.once("ready", done);
-    });
+    // ApiTrackingManager cached that null and ran with no rate limiting. once() also
+    // rejects on 'error', so an unreachable Redis still fails fast (fb#1994). Only a fresh
+    // client waits; a reconnecting one fails fast through the ping in getClient().
+    await once(client, "ready", { signal: AbortSignal.timeout(config.connectTimeout ?? 2000) }).catch(() => {});
 
     return client;
   }

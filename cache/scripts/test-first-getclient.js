@@ -53,6 +53,27 @@ async function main() {
     if (mgr.client) mgr.client.disconnect();
     server.close();
   }
+
+  // fb#1994: an UNREACHABLE Redis must still fail fast — the ready-wait ends on 'error' too.
+  const refused = new UniversalCacheManager({ redisConfig: { ...redisConfig, port: 1 } });
+  const { error: origError, warn: origWarn } = console;
+  console.error = console.warn = () => {};
+  const t0 = Date.now();
+  try {
+    const client = await refused.getClient();
+    const ms = Date.now() - t0;
+    assert.strictEqual(client, null, "refused connection returned a client");
+    assert.ok(ms < 1000, `refused connection took ${ms} ms to fail`);
+    console.log("  ok  a refused connection fails fast instead of waiting out the cap");
+  } catch (e) {
+    failures++;
+    console.error = origError;
+    console.error(`  FAIL ${e.message}`);
+  } finally {
+    Object.assign(console, { error: origError, warn: origWarn });
+    refused.isShuttingDown = true;
+    if (refused.client) refused.client.disconnect();
+  }
   if (failures) process.exit(1);
 }
 
