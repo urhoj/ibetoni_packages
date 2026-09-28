@@ -605,13 +605,14 @@ function hasStepLog(keikkaId, stepLogTypeIds, stepLogData) {
 /**
  * Validate order status is ready for delivery
  *
- * **Business Rule:** Order must be "Toimitusvalmis" (4) or completed (>=8)
- * to be considered valid for processing.
+ * **Business Rule:** Order must be "Toimitusvalmis" (4), in progress (5) or
+ * completed (>=8) to be considered valid for processing.
  *
  * **Status IDs:**
  * - 4: Toimitusvalmis (ready for delivery)
- * - >= 8: Completed statuses
- * - < 4: Incomplete (draft, planning, etc.)
+ * - 5: Toimitus meneillään (running; set by the delivery-status cron)
+ * - >= 8: Closed (8 Peruttu, 9/12/13 Toimitettu, 10 Poistettu, 100 Valmis, 11/200 system)
+ * - < 4, 6, 7: Incomplete or failed (draft, planning, delivery failed)
  *
  * **AutoFix:** Can automatically set status to Toimitusvalmis (4)
  *
@@ -629,8 +630,9 @@ function hasStepLog(keikkaId, stepLogTypeIds, stepLogData) {
  * logger.category('keikkaValidator').info(issues[0].actions.autoFix.value); // 4 (Toimitusvalmis)
  */
 function validateStatus(keikka, issues, validationSettings, ownerAsiakasId) {
-  // Status should be Toimitusvalmis (4) or completed (>=8)
-  if (keikka.keikkaTilaId !== 4 && keikka.keikkaTilaId < 8) {
+  // Status should be Toimitusvalmis (4), meneillään (5, held for the whole delivery by the
+  // delivery-status cron since cl#2634 — fb#2052) or completed (>=8)
+  if (keikka.keikkaTilaId !== 4 && keikka.keikkaTilaId !== 5 && keikka.keikkaTilaId < 8) {
     if (isRuleEnabled("INCOMPLETE_STATUS", validationSettings, keikka, ownerAsiakasId)) {
       issues.push({
         id: "INCOMPLETE_STATUS",

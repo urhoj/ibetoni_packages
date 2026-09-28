@@ -25,7 +25,7 @@ const LOCAL_PRIORITY_LEVELS = {
 const VALIDATION_RULE_DEFINITIONS = {
   INCOMPLETE_STATUS: {
     name: "Tila ei ole toimitusvalmis",
-    description: "Tilauksen tila ei ole 'Toimitusvalmis' tai valmis",
+    description: "Tilauksen tila ei ole 'Toimitusvalmis', 'Toimitus meneillään' tai valmis",
     category: LOCAL_CATEGORIES.MUU,
     defaultPriority: LOCAL_PRIORITY_LEVELS.CRITICAL,
     defaultEnabled: true,

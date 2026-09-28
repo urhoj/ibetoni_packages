@@ -132,6 +132,15 @@ describe("keikkaValidator", () => {
     expect(result.summary.totalIssues).toBe(0);
   });
 
+  test("INCOMPLETE_STATUS: a running keikka (5) is not a draft; drafts and failures still are", () => {
+    // Since cl#2634 the delivery-status cron holds tila 5 for the whole real delivery, so
+    // flagging it put a CRITICAL reminder (auto-fix: back to 4) on every running keikka (fb#2052).
+    const flagged = (keikkaTilaId) =>
+      validateKeikka(createTestKeikka({ keikkaTilaId }), {}).issues.some((i) => i.type === "INCOMPLETE_STATUS");
+    expect([1, 2, 3, 6, 7].map(flagged)).toEqual([true, true, true, true, true]);
+    expect([4, 5, 8, 9, 100].map(flagged)).toEqual([false, false, false, false, false]);
+  });
+
   test("validates driver availability issue", () => {
     const keikkaWithUnavailableDriver = createTestKeikka({
       keikkaTilaId: 4,
