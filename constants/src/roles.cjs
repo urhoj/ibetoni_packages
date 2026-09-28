@@ -214,6 +214,8 @@ const PERSON_SETTING_TYPE_IDS = {
   NOTIFY_DEV_NEW_FEEDBACK: 51,
   NOTIFY_ONLY_IF_INVOLVED: 52,
   NOTIFY_ONLY_FUTURE: 53,
+  // Push when a pump truck leaves a worksite geofence (Mapon tenants, admins + keikkahandlers).
+  NOTIFY_VEHICLE_LEFT_WORKSITE: 54,
 };
 
 const ASIAKAS_SETTING_TYPE_IDS = {
