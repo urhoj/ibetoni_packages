@@ -398,6 +398,12 @@ class UniversalCacheManager {
       // hold the lock), so a faster failure never means proceed-without-lock.
       enableOfflineQueue: false,
       commandTimeout: 2000,
+      // 2026-09-28 (Sentry NODE-EXPRESS-7X): a socket that stays "ready" but stops
+      // answering is NOT dropped by commandTimeout — each command just times out,
+      // so every request paid 2 s per Redis call until a manual restart. socketTimeout
+      // destroys a socket that gets no data this long after a write and reconnects
+      // via retryStrategy. No blocking commands are used, so nothing waits longer.
+      socketTimeout: 5000,
       maxRetriesPerRequest: 3,
       retryStrategy: (times) => Math.min(times * 1000, 5000),
       db: this.currentDb, // 0 unless REDIS_DB overrides (AMR supports only db 0)
