@@ -2,7 +2,11 @@ const Sentry = require("@sentry/node");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { SENTRY_REDACT_FIELDS, SENTRY_REDACTED_PLACEHOLDER } = require("@ibetoni/constants/sentry");
+const {
+  SENTRY_REDACT_FIELDS,
+  SENTRY_REDACTED_PLACEHOLDER,
+  SENTRY_RESTRICTIVE_DATA_COLLECTION,
+} = require("@ibetoni/constants/sentry");
 
 let enabled = false;
 
@@ -106,8 +110,13 @@ function init(options = {}) {
       if (config.beforeSend) return config.beforeSend(event);
       return event;
     },
+    // v11 streams spans by default, which makes beforeSendTransaction a no-op;
+    // the static lifecycle keeps the transaction model our filters rely on.
+    traceLifecycle: "static",
     ...(config.beforeSendTransaction && { beforeSendTransaction: config.beforeSendTransaction }),
-    ...(config.sendDefaultPii !== undefined && { sendDefaultPii: config.sendDefaultPii }),
+    // v11 dropped sendDefaultPii; its dataCollection defaults equal the old `true`,
+    // so anything but an explicit true gets the v10-equivalent restrictive baseline.
+    ...(config.sendDefaultPii !== true && { dataCollection: SENTRY_RESTRICTIVE_DATA_COLLECTION }),
   });
 
   console.log(`Sentry initialized for ${config.environment} environment`);
