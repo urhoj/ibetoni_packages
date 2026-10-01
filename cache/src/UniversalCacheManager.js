@@ -194,7 +194,7 @@ class UniversalCacheManager {
       personpvmStatus: 43200, // 12 hours - person schedule status types (static reference data)
       betoni: 3600, // 1 hour - concrete specs, reference data
       betoniReference: 7200, // 2 hours - static reference data
-      betoniLaatu: 7200, // 2 hours - quality data scoped by supplier
+      betoniLaatu: 86400, // 24 hours - grades change ~1-2×/year and every write invalidates; TTL only bounds direct-SQL edits
       betoniShortcut: 7200, // 2 hours - user-configured concrete shortcuts
       betoniList: 3600, // 1 hour - betoni search/filter results
       betoniAttr: 3600, // 1 hour - betoni attributes (keikka-specific)
@@ -1931,7 +1931,10 @@ class UniversalCacheManager {
             `betoni:laatu:filter:${betoniToimittajaAsiakasId || "*"}`,
           ),
           this.invalidateByPattern(`betoni:laatu:get:*`),
-          this.invalidateByPattern(`betoni:list:filter:*`), // Also invalidate search results
+          // Cross-supplier UnifiedSearch (fb#2007): one key spans every supplier,
+          // so any grade write sweeps them all. Replaces the dead `betoni:list:filter:*`
+          // (its GET /list/filter route was removed 2026-08-11).
+          this.invalidateByPattern(`betoni:laatu:search:*`),
         ]);
         totalInvalidated +=
           betoniLaatuListCount +
