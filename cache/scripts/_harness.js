@@ -12,7 +12,7 @@ let failures = 0;
 // test() without await still print in order before finish().
 function test(name, fn) {
   const pass = () => console.log(`  ok  ${name}`);
-  const fail = (e) => { failures++; console.error(`  FAIL ${name}\n       ${e.message}`); };
+  const fail = (e) => { failures++; console.error(`  FAIL ${name}\n       ${e?.message ?? e}`); };
   try {
     const result = fn();
     if (typeof result?.then === "function") return result.then(pass, fail);

@@ -90,6 +90,6 @@ async function main() {
     assert.strictEqual(bCalls, 1);
   });
 
-  finish(`\nAll tests passed`);
+  finish();
 }
 main();

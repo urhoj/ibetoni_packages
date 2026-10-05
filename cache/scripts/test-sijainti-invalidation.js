@@ -144,6 +144,6 @@ async function main() {
     });
   }
 
-  finish(`\nAll tests passed`);
+  finish();
 }
 main();

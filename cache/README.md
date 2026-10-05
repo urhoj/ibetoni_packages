@@ -497,6 +497,9 @@ Each script pins one invalidation contract (e.g. `test-tyomaa-merge-invalidation
 `test-personpvm-name-invalidation.js`) by stubbing `invalidate`/`invalidateByPattern` on a
 `UniversalCacheManager` and asserting which entities/patterns an operation sweeps. Add a new
 script to the `test` chain in `package.json` — a script that is not in the chain runs nowhere.
+Use the shared runner: `const { test, finish } = require("./_harness");`, `await test("name", fn)`
+for each case, then `finish()` (exits 1 if any case failed). Each script still runs alone with
+`node scripts/<file>.js`.
 
 ## Migration Guide
 

@@ -82,7 +82,7 @@ async function main() {
     assert.strictEqual(typeof BASE_TTL.default, "number");
   });
 
-  finish("\nAll tests passed");
+  finish();
 }
 
 main();

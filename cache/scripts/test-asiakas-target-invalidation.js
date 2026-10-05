@@ -70,6 +70,6 @@ async function main() {
       `expected sweeps for the caller and the linked customer, got ${JSON.stringify(asiakasIds())}`);
   });
 
-  finish(`\nAll tests passed`);
+  finish();
 }
 main();

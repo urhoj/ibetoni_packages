@@ -141,6 +141,6 @@ async function main() {
       `KEIKKA_DATE_UPDATE must not be swallowed by the compliance-date guard, got ${JSON.stringify(scopedCalls)}`);
   });
 
-  finish(`\nAll tests passed`);
+  finish();
 }
 main();
