@@ -20,13 +20,7 @@ const { AUTHZ_PREFIX, authzKey, authzSweepGlob } = require("../src/authzKeys");
 const globMatches = (glob, key) =>
   new RegExp(`^${glob.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\\\*/g, ".*")}$`).test(key);
 
-let failures = 0;
-function test(name, fn) {
-  return (async () => {
-    try { await fn(); console.log(`  ok  ${name}`); }
-    catch (e) { failures++; console.error(`  FAIL ${name}\n       ${e.message}`); }
-  })();
-}
+const { test, finish } = require("./_harness");
 
 // Invalidation sinks stubbed: invalidateByPattern records the raw patterns swept.
 function newMgr() {
@@ -189,11 +183,7 @@ async function main() {
     }
   });
 
-  if (failures) {
-    console.error(`\n${failures} failing`);
-    process.exit(1);
-  }
-  console.log("\nall authz invalidation tests passed");
+  finish("\nall authz invalidation tests passed");
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

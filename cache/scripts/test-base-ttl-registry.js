@@ -20,11 +20,7 @@
 const assert = require("assert");
 const UniversalCacheManager = require("../src/UniversalCacheManager");
 
-let failures = 0;
-async function test(name, fn) {
-  try { await fn(); console.log(`  ok  ${name}`); }
-  catch (e) { failures++; console.error(`  FAIL ${name}\n       ${e.message}`); }
-}
+const { test, finish } = require("./_harness");
 
 async function main() {
   console.log("BASE_TTL invalidation-allowlist tests:");
@@ -86,8 +82,7 @@ async function main() {
     assert.strictEqual(typeof BASE_TTL.default, "number");
   });
 
-  console.log(failures === 0 ? "\nAll tests passed" : `\n${failures} test(s) FAILED`);
-  process.exit(failures === 0 ? 0 : 1);
+  finish("\nAll tests passed");
 }
 
 main();

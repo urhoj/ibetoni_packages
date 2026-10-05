@@ -15,13 +15,7 @@ const UniversalCacheManager = require("../src/UniversalCacheManager");
 // only LOOKED invalidated because the read was mis-keyed as the vehicle record
 // (puminet5api generateVehicleKey, fixed alongside).
 
-let failures = 0;
-function test(name, fn) {
-  return (async () => {
-    try { await fn(); console.log(`  ok  ${name}`); }
-    catch (e) { failures++; console.error(`  FAIL ${name}\n       ${e.message}`); }
-  })();
-}
+const { test, finish } = require("./_harness");
 
 function newMgr() {
   const mgr = new UniversalCacheManager();
@@ -58,8 +52,7 @@ async function main() {
     });
   }
 
-  if (failures > 0) { console.error(`\n${failures} test(s) failed`); process.exit(1); }
-  console.log("\nAll foreign-key invalidation tests passed");
+  finish("\nAll foreign-key invalidation tests passed");
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

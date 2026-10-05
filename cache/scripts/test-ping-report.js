@@ -13,17 +13,7 @@
 const assert = require("assert");
 const UniversalCacheManager = require("../src/UniversalCacheManager");
 
-let failures = 0;
-function test(name, fn) {
-  try {
-    fn();
-    console.log(`  ok  ${name}`);
-  } catch (e) {
-    failures++;
-    console.error(`  FAIL ${name}`);
-    console.error(`       ${e.message}`);
-  }
-}
+const { test, finish } = require("./_harness");
 
 // Silence the intentional console.warn/console.error breadcrumbs during the run.
 const origWarn = console.warn;
@@ -87,8 +77,4 @@ test("recovery reset (streak=0) makes the next outage measure fresh", () => {
   assert.strictEqual(mgr._lastPingErrorReportAt, 0);
 });
 
-if (failures > 0) {
-  console.error(`\n${failures} test(s) failed`);
-  process.exit(1);
-}
-console.log(`\nAll tests passed`);
+finish();

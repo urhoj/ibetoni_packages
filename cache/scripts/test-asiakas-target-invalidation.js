@@ -13,13 +13,7 @@ const UniversalCacheManager = require("../src/UniversalCacheManager");
 // extra sweep appears when they coincide (the normal path), and the pre-existing
 // asiakasLinks linkedAsiakasId sweep keeps working alongside it.
 
-let failures = 0;
-function test(name, fn) {
-  return (async () => {
-    try { await fn(); console.log(`  ok  ${name}`); }
-    catch (e) { failures++; console.error(`  FAIL ${name}\n       ${e.message}`); }
-  })();
-}
+const { test, finish } = require("./_harness");
 
 // invalidateCrossEntity is the method under test; its own `invalidate` calls are
 // stubbed to record which {entityType, asiakasId} pairs it dispatched, mirroring
@@ -76,7 +70,6 @@ async function main() {
       `expected sweeps for the caller and the linked customer, got ${JSON.stringify(asiakasIds())}`);
   });
 
-  if (failures > 0) { console.error(`\n${failures} test(s) failed`); process.exit(1); }
-  console.log(`\nAll tests passed`);
+  finish(`\nAll tests passed`);
 }
 main();

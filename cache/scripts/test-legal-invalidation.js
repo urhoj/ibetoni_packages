@@ -8,13 +8,7 @@ const UniversalCacheManager = require("../src/UniversalCacheManager");
 // them. Reads then stayed stale until the 24h TTL (root cause of ib feedback
 // #38 part 1). The fix sweeps the whole legalDocument namespace.
 
-let failures = 0;
-function test(name, fn) {
-  return (async () => {
-    try { await fn(); console.log(`  ok  ${name}`); }
-    catch (e) { failures++; console.error(`  FAIL ${name}\n       ${e.message}`); }
-  })();
-}
+const { test, finish } = require("./_harness");
 
 // Manager with the two invalidation sinks stubbed: invalidateByPattern records
 // the raw patterns swept; invalidate records the scoped (default-branch) calls
@@ -46,7 +40,6 @@ async function main() {
     });
   }
 
-  if (failures > 0) { console.error(`\n${failures} test(s) failed`); process.exit(1); }
-  console.log(`\nAll tests passed`);
+  finish(`\nAll tests passed`);
 }
 main();

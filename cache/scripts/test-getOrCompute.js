@@ -1,13 +1,7 @@
 const assert = require("assert");
 const UniversalCacheManager = require("../src/UniversalCacheManager");
 
-let failures = 0;
-function test(name, fn) {
-  return (async () => {
-    try { await fn(); console.log(`  ok  ${name}`); }
-    catch (e) { failures++; console.error(`  FAIL ${name}\n       ${e.message}`); }
-  })();
-}
+const { test, finish } = require("./_harness");
 
 async function main() {
   console.log("getOrCompute singleflight tests:");
@@ -96,7 +90,6 @@ async function main() {
     assert.strictEqual(bCalls, 1);
   });
 
-  if (failures > 0) { console.error(`\n${failures} test(s) failed`); process.exit(1); }
-  console.log(`\nAll tests passed`);
+  finish(`\nAll tests passed`);
 }
 main();

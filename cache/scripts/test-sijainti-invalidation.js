@@ -13,13 +13,7 @@ const UniversalCacheManager = require("../src/UniversalCacheManager");
 //    keikka / grid fan-out, which degrades to a cross-tenant wipe when called
 //    in a loop with no asiakasId.
 
-let failures = 0;
-function test(name, fn) {
-  return (async () => {
-    try { await fn(); console.log(`  ok  ${name}`); }
-    catch (e) { failures++; console.error(`  FAIL ${name}\n       ${e.message}`); }
-  })();
-}
+const { test, finish } = require("./_harness");
 
 // Manager with the invalidation sinks stubbed: invalidateByPattern records the
 // raw patterns swept; invalidate / invalidateGridSmart record the scoped calls
@@ -150,7 +144,6 @@ async function main() {
     });
   }
 
-  if (failures > 0) { console.error(`\n${failures} test(s) failed`); process.exit(1); }
-  console.log(`\nAll tests passed`);
+  finish(`\nAll tests passed`);
 }
 main();

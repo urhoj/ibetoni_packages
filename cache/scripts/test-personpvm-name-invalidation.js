@@ -9,13 +9,7 @@ const UniversalCacheManager = require("../src/UniversalCacheManager");
 // "reverted" the moment LomaContext loaded — PERSON_UPDATE swept person/keikka/
 // asiakas/tyomaa/grid but never personpvm. Pin: person writes sweep personpvm too.
 
-let failures = 0;
-function test(name, fn) {
-  return (async () => {
-    try { await fn(); console.log(`  ok  ${name}`); }
-    catch (e) { failures++; console.error(`  FAIL ${name}\n       ${e.message}`); }
-  })();
-}
+const { test, finish } = require("./_harness");
 
 function newMgr() {
   const mgr = new UniversalCacheManager();
@@ -36,8 +30,7 @@ async function main() {
     });
   }
 
-  if (failures > 0) { console.error(`\n${failures} test(s) failed`); process.exit(1); }
-  console.log("\nAll personpvm name invalidation tests passed");
+  finish("\nAll personpvm name invalidation tests passed");
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

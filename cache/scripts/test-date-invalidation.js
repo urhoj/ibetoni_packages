@@ -21,13 +21,7 @@ const UniversalCacheManager = require("../src/UniversalCacheManager");
 // survive, and PERSON/TYOMAA must keep the SEPARATE keikka invalidation that
 // the order views genuinely depend on.
 
-let failures = 0;
-function test(name, fn) {
-  return (async () => {
-    try { await fn(); console.log(`  ok  ${name}`); }
-    catch (e) { failures++; console.error(`  FAIL ${name}\n       ${e.message}`); }
-  })();
-}
+const { test, finish } = require("./_harness");
 
 // Manager with the invalidation sinks stubbed. invalidateGridSmart is NOT
 // stubbed separately — it is left to run for real, so a reintroduced call
@@ -147,7 +141,6 @@ async function main() {
       `KEIKKA_DATE_UPDATE must not be swallowed by the compliance-date guard, got ${JSON.stringify(scopedCalls)}`);
   });
 
-  if (failures > 0) { console.error(`\n${failures} test(s) failed`); process.exit(1); }
-  console.log(`\nAll tests passed`);
+  finish(`\nAll tests passed`);
 }
 main();

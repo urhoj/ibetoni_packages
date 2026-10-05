@@ -5,13 +5,7 @@ const UniversalCacheManager = require("../src/UniversalCacheManager");
 // one key spans EVERY supplier's grades, so no supplier-scoped sweep can reach it.
 // Pin: every grade write sweeps the whole search family, even a supplier-scoped one.
 
-let failures = 0;
-function test(name, fn) {
-  return (async () => {
-    try { await fn(); console.log(`  ok  ${name}`); }
-    catch (e) { failures++; console.error(`  FAIL ${name}\n       ${e.message}`); }
-  })();
-}
+const { test, finish } = require("./_harness");
 
 function newMgr() {
   const mgr = new UniversalCacheManager();
@@ -33,8 +27,7 @@ async function main() {
     });
   }
 
-  if (failures > 0) { console.error(`\n${failures} test(s) failed`); process.exit(1); }
-  console.log("\nAll betoniLaatu invalidation tests passed");
+  finish("\nAll betoniLaatu invalidation tests passed");
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
