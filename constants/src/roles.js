@@ -444,6 +444,9 @@ export const PERSON_SETTING_TYPE_IDS = {
   NOTIFY_ONLY_FUTURE: 53,
   // Push when a pump truck leaves a worksite geofence (Mapon tenants, admins + keikkahandlers).
   NOTIFY_VEHICLE_LEFT_WORKSITE: 54,
+  // Post-login "Täydennä tietosi" prompt state: timeVar = do not ask before,
+  // stringVar = JSON array of question ids the person chose never to see again.
+  PROFILE_PROMPT: 55,
 };
 
 /**
