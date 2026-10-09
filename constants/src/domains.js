@@ -5,7 +5,7 @@
  * to betoni.online backend services. Used by CORS middleware in both
  * puminet5api (main backend) and puminet7-functions-app (cron jobs).
  *
- * Last Updated: 2026-09-03
+ * Last Updated: 2026-10-09
  *
  * Maintenance:
  * - When adding new environment, add all domain variants
@@ -16,12 +16,6 @@
  * @type {string[]}
  */
 const allowedOrigins = [
-  // stable environment
-  "https://stable.ibetoni.fi",
-  "https://stable.betoni.online",
-  "https://vara.ibetoni.fi",
-  "https://vara.betoni.online",
-
   // functions
   "https://functions.ibetoni.fi",
   "https://puminet7functions.azurewebsites.net",
@@ -41,14 +35,8 @@ const allowedOrigins = [
   // smoke-check passed a broken page as fine.
   "https://calm-beach-0d5380703-staging.westeurope.7.azurestaticapps.net",
   "https://calm-beach-0d5380703-staging.7.azurestaticapps.net",
-  "https://puminet7app-staging.azurewebsites.net",
   "https://staging.betoni.online",
   "https://staging.ibetoni.fi",
-
-  // latest environment
-  "https://puminet7app-latest.azurewebsites.net",
-  "https://latest.betoni.online",
-  "https://latest.ibetoni.fi",
 
   // staging slot (blue-green deployment staging)
   "https://prod.ibetoni.fi",
@@ -57,7 +45,6 @@ const allowedOrigins = [
   // production (live)
   "https://wonderful-rock-08f826703.azurestaticapps.net",
   "https://calm-beach-0d5380703.7.azurestaticapps.net", // jerry-swa default hostname
-  "https://puminet7app.azurewebsites.net",
   "https://puminet7api.azurewebsites.net",
   "https://betoni.online",
   "https://www.betoni.online",
@@ -72,10 +59,6 @@ const allowedOrigins = [
   "https://data.ibetoni.fi",
   "https://api.betoni.online",
   "https://api.ibetoni.fi",
-  "https://api-stable.betoni.online",
-  "https://api-stable.ibetoni.fi",
-  "https://api-latest.betoni.online",
-  "https://api-latest.ibetoni.fi",
   "https://api-staging.betoni.online",
   "https://api-staging.ibetoni.fi",
 
