@@ -2134,6 +2134,8 @@ class UniversalCacheManager {
       // which names no key — `tyomaa:search:<owner>:…` kept listing the deleted
       // secondary until TTL. A merge is a delete of the secondary plus an update
       // of every keikka that pointed at it, so it sweeps what DELETE sweeps.
+      // fb#2373: the "keikka" entity sweep never reaches `keikka:listByAsiakases:*`
+      // (CLI keikka list/stats keys), so the list prefix is swept explicitly.
       case "TYOMAA_MERGE":
       case "TYOMAA_UPDATE":
       case "TYOMAA_CREATE":
@@ -2145,6 +2147,7 @@ class UniversalCacheManager {
           this.invalidate(operation, "tyomaaPerson", params),
           this.invalidate(operation, "person", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
+          this.invalidateByPattern("keikka:listByAsiakases:*"),
           this.invalidateByPattern(`ecofleet:vehicleDayTimeline:*:${today}`),
           this.invalidateByPattern(`ecofleet:vehicleDayRoute:*:${today}`),
         ]);
