@@ -54,6 +54,7 @@ import { BETONIJERRY, BETONIJERRY_CITIES } from "./betonijerry.js";
 import { PUMINET } from "./puminet.js";
 import { DASHBOARD_CLOSE_RADIUS_M } from "./geo.js";
 import { PERSON_LOG_TYPES } from "./personLogTypes.js";
+import { KEIKKA_DONE_TILA_IDS } from "./keikkaTila.js";
 
 export {
   // Step log type constants
@@ -122,6 +123,9 @@ export {
 
   // Geo / proximity constants
   DASHBOARD_CLOSE_RADIUS_M,
+
+  // keikkaTila
+  KEIKKA_DONE_TILA_IDS,
 
   // Error helpers
   isUniqueViolation,

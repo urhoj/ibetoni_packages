@@ -50,6 +50,7 @@ const { BETONIJERRY, BETONIJERRY_CITIES } = require("./src/betonijerry.cjs");
 const { PUMINET } = require("./src/puminet.cjs");
 const { DASHBOARD_CLOSE_RADIUS_M } = require("./src/geo.cjs");
 const { PERSON_LOG_TYPES } = require("./src/personLogTypes.cjs");
+const { KEIKKA_DONE_TILA_IDS } = require("./src/keikkaTila.cjs");
 
 module.exports = {
   // Step log type constants
@@ -118,6 +119,9 @@ module.exports = {
 
   // Geo / proximity constants
   DASHBOARD_CLOSE_RADIUS_M,
+
+  // keikkaTila
+  KEIKKA_DONE_TILA_IDS,
 
   // Error helpers
   isUniqueViolation,
