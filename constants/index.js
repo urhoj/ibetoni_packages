@@ -48,7 +48,7 @@ const { FENNOA_PAYMENT_STATUS, INVOICE_STATUS, INVOICE_STATUS_LABELS_FI } = requ
 const { SENTRY_REDACT_FIELDS, SENTRY_REDACTED_PLACEHOLDER } = require("./src/sentry.cjs");
 const { BETONIJERRY, BETONIJERRY_CITIES } = require("./src/betonijerry.cjs");
 const { PUMINET } = require("./src/puminet.cjs");
-const { DASHBOARD_CLOSE_RADIUS_M } = require("./src/geo.cjs");
+const { DASHBOARD_CLOSE_RADIUS_M, GPS_STALE_MIN, GPS_STALE_ENGINE_OFF_MIN } = require("./src/geo.cjs");
 const { PERSON_LOG_TYPES } = require("./src/personLogTypes.cjs");
 const { KEIKKA_DONE_TILA_IDS } = require("./src/keikkaTila.cjs");
 
@@ -119,6 +119,8 @@ module.exports = {
 
   // Geo / proximity constants
   DASHBOARD_CLOSE_RADIUS_M,
+  GPS_STALE_MIN,
+  GPS_STALE_ENGINE_OFF_MIN,
 
   // keikkaTila
   KEIKKA_DONE_TILA_IDS,

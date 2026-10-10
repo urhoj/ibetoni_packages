@@ -52,7 +52,7 @@ import { FENNOA_PAYMENT_STATUS, INVOICE_STATUS, INVOICE_STATUS_LABELS_FI } from 
 import { SENTRY_REDACT_FIELDS, SENTRY_REDACTED_PLACEHOLDER } from "./sentry.js";
 import { BETONIJERRY, BETONIJERRY_CITIES } from "./betonijerry.js";
 import { PUMINET } from "./puminet.js";
-import { DASHBOARD_CLOSE_RADIUS_M } from "./geo.js";
+import { DASHBOARD_CLOSE_RADIUS_M, GPS_STALE_MIN, GPS_STALE_ENGINE_OFF_MIN } from "./geo.js";
 import { PERSON_LOG_TYPES } from "./personLogTypes.js";
 import { KEIKKA_DONE_TILA_IDS } from "./keikkaTila.js";
 
@@ -123,6 +123,8 @@ export {
 
   // Geo / proximity constants
   DASHBOARD_CLOSE_RADIUS_M,
+  GPS_STALE_MIN,
+  GPS_STALE_ENGINE_OFF_MIN,
 
   // keikkaTila
   KEIKKA_DONE_TILA_IDS,
