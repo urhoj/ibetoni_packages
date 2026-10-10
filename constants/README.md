@@ -133,6 +133,17 @@ if (attempts >= SECURITY.MAX_LOGIN_ATTEMPTS) {
 
 **Legacy exports (deprecated)**: `MAX_LOGIN_ATTEMPTS`, `LOCKOUT_DURATION`, `RATE_LIMIT_WINDOW`, `MAX_REQUESTS_PER_WINDOW`
 
+### Keikka Done States (`src/keikkaTila.js` / `src/keikkaTila.cjs`)
+
+- **KEIKKA_DONE_TILA_IDS**: frozen `[8, 9, 10, 12, 13, 100]` — `keikkaTilaId`s of finished orders: 8 Peruttu, 9/12/13 Toimitettu, 10 Poistettu, 100 Valmis
+  - The coordinate fan-out (`recomputeMatkatForOpenKeikkas`) never selects these orders; `gridSql.saveKeikka` and `keikkaSql.setBetoniToimittaja` use them only to skip the missing-km auto-fill (a done order is still recomputed when its worksite/plant/Tyhjänä inputs change) (fb#2394, fb#2405)
+  - Dual ESM/CJS pair: `src/keikkaTila.js` (frontend) and `src/keikkaTila.cjs` (backend, loaded by the package `index.js`) — edit both in the same commit
+
+```javascript
+const { KEIKKA_DONE_TILA_IDS } = require('@ibetoni/constants');
+const isDone = KEIKKA_DONE_TILA_IDS.includes(Number(keikkaTilaId));
+```
+
 ## Maintenance
 
 ### Adding New Domains
