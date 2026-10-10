@@ -144,6 +144,17 @@ const { KEIKKA_DONE_TILA_IDS } = require('@ibetoni/constants');
 const isDone = KEIKKA_DONE_TILA_IDS.includes(Number(keikkaTilaId));
 ```
 
+### Geo / map thresholds (`src/geo.js` / `src/geo.cjs`, subexport `./geo`)
+
+- **DASHBOARD_CLOSE_RADIUS_M**: 2000 — "CLOSE" bucket and default search radius of the address dashboard (puminet4 `pages/map/osoitetiedot`, puminet5api `modules/address`)
+- **GPS_STALE_MIN**: 30 — a /tilanne GPS ping older than this is stale: the backend buckets the vehicle `ei_signaalia` (`modules/dashboard/dayBoardDerive.js`), the frontend ghosts it on the map (`pages/tilanne`) (fb#1175)
+- **GPS_STALE_ENGINE_OFF_MIN**: 120 — the longer window when the engine is off; a parked tracker reports only every 30-90 min (fb#1067)
+- Dual ESM/CJS pair — edit both halves in the same commit
+
+```javascript
+const { GPS_STALE_MIN, GPS_STALE_ENGINE_OFF_MIN } = require('@ibetoni/constants');
+```
+
 ## Maintenance
 
 ### Adding New Domains
