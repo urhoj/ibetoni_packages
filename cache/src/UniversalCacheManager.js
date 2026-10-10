@@ -119,8 +119,8 @@ const MAX_TTL_SECONDS = 604800; // 7 days
 // authz:<kind>[.<qualifier>]:<family>:<id> — id ALWAYS last, which is what lets the
 // sweep below match it exactly (modules/cache/authzLookupCache.js) — and rely on
 // invalidateCrossEntity to sweep them. Both halves — the keys that module writes and
-// the glob swept below — are built from ./authzKeys, so a segment rename cannot make
-// the sweep a silent no-op (fb#1261). Families absent here (attachment, tuote,
+// the glob swept below — are built from ./authzKeys (why: its header, fb#1261).
+// Families absent here (attachment, tuote,
 // laskupohja, keikkaLasku, betoniHinta, ...) are refreshed by the memo's own TTL
 // alone — EXCEPT on a `*_MERGE` op, which re-points ownership across every family
 // at once (see the whole-namespace merge sweep in invalidateCrossEntity) and so

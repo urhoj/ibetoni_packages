@@ -218,10 +218,7 @@ moves both at once — and both normalise the entity id through the same `normId
 carrying `'08'` still sweeps the key stored under `8` (fb#1297). Require that module by its
 direct path, **not** through the package root: a `jest.mock("@ibetoni/cache")` double replaces
 the root and omits these helpers, which makes the read gates throw and deny (phantom 403s).
-Before fb#1261 they were independent
-template literals in two repos, each pinned by hand-typed strings, so a rename on either side
-left both suites green while the sweep quietly became a no-op — and this sweep backs an
-authorization gate, not a freshness one, so that failure mode is fail-OPEN. Pinned by
+Why one definition matters (fail-OPEN drift): the header of `src/authzKeys.js` (fb#1261). Pinned by
 `scripts/test-authz-invalidation.js`, whose closing block glob-matches the emitted sweep
 against keys `authzKey()` produced rather than comparing typed strings.
 
