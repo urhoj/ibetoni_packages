@@ -8,7 +8,13 @@ Single source of truth for mapping PRH v3 open-data company records →
 - the nightly dead-customer sweep (`puminet7-functions-app` → `prhSweep`), and
 - the on-demand "PRH-tarkistus" button check (`puminet5api` → asiakas `prh-check` route).
 
-Keeping the logic here guarantees the sweep and the on-click check never diverge.
+Keeping the logic here guarantees the two paths never **classify** differently. They do not
+**fetch** the same way, though: the sweep uses this package's `fetchPrhCompany`, which calls
+`avoindata.prh.fi` directly with no fallback, while `prh-check` fetches through puminet5api's
+`prhService.searchByBusinessId`, which falls back to the EU VAT register (VIES) for sole traders.
+A sole trader still classifies as `unknown` on both paths: the sweep gets `null`, and a VIES record
+has empty `companySituations` / `registeredEntries`. Details: `puminet5api/modules/vies/README.md`
+→ "Not used by the nightly dead-customer sweep".
 
 ## API
 
