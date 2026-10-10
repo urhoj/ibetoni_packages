@@ -149,8 +149,12 @@ function safeStringify(value) {
 /**
  * Report a swallowed error to Sentry with `console.error` logging.
  *
- * Use in catch blocks that return null/false/[]/{success:false} or swallow
- * the error — those failures are invisible in production without this.
+ * Use in FRONTEND catch blocks that return null/false/[]/{success:false} or
+ * swallow the error — those failures are invisible in production without this.
+ * Backend (puminet5api) modules use captureException(err, { tags: { module,
+ * operation } }) instead — the established convention (fb#1497); backend
+ * route handlers use handleRouteError. The warning level and fingerprint
+ * below are captureError-only.
  *
  * Enrichment applied automatically:
  * - level = "warning" (distinguishes swallowed errors from unhandled crashes)
