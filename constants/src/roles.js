@@ -490,4 +490,6 @@ export const ASIAKAS_SETTING_TYPE_IDS = {
   HAS_AI: 34,
   HAS_JERRY: 35,
   HAS_BETONI_STORE: 36,
+  // Manual free-text SMS to a tenant's own drivers (grid driver menu). Owner ruling 2026-10-12.
+  HAS_SMS: 37,
 };
