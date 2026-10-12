@@ -360,19 +360,19 @@ class UniversalCacheManager {
    */
   _applyTtlMultiplier(baseTtl) {
     const result = {};
-
     for (const [entityType, baseValue] of Object.entries(baseTtl)) {
-      if (TTL_MULTIPLIER_EXCLUDED.has(entityType)) {
-        // Real-time entities keep their base TTL
-        result[entityType] = baseValue;
-      } else {
-        // Apply multiplier with max cap
-        const multiplied = Math.floor(baseValue * TTL_MULTIPLIER);
-        result[entityType] = Math.min(multiplied, MAX_TTL_SECONDS);
-      }
+      result[entityType] = this._scaleTtl(baseValue, entityType);
     }
-
     return result;
+  }
+
+  /**
+   * One base TTL → effective TTL: real-time entities keep the base, the rest get
+   * the multiplier, capped at MAX_TTL_SECONDS.
+   */
+  _scaleTtl(baseValue, entityType) {
+    if (TTL_MULTIPLIER_EXCLUDED.has(entityType)) return baseValue;
+    return Math.min(Math.floor(baseValue * TTL_MULTIPLIER), MAX_TTL_SECONDS);
   }
 
   /**
@@ -820,11 +820,17 @@ class UniversalCacheManager {
 
   /**
    * Cache data in Redis with appropriate TTL. Also populates L1 for eligible entity types.
+   *
+   * @param {number} [baseTtlSeconds] - Caller's BASE TTL; replaces the entity's
+   *   BASE_TTL and gets the same CACHE_TTL_MULTIPLIER + cap (fb#2500). L1 keeps
+   *   its fixed L1_TTL_MS regardless.
    */
-  async cache(key, data, entityType = "default") {
+  async cache(key, data, entityType = "default", baseTtlSeconds) {
     return await this.withRedis(
       async (redis) => {
-        const baseTtl = this.TTL[entityType] || this.TTL.default;
+        const baseTtl = baseTtlSeconds > 0
+          ? this._scaleTtl(baseTtlSeconds, entityType)
+          : this.TTL[entityType] || this.TTL.default;
         // Add ±5% jitter to prevent synchronized cache expiration (cache stampede prevention)
         const jitter = Math.floor(baseTtl * 0.05 * (Math.random() * 2 - 1));
         const ttl = baseTtl + jitter;
