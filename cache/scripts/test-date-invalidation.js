@@ -18,8 +18,9 @@ const UniversalCacheManager = require("../src/UniversalCacheManager");
 //
 // These tests pin the SHAPE of each family, not just the absence of "grid":
 // the entity + its *RequiredDateType + the complianceDashboard sweep must
-// survive, and PERSON/TYOMAA must keep the SEPARATE keikka invalidation that
-// the order views genuinely depend on.
+// survive. No family sweeps keikka (fb#2496): neither cached order detail
+// (keikka_get_v2, CLI keikka get) carries compliance dates, and the old
+// PERSON/TYOMAA keikka sweep only ever hit a wrong id.
 
 const { test, finish } = require("./_harness");
 
@@ -52,15 +53,13 @@ const FAMILIES = [
   {
     prefix: "PERSON_DATE",
     params: { asiakasId: 8, entityType: "personDate", personId: 10, personDateTypeId: 4 },
-    // keikka is deliberate: order views show person compliance status.
-    scoped: ["keikka", "person", "personDate", "personRequiredDateType"],
+    scoped: ["person", "personDate", "personRequiredDateType"],
     sweeps: ["complianceDashboard:*"],
   },
   {
     prefix: "TYOMAA_DATE",
     params: { asiakasId: 8, entityType: "tyomaaDate", tyomaaId: 77, tyomaaDateTypeId: 4 },
-    // keikka is deliberate: order views show tyomaa compliance status.
-    scoped: ["keikka", "tyomaa", "tyomaaDate", "tyomaaRequiredDateType"],
+    scoped: ["tyomaa", "tyomaaDate", "tyomaaRequiredDateType"],
     sweeps: ["complianceDashboard:*"],
   },
   {

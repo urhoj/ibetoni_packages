@@ -24,7 +24,7 @@ async function main() {
   console.log("tyomaa merge invalidation tests:");
 
   await test("TYOMAA_MERGE sweeps tyomaa (search/list keys) like TYOMAA_DELETE, not the dead `default` entity", async () => {
-    const { mgr, entities } = newMgr();
+    const { mgr, entities, patterns } = newMgr();
     // Exactly what createCombinatorRouter's mergeParamsExtractor sends: no entityType.
     await mgr.invalidateCrossEntity("TYOMAA_MERGE", {
       asiakasId: 27,
@@ -32,9 +32,11 @@ async function main() {
       secondaryTyomaaId: 3380,
       affectedEntities: ["tyomaa", "keikka", "person", "grid"],
     });
-    for (const e of ["tyomaa", "keikka", "person", "grid"]) {
+    for (const e of ["tyomaa", "person", "grid"]) {
       assert.ok(entities.includes(e), `expected a ${e} sweep, got ${JSON.stringify(entities)}`);
     }
+    // The keikka detail sweep is the explicit global one (fb#2496).
+    assert.ok(patterns.includes("keikka:get:*"), `no keikka:get:* sweep: ${JSON.stringify(patterns)}`);
     assert.ok(!entities.includes("default"), `swept the dead 'default' entity: ${JSON.stringify(entities)}`);
   });
 

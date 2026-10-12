@@ -1207,8 +1207,13 @@ class UniversalCacheManager {
     let pattern;
     switch (entityType) {
       case "keikka": {
+        // entityId names a keikka only on a keikka op: a person/vehicle/tyomaa extractor
+        // puts ITS id there, which swept one unrelated order and missed the real ones
+        // (fb#2496). Without a keikka id the sweep is global, never skipped.
+        const ownKeikkaId =
+          !params.entityType || params.entityType === "keikka" ? params.entityId : undefined;
         const keikkaIdValue =
-          params.body?.keikkaId || params.keikkaId || params.entityId;
+          params.body?.keikkaId || params.keikkaId || ownKeikkaId;
 
         const individualPattern = keikkaIdValue
           ? `keikka:get:${keikkaIdValue}:*`
@@ -1462,6 +1467,21 @@ class UniversalCacheManager {
   }
 
   /**
+   * Sweep every cached order detail (`keikka:get:*`: keikka_get_v2 and the CLI
+   * keikka get). For writes to a row SHARED by many orders: keikka_get_v2 returns
+   * the live asiakasView / tyomaa / vehicleView rows and keikkaview's person and
+   * sijainti joins of every order that references the row, while the key carries
+   * only the keikkaId, so no narrower pattern reaches them (fb#2496). A keikkaId in
+   * such a request does NOT bound the change: the worksite save sends
+   * body.keikkaId while also rewriting the global tyomaa row. One SCAN either way.
+   *
+   * @returns {Promise<number>} Keys deleted.
+   */
+  _sweepAllKeikkaDetails() {
+    return this.invalidateByPattern("keikka:get:*");
+  }
+
+  /**
    * The `geocode:` read keys a sijainti-row write makes stale — the single
    * source of truth shared by SIJAINTI_* and SIJAINTI_LATLNG_UPDATE, so the two
    * can never drift apart (that drift is what left `ib sijainti list` uncleared;
@@ -1634,13 +1654,13 @@ class UniversalCacheManager {
       case "PERSON_DATE_UPDATE":
       case "PERSON_DATE_CREATE":
       case "PERSON_DATE_DELETE": {
-        // CRITICAL: keikka cache must be invalidated because order views show person compliance status
+        // No "keikka" sweep (fb#2496): neither cached order detail (keikka_get_v2,
+        // CLI keikka get) carries compliance dates; it only ever hit a wrong id.
         const counts = await Promise.all([
           this.invalidate(operation, "personDate", params),
           this.invalidate(operation, "person", params),
           this.invalidate(operation, "personRequiredDateType", params),
           // fb#761: no invalidateGridSmart — it swept every tenant's grid, at every date.
-          this.invalidate(operation, "keikka", params),
           this.invalidateByPattern(`complianceDashboard:*`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
@@ -1652,13 +1672,12 @@ class UniversalCacheManager {
       case "TYOMAA_DATE_UPDATE":
       case "TYOMAA_DATE_CREATE":
       case "TYOMAA_DATE_DELETE": {
-        // CRITICAL: keikka cache must be invalidated because order views show tyomaa compliance status
+        // No "keikka" sweep: same reason as PERSON_DATE_* (fb#2496).
         const counts = await Promise.all([
           this.invalidate(operation, "tyomaaDate", params),
           this.invalidate(operation, "tyomaa", params),
           this.invalidate(operation, "tyomaaRequiredDateType", params),
           // fb#761: no invalidateGridSmart — it swept every tenant's grid, at every date.
-          this.invalidate(operation, "keikka", params),
           this.invalidateByPattern(`complianceDashboard:*`),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
@@ -1718,16 +1737,13 @@ class UniversalCacheManager {
         );
         totalInvalidated += asiakasOpCount;
 
-        // If keikkaId is provided, also invalidate keikka cache
-        // This handles cases where keikkaAsiakas table is updated
-        if (params.keikkaId) {
-          const keikkaOpCount = await this.invalidate(
-            operation,
-            "keikka",
-            params,
-          );
-          totalInvalidated += keikkaOpCount;
-        }
+        // asiakasView renders on every order of the customer (and its suppliers), so a
+        // customer write sweeps all order details. This used to run only with a
+        // keikkaId (keikkaAsiakas edits), leaving a rename stale until TTL (fb#2496).
+        totalInvalidated += await this._sweepAllKeikkaDetails();
+        // The Historiakartta pins (keikka:listByAsiakases:pins:*) and the CLI keikka
+        // list carry asiakasNimi too (fb#2508).
+        totalInvalidated += await this.invalidateByPattern("keikka:listByAsiakases:*");
 
         // If linkedAsiakasId is provided (for asiakasLinks), invalidate both customers
         if (params.linkedAsiakasId) {
@@ -1795,7 +1811,9 @@ class UniversalCacheManager {
 
         const counts = await Promise.all([
           ...affectedEntities.map((entityType) =>
-            this.invalidate(operation, entityType, params),
+            entityType === "keikka"
+              ? this._sweepAllKeikkaDetails()
+              : this.invalidate(operation, entityType, params),
           ),
           this.invalidateByPattern("keikka:listByAsiakases:*"),
           this.invalidateByPattern("asiakas:list:*"),
@@ -1962,7 +1980,7 @@ class UniversalCacheManager {
 
         const counts = await Promise.all([
           this.invalidate(operation, "person", params),
-          this.invalidate(operation, "keikka", params),
+          this._sweepAllKeikkaDetails(),
           this.invalidate(operation, "keikkaPerson", params),
           this.invalidate(operation, "grid", params),
           this.invalidate(operation, "asiakas", params),
@@ -2030,7 +2048,8 @@ class UniversalCacheManager {
         const personEntityId = params.entityId || params.personId;
         const counts = await Promise.all([
           this.invalidate(operation, "person", params),
-          this.invalidate(operation, "keikka", params),
+          // keikkaview + asiakasView render this person on every order they touch.
+          this._sweepAllKeikkaDetails(),
           this.invalidate(operation, "asiakas", params),
           this.invalidate(operation, "tyomaa", params),
           this.invalidate(operation, "grid", params),
@@ -2061,7 +2080,7 @@ class UniversalCacheManager {
         const deletedPersonId = params.entityId || params.personId;
         const counts = await Promise.all([
           this.invalidate(operation, "person", params),
-          this.invalidate(operation, "keikka", params),
+          this._sweepAllKeikkaDetails(), // same reason as PERSON_UPDATE
           this.invalidate(operation, "asiakas", params),
           this.invalidate(operation, "tyomaa", params),
           this.invalidate(operation, "grid", params),
@@ -2092,7 +2111,7 @@ class UniversalCacheManager {
             params.sijaintiId || params.entityId,
           ).map((p) => this.invalidateByPattern(p)),
           this.invalidate(operation, "tyomaa", params),
-          this.invalidate(operation, "keikka", params),
+          this._sweepAllKeikkaDetails(), // keikkaview joins sijainti on every order
           this.invalidateGridSmart("TYOMAA_UPDATE", params.body || {}, params),
           this.invalidate(operation, "asiakas", params),
           this.invalidateByPattern(`ecofleet:vehicleDayTimeline:*:${today}`),
@@ -2143,7 +2162,9 @@ class UniversalCacheManager {
         const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
         const counts = await Promise.all([
           this.invalidate(operation, "tyomaa", params),
-          this.invalidate(operation, "keikka", params),
+          // The live tyomaa row (name, address, lat/lng) renders on every order at the
+          // site; tyomaa /set's body.keikkaId does not bound that (fb#2496).
+          this._sweepAllKeikkaDetails(),
           this.invalidate(operation, "tyomaaPerson", params),
           this.invalidate(operation, "person", params),
           this.invalidateGridSmart(operation, params.body || {}, params),
@@ -2166,7 +2187,9 @@ class UniversalCacheManager {
         const vehicleId = params.entityId || params.vehicleId || params.body?.vehicleId;
         const counts = await Promise.all([
           this.invalidate(operation, "vehicle", params),
-          this.invalidate(operation, "keikka", params),
+          this._sweepAllKeikkaDetails(), // vehicleView renders on every order of the vehicle
+          // Historiakartta pins carry vehicleNimi/No/RegNo (fb#2508).
+          this.invalidateByPattern("keikka:listByAsiakases:*"),
           this.invalidateGridSmart(operation, params.body || {}, params),
           this.invalidate(operation, "person", params),
           this.invalidateByPattern(`grid:v7tenant:${dateKey}:*`),
@@ -2213,14 +2236,14 @@ class UniversalCacheManager {
         break;
       }
 
-      // CRITICAL: tuotteet_delete modifies keikkaLaskuRivit - products affect invoices and keikka pricing
+      // CRITICAL: tuotteet_delete modifies keikkaLaskuRivit - products affect invoices and keikka pricing.
+      // No "keikka" sweep (fb#2496): neither cached order detail carries products or prices.
       case "TUOTE_UPDATE":
       case "TUOTE_CREATE":
       case "TUOTE_DELETE": {
         const counts = await Promise.all([
           this.invalidate(operation, "tuote", params),
           this.invalidate(operation, "lasku", params),
-          this.invalidate(operation, "keikka", params),
           this.invalidateByPattern("inventory:dashboard:*"),
           this.invalidateByPattern("inventory:varastoList:*"),
         ]);
