@@ -1,6 +1,6 @@
 {
   "name": "@ibetoni/constants",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Shared constants for betoni.online platform",
   "scripts": {
     "test": "vitest run"

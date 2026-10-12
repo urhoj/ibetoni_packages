@@ -86,12 +86,12 @@ if (isUniqueViolation(err)) {
 
 ### Cache TTL (`src/cache.js`)
 
-- **CACHE_TTL**: Default Time-To-Live values for cached entities (in seconds)
-  - `CACHE_TTL.KEIKKA` - 600 (10 minutes) - Orders change frequently
-  - `CACHE_TTL.TYOMAA` - 1200 (20 minutes) - Worksites change moderately
-  - `CACHE_TTL.PERSON` - 1800 (30 minutes) - Person data relatively stable
-  - `CACHE_TTL.VEHICLE` - 1800 (30 minutes) - Vehicle data relatively stable
-  - `CACHE_TTL.WEATHER` - 900 (15 minutes) - Weather data changes frequently
+- **CACHE_TTL**: Base Time-To-Live values for cached entities (in seconds). `UniversalCacheManager` multiplies the entity default by `CACHE_TTL_MULTIPLIER` (default 4), so the effective TTL is 4× these values.
+  - `CACHE_TTL.KEIKKA` - 3600 (1 hour) - Orders, invalidated on changes
+  - `CACHE_TTL.TYOMAA` - 7200 (2 hours) - Worksites change moderately
+  - `CACHE_TTL.PERSON` - 7200 (2 hours) - Person data relatively stable
+  - `CACHE_TTL.VEHICLE` - 7200 (2 hours) - Vehicle data relatively stable
+  - `CACHE_TTL.WEATHER` - 3600 (1 hour) - Weather data from FMI
 
 ```javascript
 const { CACHE_TTL } = require('@ibetoni/constants');
