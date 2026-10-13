@@ -86,7 +86,7 @@ if (isUniqueViolation(err)) {
 
 ### Cache TTL (`src/cache.js`)
 
-- **CACHE_TTL**: Base Time-To-Live values for cached entities (in seconds) for callers that pass a TTL themselves. `UniversalCacheManager` (`@ibetoni/cache`) does NOT read these: it multiplies its own `BASE_TTL` table by `CACHE_TTL_MULTIPLIER` (default 4). The two tables agree only for keikka and weather.
+- **CACHE_TTL**: Base Time-To-Live values for cached entities (in seconds) for callers that pass a TTL themselves. `UniversalCacheManager` (`@ibetoni/cache`) does NOT read these: it multiplies its own `BASE_TTL` table by `CACHE_TTL_MULTIPLIER` (default 4). The two tables agree only for keikka and weather. A TTL a caller passes (e.g. `executeQuery`'s `cache.ttl`) replaces the `BASE_TTL` entry and is scaled the same way (fb#2500).
   - `CACHE_TTL.KEIKKA` - 3600 (1 hour) - Orders, invalidated on changes
   - `CACHE_TTL.TYOMAA` - 7200 (2 hours) - Worksites change moderately
   - `CACHE_TTL.PERSON` - 7200 (2 hours) - Person data relatively stable
