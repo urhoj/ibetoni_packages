@@ -2073,6 +2073,11 @@ class UniversalCacheManager {
           personEntityId
             ? this.invalidateByPattern(`asiakas:myRoles:*:${personEntityId}`)
             : Promise.resolve(0),
+          // `ib person get` is keyed by the READER's company, which the
+          // `person:*:<writerTenant>*` sweep above misses (membership/owner change).
+          personEntityId
+            ? this.invalidateByPattern(`person:get:*:${personEntityId}:cli`)
+            : Promise.resolve(0),
           // person:forKeikka:get:{keikkaId}[:{personId}] has no asiakasId slot —
           // wildcard person:* won't match it. Sweep by keikkaId when known.
           params.keikkaId
@@ -2316,6 +2321,10 @@ class UniversalCacheManager {
           );
           totalInvalidated += await this.invalidateByPattern(
             `asiakasPersonSetting:get:*:*:${personId}`,
+          );
+          // `ib person get` row carries the person's roles in the READER's company.
+          totalInvalidated += await this.invalidateByPattern(
+            `person:get:*:${personId}:cli`,
           );
         }
 
