@@ -233,7 +233,7 @@ Invalidate cache for a specific entity type.
 
 **Returns:** `Promise<number>` - Number of keys invalidated
 
-### `cacheManager.cache(key, data, entityType)`
+### `cacheManager.cache(key, data, entityType, baseTtlSeconds?)`
 
 Store data in Redis with appropriate TTL. Also populates L1 in-memory cache for eligible entity types.
 
@@ -241,6 +241,7 @@ Store data in Redis with appropriate TTL. Also populates L1 in-memory cache for 
 - `key` (String) - Cache key
 - `data` (any) - Data to cache (will be JSON stringified for Redis)
 - `entityType` (String) - Entity type for TTL selection (default: 'default')
+- `baseTtlSeconds` (Number, optional) - Per-call BASE TTL that replaces the entity's base (fb#2500). It is NOT literal: the multiplier and 7-day cap apply exactly as to an entity base (`300` → ~20 min at 4×), except for the multiplier-excluded `ecofleet*` entities. Anything but a finite number ≥ 1 falls back to the entity TTL (fb#2545). L1 keeps its fixed 30-min TTL. `executeQuery`'s `cache.ttl` in puminet5api is passed here.
 
 **Returns:** `Promise<boolean>` - Success status
 
@@ -457,6 +458,10 @@ TTLs are capped at **7 days** (604,800 seconds) regardless of multiplier to prev
 | ecofleet-daily-today | 10min | **10min** | Today's GPS timeline/route (excluded from multiplier) |
 | keikkaTila | 12hr | **48hr** | Delivery status types (L1 eligible) |
 | default | 1hr | **4hr** | Fallback for unknown types |
+
+### Per-Call Override
+
+`cache(key, data, entityType, baseTtlSeconds)` (and so puminet5api's `executeQuery` `cache.ttl`) replaces the table's base value for that one key; the multiplier, exclusions and cap above still apply. Write it as a base: `ttl: 300` lives ~20 min, not 5.
 
 ### L1 In-Memory Cache
 

@@ -822,18 +822,21 @@ class UniversalCacheManager {
    * Cache data in Redis with appropriate TTL. Also populates L1 for eligible entity types.
    *
    * @param {number} [baseTtlSeconds] - Caller's BASE TTL; replaces the entity's
-   *   BASE_TTL and gets the same CACHE_TTL_MULTIPLIER + cap (fb#2500). L1 keeps
+   *   BASE_TTL and gets the same CACHE_TTL_MULTIPLIER + cap (fb#2500); ecofleet*
+   *   entities are not multiplied. Anything but a finite number >= 1 (a string,
+   *   sub-second, NaN, Infinity) falls back to the entity TTL, since setex would
+   *   reject it and the value would silently never be cached (fb#2545). L1 keeps
    *   its fixed L1_TTL_MS regardless.
    */
   async cache(key, data, entityType = "default", baseTtlSeconds) {
     return await this.withRedis(
       async (redis) => {
-        const baseTtl = baseTtlSeconds > 0
-          ? this._scaleTtl(baseTtlSeconds, entityType)
+        const baseTtl = Number.isFinite(baseTtlSeconds) && baseTtlSeconds >= 1
+          ? this._scaleTtl(Math.floor(baseTtlSeconds), entityType)
           : this.TTL[entityType] || this.TTL.default;
         // Add ±5% jitter to prevent synchronized cache expiration (cache stampede prevention)
         const jitter = Math.floor(baseTtl * 0.05 * (Math.random() * 2 - 1));
-        const ttl = baseTtl + jitter;
+        const ttl = Math.max(1, baseTtl + jitter);
         await redis.setex(this._nsKey(key), ttl, JSON.stringify(data));
         // Populate L1 cache for eligible entity types
         if (this.L1_ENTITY_TYPES.has(entityType)) {
