@@ -192,7 +192,7 @@ Invalidate cache for complex cross-entity operations.
 - `NOTIFICATION_UPDATE` - Notification acknowledged
 - `NOTIFICATION_READ` - Notification marked as read
 - `NOTIFICATION_BROADCAST` - Group notification (invalidates all caches for asiakasId)
-- `ASIAKAS_PERSON_SETTING_*` - Role/permission changes (invalidates auth cache)
+- `ASIAKAS_PERSON_SETTING_*` - Role/permission changes (invalidates auth cache and every company's `ib person get` copy, `person:get:*:{personId}:cli`)
 - And many more...
 
 **`authz:` lookup memo sweep.** After the per-operation switch, every operation whose
