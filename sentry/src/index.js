@@ -122,6 +122,12 @@ function init(options = {}) {
   console.log(`Sentry initialized for ${config.environment} environment`);
 }
 
+/**
+ * Copy a capture* helper's context onto a Sentry scope.
+ * context: { user, tags, extra, fingerprint } — fingerprint (string[]) replaces
+ * Sentry's default stack-based grouping, so one call site can split into one
+ * issue per value (e.g. ["slow-query", procedure], fb#2622).
+ */
 function applyContextToScope(scope, context) {
   if (context.user) scope.setUser(context.user);
   if (context.tags) Object.keys(context.tags).forEach((k) => scope.setTag(k, context.tags[k]));
@@ -154,12 +160,12 @@ function safeStringify(value) {
  * swallow the error — those failures are invisible in production without this.
  * Backend (puminet5api) modules use captureException(err, { tags: { module,
  * operation } }) instead — the established convention (fb#1497); backend
- * route handlers use handleRouteError. The warning level and fingerprint
- * below are captureError-only.
+ * route handlers use handleRouteError. The enrichment below is captureError-only.
  *
  * Enrichment applied automatically:
  * - level = "warning" (distinguishes swallowed errors from unhandled crashes)
- * - fingerprint = [feature, op] when both tags are present (stable grouping)
+ * - fingerprint = [feature, op] when both tags are present (stable grouping),
+ *   unless the caller passes an explicit context.fingerprint, which wins
  * - non-Error values are wrapped in `new Error(...)` so stack traces survive
  */
 function captureError(error, context = {}) {
@@ -171,15 +177,13 @@ function captureError(error, context = {}) {
       ? error
       : new Error(typeof error === "string" ? error : safeStringify(error));
 
-  const { tags, extra, user } = context;
+  const { tags, fingerprint } = context;
 
   Sentry.withScope((scope) => {
     scope.setLevel("warning");
-    if (user) scope.setUser(user);
-    if (tags) Object.keys(tags).forEach((k) => scope.setTag(k, tags[k]));
-    if (extra) Object.keys(extra).forEach((k) => scope.setExtra(k, extra[k]));
+    applyContextToScope(scope, context);
     const operation = tags?.operation ?? tags?.op;
-    if (tags?.feature && operation) {
+    if (!fingerprint && tags?.feature && operation) {
       scope.setFingerprint([tags.feature, operation]);
     }
     Sentry.captureException(normalized);

@@ -29,7 +29,7 @@ These packages encapsulate core business logic that needs to be shared across mu
 - **`@ibetoni/fennoa-utils`** - Fennoa API response parsing (`parseFennoaInvoiceResponse`) and payment status computation (`computePaymentStatus`)
 - **`@ibetoni/health-monitor`** - Deployment health checks, response-time monitoring, and shared status dashboard helpers
 - **`@ibetoni/ocr-utils`** - OCR document classification and confidence display helpers
-- **`@ibetoni/sentry`** - Shared `@sentry/node` initialization, `captureError`/`captureException` helpers, and PII redaction
+- **`@ibetoni/sentry`** - Shared `@sentry/node` initialization, `captureError`/`captureException`/`captureMessage` helpers, and PII redaction
 - **`@ibetoni/utils`** - General-purpose shared utilities (HTML escaping)
 
 ## 🚀 Usage
