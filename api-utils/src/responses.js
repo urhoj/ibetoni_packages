@@ -39,10 +39,13 @@ function sendSuccess(res, data, statusCode = 200) {
  * @param {string} [code] - Optional stable machine code for clients that render
  *   their own localized copy. OMITTED from the body when falsy, so every existing
  *   caller's response stays byte-identical.
+ * @param {object} [extra] - Optional extra body fields a client needs beside the
+ *   message (e.g. /api/sms's { smsLogId, status } on a gateway 422, fb#2552). They
+ *   can never override success/message/error; omitted = byte-identical body.
  */
-function sendError(res, error, statusCode = 500, code) {
+function sendError(res, error, statusCode = 500, code, extra) {
   const message = typeof error === "string" ? error : error.message || "An error occurred";
-  const body = { success: false, message, error: message };
+  const body = { ...extra, success: false, message, error: message };
   if (code) body.code = code;
   res.status(statusCode).json(body);
 }

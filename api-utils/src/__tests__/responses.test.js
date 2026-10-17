@@ -37,6 +37,18 @@ describe("sendError", () => {
         expect("code" in res.body).toBe(false);
     });
 
+    it("adds extra body fields when given (fb#2552)", () => {
+        const res = mockRes();
+        sendError(res, "Lähetys epäonnistui", 422, undefined, { smsLogId: 7, status: "unknown" });
+        expect(res.body).toEqual({ smsLogId: 7, status: "unknown", success: false, message: "Lähetys epäonnistui", error: "Lähetys epäonnistui" });
+    });
+
+    it("never lets extra fields override the core keys", () => {
+        const res = mockRes();
+        sendError(res, "x", 400, undefined, { success: true, message: "y", error: "z" });
+        expect(res.body).toEqual({ success: false, message: "x", error: "x" });
+    });
+
     it("keeps the convenience wrappers unchanged", () => {
         const res = mockRes();
         sendNotFound(res, "nope");

@@ -11,7 +11,7 @@ Promoted from `puminet5api/utils/{apiResponseHandler,validation}.js` so all back
 | Function | Behavior |
 |---|---|
 | `sendSuccess(res, data, statusCode = 200)` | Sends raw `data` as JSON. No wrapping. |
-| `sendError(res, error, statusCode = 500)` | Sends `{ success: false, message, error }`. No Sentry. Use for guard clauses. |
+| `sendError(res, error, statusCode = 500, code?, extra?)` | Sends `{ success: false, message, error }` (+ `code` when given, + any `extra` fields, which never override the core keys). No Sentry. Use for guard clauses. |
 | `sendValidationError(res, message)` | `sendError` with status 400. |
 | `sendNotFound(res, message?)` | `sendError` with status 404. |
 | `sendUnauthorized(res, message?)` | `sendError` with status 401. |
