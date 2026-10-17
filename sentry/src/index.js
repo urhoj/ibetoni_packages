@@ -126,6 +126,7 @@ function applyContextToScope(scope, context) {
   if (context.user) scope.setUser(context.user);
   if (context.tags) Object.keys(context.tags).forEach((k) => scope.setTag(k, context.tags[k]));
   if (context.extra) Object.keys(context.extra).forEach((k) => scope.setExtra(k, context.extra[k]));
+  if (context.fingerprint) scope.setFingerprint(context.fingerprint);
 }
 
 function captureException(error, context = {}) {
