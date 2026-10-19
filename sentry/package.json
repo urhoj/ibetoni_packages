@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Shared Sentry error tracking initialization and utilities",
   "main": "src/index.js",
+  "scripts": {
+    "test": "vitest run"
+  },
   "private": true,
   "license": "UNLICENSED",
   "engines": {
