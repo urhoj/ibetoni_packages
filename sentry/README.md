@@ -5,6 +5,7 @@ Shared Sentry (`@sentry/node`) initialization and capture helpers for the Node.j
 ## Consumers
 
 - `puminet5api` — `config/sentry/instrument.js` calls `init()`; `config/sentry/utils.js` re-exports the helpers.
+- `puminet7-functions-app` — same layout under `src/config/sentry/` (`instrument.js` calls `init({ service: "puminet7-functions-app" })`, `utils.js` re-exports the package).
 - `@ibetoni/api-utils` (`handleRouteError`) and `@ibetoni/cache` report through it.
 - The frontends do NOT use it at runtime (they use `@sentry/react`). `puminet4/src/index.jsx` keeps its own copy of `redactSensitiveFields` that mirrors the one here — change both together.
 

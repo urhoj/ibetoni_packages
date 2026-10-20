@@ -14,7 +14,7 @@ Shared business logic packages for the betoni.online concrete delivery managemen
 | [@ibetoni/fennoa-utils](./fennoa-utils/) | 1.0.0 | Fennoa invoice response parsing and payment status computation | [README](./fennoa-utils/README.md) |
 | [@ibetoni/health-monitor](./health-monitor/) | 1.0.0 | Deployment health checks and response-time monitoring | — |
 | [@ibetoni/ocr-utils](./ocr-utils/) | 1.0.0 | OCR document classification and confidence display | — |
-| [@ibetoni/sentry](./sentry/) | 1.0.0 | Shared Sentry initialization, capture helpers, redaction | — |
+| [@ibetoni/sentry](./sentry/) | 1.0.0 | Shared Sentry initialization, capture helpers, redaction | [README](./sentry/README.md) |
 | [@ibetoni/utils](./utils/) | 1.0.0 | General-purpose shared utilities (HTML escaping) | — |
 
 ## 🎯 Purpose
