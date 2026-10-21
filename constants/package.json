@@ -47,6 +47,10 @@
     "./geo": {
       "import": "./src/geo.js",
       "require": "./src/geo.cjs"
+    },
+    "./driverDay": {
+      "import": "./src/driverDay.js",
+      "require": "./src/driverDay.cjs"
     }
   },
   "keywords": [
