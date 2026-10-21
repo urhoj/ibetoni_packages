@@ -447,6 +447,9 @@ export const PERSON_SETTING_TYPE_IDS = {
   // Post-login "Täydennä tietosi" prompt state: timeVar = do not ask before,
   // stringVar = JSON array of question ids the person chose never to see again.
   PROFILE_PROMPT: 55,
+  // How the driver wants the day's details (stringVar: sms|whatsapp|email|push|none_self|none_manual;
+  // missing = sms). docs/development/projects/driver-day-message/README.md §1.
+  DAY_MESSAGE_CHANNEL: 56,
 };
 
 /**
@@ -492,4 +495,7 @@ export const ASIAKAS_SETTING_TYPE_IDS = {
   HAS_BETONI_STORE: 36,
   // Manual free-text SMS to a tenant's own drivers (grid driver menu). Owner ruling 2026-10-12.
   HAS_SMS: 37,
+  // Order-book sheet " k" marker sends the day message to the driver automatically (default off).
+  // Sysadmin-only toggle like HAS_SMS (modules/asiakas/asiakas.js). Spec §7.
+  DAY_MESSAGE_AUTO: 38,
 };
