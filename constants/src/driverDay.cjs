@@ -70,12 +70,19 @@ function fnv1a(text) {
 
 /**
  * Fingerprint of the jobs on one vehicle on one (Helsinki) day.
+ * Palkkis (fb#2723) count too — a "huolto" / "pois ajosta" / "kommentti" day has no keikka at all.
+ * Unlike a keikka comment, a palkki's TEXT counts: it is the palkki's content. Which palkki types
+ * count is the caller's filter (the day message's showInReport types; the backend rows already are).
+ * The palkki parts are appended only when there are palkkis, so a keikka-only day keeps the
+ * fingerprint it had before palkkis were counted.
  * @param {Array<Object>} keikat - keikka rows (grid `keikat` or upcomingForDriver rows; duplicate
  *   keikkaIds — one row per betoni line — count once)
  * @param {{pvm: number, vehicleId: number}} day - pvm is the Helsinki day, yyyymmdd
- * @returns {string|null} 8 hex chars, or null when no counted job starts on that day
+ * @param {Array<Object>} [palkit] - palkki rows: backend grid_palkit (grid_palkki_Id, starttime, text)
+ *   or grid items (palkkiId, timeStart, keikkaComment)
+ * @returns {string|null} 8 hex chars, or null when no counted job or palkki starts on that day
  */
-function driverDaySignature(keikat, { pvm, vehicleId }) {
+function driverDaySignature(keikat, { pvm, vehicleId }, palkit = []) {
   const byId = new Map();
   for (const k of keikat || []) {
     if (k?.vehicleId !== vehicleId || !driverDayCounts(k)) continue; // cheap checks before the date parse
@@ -84,8 +91,19 @@ function driverDaySignature(keikat, { pvm, vehicleId }) {
     const minute = Math.floor(start.getTime() / 60000);
     byId.set(k.keikkaId, `${k.keikkaId}:${vehicleId}:${minute}:${k.tyomaaId || 0}:${k.keikkaTilaId === PERUTTU ? 1 : 0}`);
   }
-  if (!byId.size) return null;
-  const parts = [...byId.entries()].sort(([a], [b]) => a - b).map(([, part]) => part);
+  const palkkiParts = new Map();
+  for (const p of palkit || []) {
+    const id = p?.grid_palkki_Id ?? p?.palkkiId;
+    if (typeof id !== "number" || p.vehicleId !== vehicleId) continue;
+    const start = toDate(p.starttime ?? p.timeStart);
+    if (!start || helsinkiYyyymmdd(start) !== pvm) continue;
+    const minute = Math.floor(start.getTime() / 60000);
+    palkkiParts.set(id, `p${id}:${vehicleId}:${minute}:${p.grid_palkkiTypeId || 0}:${fnv1a(String(p.text ?? p.keikkaComment ?? ""))}`);
+  }
+  if (!byId.size && !palkkiParts.size) return null;
+  const sorted = (map) => [...map.entries()].sort(([a], [b]) => a - b).map(([, part]) => part);
+  const parts = sorted(byId);
+  if (palkkiParts.size) parts.push(...sorted(palkkiParts));
   return fnv1a(parts.join(";"));
 }
 
