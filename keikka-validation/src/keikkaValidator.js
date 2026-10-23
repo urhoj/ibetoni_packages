@@ -964,8 +964,11 @@ function validateDrivers(
  * 1. Concrete specifications must exist (betonit array)
  * 2. Each concrete spec must have m3 > 0
  * 3. Long pump lines (>20m) require 8mm or hieno16mm aggregate
- * 4. Concrete must be validated (betoniVahvistettu=true)
- * 5. Concrete data must be sent (betonitiedotLahetetty or step log)
+ * 4. Harkko in keikkaOtsikko/keikkaComment requires one 8mm (raeKokoId 4) + S4 (notkeusId 4) row
+ * 5. Concrete must be validated (betoniVahvistettu=true)
+ * 6. Concrete data must be sent (betonitiedotLahetetty or step log)
+ *
+ * Ids are compared via Number(): socket keikkaBetoni:updated merges them as strings.
  *
  * **Pump Line Logic:**
  * - pumppuLinja > 20m requires specific aggregate sizes
@@ -1084,7 +1087,7 @@ function validateBetoni(keikka, issues, ownerAsiakasId, validationSettings, step
     isRuleEnabled("PUMP_LINE_CONCRETE_TYPE", validationSettings, keikka, ownerAsiakasId)
   ) {
     const has8mmOrHieno16mm = keikka.betonit.some(
-      (betoni) => betoni.raeKokoId === 4 || betoni.raeKokoId === 2
+      (betoni) => Number(betoni.raeKokoId) === 4 || Number(betoni.raeKokoId) === 2
     );
 
     if (!has8mmOrHieno16mm) {
@@ -1120,11 +1123,12 @@ function validateBetoni(keikka, issues, ownerAsiakasId, validationSettings, step
   // Harkko (block-fill) pour needs 8mm (raeKokoId 4) S4 (notkeusId 4) concrete; one
   // matching row is enough. Same /hark+o/ match as the Betomik order-book import.
   if (
-    keikka.betonit.length > 0 &&
     [keikka.keikkaOtsikko, keikka.keikkaComment].some((t) => /\bhark+o/i.test(t || "")) &&
     isRuleEnabled("HARKKO_CONCRETE_TYPE", validationSettings, keikka, ownerAsiakasId)
   ) {
-    const has8mmS4 = keikka.betonit.some((betoni) => betoni.raeKokoId === 4 && betoni.notkeusId === 4);
+    const has8mmS4 = keikka.betonit.some(
+      (betoni) => Number(betoni.raeKokoId) === 4 && Number(betoni.notkeusId) === 4
+    );
 
     if (!has8mmS4) {
       const first = keikka.betonit[0];

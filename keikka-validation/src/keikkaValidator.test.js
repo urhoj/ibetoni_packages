@@ -773,6 +773,16 @@ describe("HARKKO_CONCRETE_TYPE", () => {
     expect(harkkoIssue({ keikkaOtsikko: "harkko", betonit: [s3_16, s4_8] })).toBeUndefined();
   });
 
+  test("string ids from a socket merge still count as 8mm S4 (fb#2801)", () => {
+    expect(harkkoIssue({ keikkaOtsikko: "harkko", betonit: [{ ...s4_8, raeKokoId: "4", notkeusId: "4" }] })).toBeUndefined();
+  });
+
+  test("PUMP_LINE accepts a string 8mm raeKokoId (fb#2801)", () => {
+    const keikka = createTestKeikka({ keikkaTilaId: 4, pumppuLinja: 25, betonit: [{ m3: 5, raeKokoId: "4" }] });
+    const result = validateKeikka(keikka, { ...testContext, validationSettings: settings });
+    expect(result.issues.some((i) => i.type === "PUMP_LINE_CONCRETE_TYPE")).toBe(false);
+  });
+
   test("silent without harkko text or without betonit", () => {
     expect(harkkoIssue({ keikkaOtsikko: "laatta", betonit: [s3_16] })).toBeUndefined();
     expect(harkkoIssue({ keikkaOtsikko: "harkko", betonit: [] })).toBeUndefined();
