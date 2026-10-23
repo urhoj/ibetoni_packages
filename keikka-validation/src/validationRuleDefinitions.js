@@ -32,14 +32,14 @@ const VALIDATION_RULE_DEFINITIONS = {
   },
   MISSING_OMA_ASIAKAS: {
     name: "Oma asiakas puuttuu",
-    description: "Oman yrityksen tilaukselta puuttuu asiakas",
+    description: "Oman yrityksen tilaukselta puuttuu asiakas tai asiakas on Tuntematon asiakas",
     category: LOCAL_CATEGORIES.ASIAKAS,
     defaultPriority: LOCAL_PRIORITY_LEVELS.CRITICAL,
     defaultEnabled: true,
   },
   MISSING_VIERAS_ASIAKAS: {
     name: "Vieras asiakas puuttuu",
-    description: "Ulkopuolisen yrityksen tilaukselta puuttuu asiakas",
+    description: "Ulkopuolisen yrityksen tilaukselta puuttuu asiakas tai asiakas on Tuntematon asiakas",
     category: LOCAL_CATEGORIES.ASIAKAS,
     defaultPriority: LOCAL_PRIORITY_LEVELS.CRITICAL,
     defaultEnabled: true,

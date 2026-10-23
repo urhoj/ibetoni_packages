@@ -795,6 +795,31 @@ describe("HARKKO_CONCRETE_TYPE", () => {
   });
 });
 
+describe("Tuntematon asiakas (asiakasId 1486) counts as missing", () => {
+  const settings = { enabled: true, rules: getDefaultValidationRulesSettings() };
+  const types = (overrides) =>
+    validateKeikka(createTestKeikka({ keikkaTilaId: 4, ...overrides }), { ...testContext, validationSettings: settings })
+      .issues.map((i) => i.type);
+
+  test("own order gets MISSING_OMA_ASIAKAS and no name/Y-tunnus issue", () => {
+    const t = types({ asiakasId: 1486, asiakasNimi: "Tuntematon asiakas", sourceAsiakasId: testContext.ownerAsiakasId });
+    expect(t).toContain("MISSING_OMA_ASIAKAS");
+    expect(t).not.toContain("MISSING_ASIAKAS_NIMI");
+    expect(t).not.toContain("MISSING_ASIAKAS_YTUNNUS");
+  });
+
+  test("string id from a socket merge also counts", () => {
+    expect(types({ asiakasId: "1486", asiakasNimi: "Tuntematon asiakas", sourceAsiakasId: -1 }))
+      .toContain("MISSING_VIERAS_ASIAKAS");
+  });
+
+  test("a real customer is not flagged", () => {
+    const t = types({ asiakasId: 456, asiakasNimi: "Test Oy", ytunnus: "1234567-8" });
+    expect(t).not.toContain("MISSING_OMA_ASIAKAS");
+    expect(t).not.toContain("MISSING_VIERAS_ASIAKAS");
+  });
+});
+
 // Usage example
 export const exampleUsage = () => {
   const sampleKeikka = createTestKeikka({

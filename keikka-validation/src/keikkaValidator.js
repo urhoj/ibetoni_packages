@@ -239,6 +239,9 @@ const {
  * @property {Object<string, number>} categories - Issue count by category
  */
 
+// "Tuntematon asiakas": the Betomik order-book sync's placeholder, i.e. no real customer
+const UNKNOWN_ASIAKAS_ID = 1486;
+
 const PRIORITY_LEVELS = {
   CRITICAL: 5, // Order cannot be processed
   HIGH: 4, // Significant issues requiring immediate attention
@@ -707,7 +710,7 @@ function validateStatus(keikka, issues, validationSettings, ownerAsiakasId) {
  * logger.category('keikkaValidator').info(issues[0].type); // "MISSING_ASIAKAS_YTUNNUS"
  */
 function validateAsiakas(keikka, issues, ownerAsiakasId, validationSettings) {
-  const hasMissingAsiakas = !keikka.asiakasId || keikka.asiakasId === 0;
+  const hasMissingAsiakas = !keikka.asiakasId || Number(keikka.asiakasId) === UNKNOWN_ASIAKAS_ID;
 
   if (hasMissingAsiakas) {
     // Determine if this is own company order or external order
