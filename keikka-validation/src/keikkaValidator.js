@@ -3,7 +3,9 @@
  * @description Delivery Order Validation System for betoni.online
  *
  * Pure validation engine with 5-level priority system and 7 validation categories.
- * Each validation issue includes actionable remediation steps (click, autoFix, dismiss).
+ * Each validation issue includes actionable remediation steps (click, autoFix).
+ * Per-order dismissal is not an issue action: the UI writes a stepLog type 34 row (fb#2802)
+ * and validateKeikka() splits issues into `issues` / `dismissedIssues`.
  *
  * **Priority Levels:** CRITICAL (5) → HIGH (4) → MEDIUM (3) → LOW (2) → NOTIFICATION (1)
  * **Categories:** BETONI, ASIAKAS, TYOMAA, CONTACT, VEHICLE, PUMPPARI, MUU
@@ -33,14 +35,7 @@ const {
   isSevereHot,
   SEVERE_HOT_THRESHOLD,
 } = require("./weatherThresholds.js");
-const {
-  VALIDATION_DISMISSED_STEP_LOG_TYPE,
-  DISMISS_WINDOW_DAYS,
-  getIssueFingerprint,
-  buildDismissalData,
-  parseDismissal,
-  isOutsideDismissWindow,
-} = require("./dismissal.js");
+const { getIssueFingerprint, parseDismissal, isOutsideDismissWindow } = require("./dismissal.js");
 
 /**
  * "Harkko" (concrete block fill) anywhere in a text, compounds included
@@ -126,11 +121,16 @@ const HARKKO_PATTERN = /hark+o/i;
  */
 
 /**
- * Step log entry for tracking dismissed reminders
+ * Step log entry: sent markers (5, 20) and per-order dismissals (34)
  *
  * @typedef {Object} StepLog
  * @property {number} keikkaId - Related order ID
  * @property {number} stepLogTypeId - Log type (20=order confirmation sent, 5=concrete data sent, 34=validation warning dismissed)
+ * @property {string} [data2] - Type 34: JSON `{ issueId, fingerprint[, reason] }`
+ * @property {number} [stepLogId] - Row id (type 34: used by undismiss)
+ * @property {string} [personFirstName] - Author first name (type 34: shown as "Ohitettu: ...")
+ * @property {string} [personLastName] - Author last name
+ * @property {string} [entryTime] - When the row was written (ISO string)
  */
 
 /**
@@ -194,12 +194,12 @@ const HARKKO_PATTERN = /hark+o/i;
  * **Action Types:**
  * - click: Open UI for manual correction
  * - autoFix: Automatic correction (API call or data transformation)
- * - dismiss: Mark issue as handled (creates step log entry)
+ *
+ * (Dismissal is not an action: see partitionDismissed, fb#2802.)
  *
  * @typedef {Object} ValidationActions
  * @property {ActionClick} click - Manual correction action
  * @property {ActionAutoFix} [autoFix] - Automatic fix action (optional)
- * @property {ActionDismiss} [dismiss] - Dismissal action (optional)
  */
 
 /**
@@ -223,15 +223,6 @@ const HARKKO_PATTERN = /hark+o/i;
  * @property {string} label - Button text
  * @property {string} description - Tooltip/help text
  * @property {number} [betoniIndex] - Concrete line index if applicable
- */
-
-/**
- * Dismiss action for marking issue as handled
- *
- * @typedef {Object} ActionDismiss
- * @property {string} action - Action handler name (e.g., "dismissContact")
- * @property {string} label - Button text
- * @property {string} description - Tooltip/help text
  */
 
 /**
@@ -394,28 +385,11 @@ const validateKeikka = (keikka, options = {}) => {
     now = new Date(),
   } = options;
 
-  // Orders older than the dismissal window show no warnings at all (fb#2802): the
-  // nightly purge drops their dismissals, which must never bring a warning back.
-  if (isOutsideDismissWindow(keikka, now)) {
+  // No warnings at all when validation is switched off, or for orders older than the
+  // dismissal window (fb#2802): the nightly purge drops their dismissals, which must
+  // never bring a warning back.
+  if ((validationSettings && validationSettings.enabled === false) || isOutsideDismissWindow(keikka, now)) {
     return { isValid: true, issues: [], dismissedIssues: [], summary: calculateSummary([]) };
-  }
-
-  // Check if validation is enabled at all
-  if (validationSettings && validationSettings.enabled === false) {
-    return {
-      isValid: true,
-      issues: [],
-      dismissedIssues: [],
-      summary: {
-        totalIssues: 0,
-        critical: 0,
-        high: 0,
-        medium: 0,
-        low: 0,
-        notification: 0,
-        categories: {},
-      },
-    };
   }
 
   // Create optimized lookup maps with validation
@@ -639,16 +613,12 @@ function getRulePriority(ruleId, validationSettings) {
 /**
  * Check if step log entry exists for order
  *
- * Used to determine if user has dismissed a validation reminder.
- * Step logs track user actions like "dismiss contact email warning".
+ * Used to tell whether an action was performed (alternative to boolean flags).
+ * Per-order dismissals (type 34) are NOT read here; see partitionDismissed.
  *
- * **Step Log Type IDs:**
- * - 4, 20: Order confirmation dismissed
- * - 5: Concrete data sent
- *
- * **Use Cases:**
- * - Skip validation if user explicitly dismissed reminder
- * - Check if action was performed (alternative to boolean flags)
+ * **Step Log Type IDs checked by current callers:**
+ * - 5: Concrete data sent (validateBetoni)
+ * - 20: Order confirmation sent (validateMuut)
  *
  * @param {number} keikkaId - Order identifier
  * @param {Array<number>} stepLogTypeIds - Step log type IDs to check for
@@ -656,15 +626,15 @@ function getRulePriority(ruleId, validationSettings) {
  * @returns {boolean} True if any matching step log exists
  *
  * @example
- * // Check if order confirmation was dismissed
+ * // Check if the order confirmation was sent
  * const stepLogs = [
- *   { keikkaId: 123, stepLogTypeId: 4 },
+ *   { keikkaId: 123, stepLogTypeId: 20 },
  *   { keikkaId: 456, stepLogTypeId: 5 }
  * ];
- * const dismissed = hasStepLog(123, [4, 20], stepLogs);
- * logger.category('keikkaValidator').info(dismissed); // true (stepLogTypeId 4 found)
- * const notDismissed = hasStepLog(789, [4, 20], stepLogs);
- * logger.category('keikkaValidator').info(notDismissed); // false (no matching entry)
+ * const sent = hasStepLog(123, [20], stepLogs);
+ * logger.category('keikkaValidator').info(sent); // true (stepLogTypeId 20 found)
+ * const notSent = hasStepLog(789, [20], stepLogs);
+ * logger.category('keikkaValidator').info(notSent); // false (no matching entry)
  *
  * @performance O(n) where n=stepLogData length
  */
@@ -1628,9 +1598,8 @@ function validateTyomaa(keikka, issues, validationSettings, ownerAsiakasId) {
  * - Phone: yhteyshenkiloPuhelin, personPhone
  * - Email: yhteyshenkiloEmail, personEmail, contactPersonEmail
  *
- * **Step Log Integration:**
- * - stepLogTypeId=4,20: Contact email reminder dismissed
- * - Skips email validation if dismissed
+ * **Step Log Integration:** none. The email check has no step-log skip; a warning is
+ * silenced only by a per-order dismissal (type 34, see partitionDismissed).
  *
  * **Early Return:** Skips phone validation if contact person missing
  *
@@ -1664,16 +1633,17 @@ function validateTyomaa(keikka, issues, validationSettings, ownerAsiakasId) {
  * logger.category('keikkaValidator').info(issues[0].message); // "Sähköpostiosoite ei ole kelvollinen"
  *
  * @example
- * // Email reminder dismissed
+ * // Step logs do not affect the email check
  * const keikka = {
  *   keikkaId: 123,
  *   yhteyshenkiloNimi: "Pekka Test",
+ *   yhteyshenkiloPuhelin: "050-1234567",
  *   yhteyshenkiloEmail: "" // Missing
  * };
- * const stepLogs = [{ keikkaId: 123, stepLogTypeId: 20 }]; // Dismissed
+ * const stepLogs = [{ keikkaId: 123, stepLogTypeId: 20 }];
  * const issues = [];
  * validateContact(keikka, issues, null, 100, stepLogs);
- * logger.category('keikkaValidator').info(issues.length); // 0 (validation skipped due to dismissal)
+ * logger.category('keikkaValidator').info(issues[0].type); // "MISSING_CONTACT_EMAIL" (still reported)
  *
  * @performance O(1) - fixed field checks
  */
@@ -1914,7 +1884,8 @@ function validateVehicle(keikka, issues, vehicleMap, validationSettings, ownerAs
  * - Skips if no email to send confirmation to
  *
  * **Step Log Integration:**
- * - stepLogTypeId=4,20: Order confirmation dismissed or sent
+ * - stepLogTypeId=20 (ORDER_CONFIRMATION_SENT): order confirmation sent; type 4
+ *   (generic email) does not clear the warning
  * - Alternative to tilausvahvistusLahetetty flag
  *
  * **Email Validation:**
@@ -2087,7 +2058,7 @@ function validateCustomerPayments(
           label: "Näytä maksutiedot",
           description: "Avaa asiakkaan maksutilanne",
         },
-        // No dismiss or autoFix - this validation cannot be bypassed
+        // No autoFix. The warning can be dismissed per order like any other (type 34, fb#2802)
       },
     });
   }
@@ -2367,10 +2338,4 @@ module.exports = {
   getPriorityName,
   getPriorityColor,
   getCategoryName,
-  VALIDATION_DISMISSED_STEP_LOG_TYPE,
-  DISMISS_WINDOW_DAYS,
-  getIssueFingerprint,
-  buildDismissalData,
-  parseDismissal,
-  isOutsideDismissWindow,
 };

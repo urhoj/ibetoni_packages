@@ -866,9 +866,6 @@ export const exampleUsage = () => {
         if (issue.actions.autoFix) {
           void 0;
         }
-        if (issue.actions.dismiss) {
-          void 0;
-        }
       });
     }
   });

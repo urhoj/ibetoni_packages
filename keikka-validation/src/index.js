@@ -2,18 +2,19 @@ const validator = require("./keikkaValidator.js");
 const defs = require("./validationRuleDefinitions.js");
 const settings = require("./settings.js");
 const thresholds = require("./weatherThresholds.js");
+const dismissal = require("./dismissal.js");
 
 module.exports = {
   validateKeikka: validator.validateKeikka,
   isMissingAsiakas: validator.isMissingAsiakas,
   UNKNOWN_ASIAKAS_ID: validator.UNKNOWN_ASIAKAS_ID,
   HARKKO_PATTERN: validator.HARKKO_PATTERN,
-  VALIDATION_DISMISSED_STEP_LOG_TYPE: validator.VALIDATION_DISMISSED_STEP_LOG_TYPE,
-  DISMISS_WINDOW_DAYS: validator.DISMISS_WINDOW_DAYS,
-  getIssueFingerprint: validator.getIssueFingerprint,
-  buildDismissalData: validator.buildDismissalData,
-  parseDismissal: validator.parseDismissal,
-  isOutsideDismissWindow: validator.isOutsideDismissWindow,
+  VALIDATION_DISMISSED_STEP_LOG_TYPE: dismissal.VALIDATION_DISMISSED_STEP_LOG_TYPE,
+  DISMISS_WINDOW_DAYS: dismissal.DISMISS_WINDOW_DAYS,
+  getIssueFingerprint: dismissal.getIssueFingerprint,
+  buildDismissalData: dismissal.buildDismissalData,
+  parseDismissal: dismissal.parseDismissal,
+  isOutsideDismissWindow: dismissal.isOutsideDismissWindow,
   PRIORITY_LEVELS: validator.PRIORITY_LEVELS,
   CATEGORIES: validator.CATEGORIES,
   getPriorityName: validator.getPriorityName,
