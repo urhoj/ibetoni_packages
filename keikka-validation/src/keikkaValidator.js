@@ -1231,6 +1231,11 @@ function validateBetoni(keikka, issues, ownerAsiakasId, validationSettings, step
         id: `INCOMPLETE_BETONI_VALIDATION_${index}`,
         type: "INCOMPLETE_BETONI_VALIDATION",
         message: "Määrä / laatu varmistus",
+        // The message does not name the row, so a dismissal keys on what is being
+        // verified: a changed m3 / grain / slump brings the warning back (fb#2802).
+        dismissKey: `INCOMPLETE_BETONI_VALIDATION_${index}|${[betoni.m3, betoni.raeKokoId, betoni.notkeusId]
+          .map((v) => (v == null || v === "" ? "" : Number(v)))
+          .join("|")}`,
         category: CATEGORIES.BETONI,
         priority: getRulePriority("INCOMPLETE_BETONI_VALIDATION", validationSettings),
         field: `betonit[${index}].betoniVahvistettu`,

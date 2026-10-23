@@ -980,3 +980,34 @@ describe("dismissal partitioning (fb#2802)", () => {
     for (const issue of issues) expect(issue.actions?.dismiss).toBeUndefined();
   });
 });
+
+describe("INCOMPLETE_BETONI_VALIDATION dismissal key (fb#2802 review #7)", () => {
+  const now = new Date("2026-10-23T10:00:00Z");
+  const row = { m3: 5, raeKokoId: 1, raeKokoSelite: "16mm", notkeusId: 3, notkeusSelite: "S3", betoniVahvistettu: false };
+  const keikka = (betoni) => createTestKeikka({ keikkaTilaId: 4, betonit: [betoni], pumppuAika: "2026-10-24T06:00:00Z" });
+  const issueOf = (k) => validateKeikka(k, { ...testContext, validationSettings: null, now }).issues.find((i) => i.id === "INCOMPLETE_BETONI_VALIDATION_0");
+  const dismissed = (k, key) =>
+    validateKeikka(k, {
+      ...testContext,
+      validationSettings: null,
+      now,
+      stepLogData: [{ stepLogId: 1, keikkaId: 1, stepLogTypeId: 34, data2: JSON.stringify({ issueId: "INCOMPLETE_BETONI_VALIDATION_0", fingerprint: key }) }],
+    }).issues.some((i) => i.id === "INCOMPLETE_BETONI_VALIDATION_0") === false;
+
+  test("the message stays the same but the key names m3 / grain / slump", () => {
+    const issue = issueOf(keikka(row));
+    expect(issue.message).toBe("Määrä / laatu varmistus");
+    expect(issue.dismissKey).toBe("INCOMPLETE_BETONI_VALIDATION_0|5|1|3");
+  });
+
+  test("a dismissal survives an unchanged row (string ids from a socket merge too)", () => {
+    const key = issueOf(keikka(row)).dismissKey;
+    expect(dismissed(keikka({ ...row, m3: "5", raeKokoId: "1", notkeusId: "3" }), key)).toBe(true);
+  });
+
+  test("a changed m3 or quality brings it back", () => {
+    const key = issueOf(keikka(row)).dismissKey;
+    expect(dismissed(keikka({ ...row, m3: 7 }), key)).toBe(false);
+    expect(dismissed(keikka({ ...row, notkeusId: 4 }), key)).toBe(false);
+  });
+});
