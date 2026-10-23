@@ -2,7 +2,7 @@
  * Tests and usage examples for keikkaValidator
  */
 
-import { validateKeikka, PRIORITY_LEVELS } from "./keikkaValidator";
+import { validateKeikka, isMissingAsiakas, PRIORITY_LEVELS } from "./keikkaValidator";
 import { VALIDATION_RULE_DEFINITIONS } from "./validationRuleDefinitions.js";
 import { getDefaultValidationRulesSettings } from "./validationRuleDefinitions.js";
 
@@ -814,7 +814,12 @@ describe("Tuntematon asiakas (asiakasId 1486) counts as missing", () => {
     expect(t).not.toContain("MISSING_ASIAKAS_YTUNNUS");
   });
 
-  test("string id from a socket merge also counts", () => {
+  test("isMissingAsiakas helper", () => {
+    for (const id of [0, null, undefined, 1486, "1486"]) expect(isMissingAsiakas(id)).toBe(true);
+    for (const id of [456, "456"]) expect(isMissingAsiakas(id)).toBe(false);
+  });
+
+  test("string id is coerced", () => {
     expect(types({ asiakasId: "1486", asiakasNimi: "Tuntematon asiakas", sourceAsiakasId: -1 }))
       .toContain("MISSING_VIERAS_ASIAKAS");
   });

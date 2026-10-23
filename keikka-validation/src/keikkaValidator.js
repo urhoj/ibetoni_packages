@@ -56,7 +56,7 @@ const HARKKO_PATTERN = /hark+o/i;
  * @property {number} keikkaId - Order identifier
  * @property {number} keikkaTilaId - Order status ID (4=Toimitusvalmis, >=8=completed)
  * @property {string} [keikkaTilaSelite] - Status description
- * @property {number} asiakasId - Customer ID (0 or null = missing)
+ * @property {number} asiakasId - Customer ID (0, null or 1486 Tuntematon asiakas = missing)
  * @property {string} [asiakasNimi] - Customer name
  * @property {string} [ytunnus] - Finnish business ID (Y-tunnus)
  * @property {number} sourceAsiakasId - Order owner's customer ID
@@ -257,8 +257,11 @@ const HARKKO_PATTERN = /hark+o/i;
  * @property {Object<string, number>} categories - Issue count by category
  */
 
-// "Tuntematon asiakas": the Betomik order-book sync's placeholder, i.e. no real customer
+// "Tuntematon asiakas": the Betomik order-book sync's placeholder (betomikOrderbook/autoCreate.js), i.e. no real customer
 const UNKNOWN_ASIAKAS_ID = 1486;
+
+/** True when an order has no real customer: no asiakasId, or the Tuntematon asiakas placeholder. */
+const isMissingAsiakas = (asiakasId) => !asiakasId || Number(asiakasId) === UNKNOWN_ASIAKAS_ID;
 
 const PRIORITY_LEVELS = {
   CRITICAL: 5, // Order cannot be processed
@@ -736,7 +739,8 @@ function validateStatus(keikka, issues, validationSettings, ownerAsiakasId) {
  * Validate customer (asiakas) information
  *
  * **Validation Rules:**
- * 1. Customer ID must exist (asiakasId > 0)
+ * 1. A real customer must be set: asiakasId present and not the Tuntematon asiakas
+ *    placeholder (UNKNOWN_ASIAKAS_ID 1486); see isMissingAsiakas
  * 2. Customer name must be present
  * 3. Y-tunnus required for own company orders
  *
@@ -744,7 +748,7 @@ function validateStatus(keikka, issues, validationSettings, ownerAsiakasId) {
  * - Own orders (sourceAsiakasId === ownerAsiakasId): Strict validation including Y-tunnus
  * - External orders: Relaxed validation (no Y-tunnus requirement)
  *
- * **Early Return:** Stops validation if customer ID missing (no point validating details)
+ * **Early Return:** Stops validation if the customer is missing (no point validating details)
  *
  * **Finnish Business Context:**
  * - Y-tunnus: Finnish business identifier (format: 1234567-8)
@@ -776,9 +780,7 @@ function validateStatus(keikka, issues, validationSettings, ownerAsiakasId) {
  * logger.category('keikkaValidator').info(issues[0].type); // "MISSING_ASIAKAS_YTUNNUS"
  */
 function validateAsiakas(keikka, issues, ownerAsiakasId, validationSettings) {
-  const hasMissingAsiakas = !keikka.asiakasId || Number(keikka.asiakasId) === UNKNOWN_ASIAKAS_ID;
-
-  if (hasMissingAsiakas) {
+  if (isMissingAsiakas(keikka.asiakasId)) {
     // Determine if this is own company order or external order
     const isOwnOrder = keikka.sourceAsiakasId === ownerAsiakasId;
     const validationId = isOwnOrder ? "MISSING_OMA_ASIAKAS" : "MISSING_VIERAS_ASIAKAS";
@@ -2357,6 +2359,8 @@ const getCategoryName = (category) => {
 
 module.exports = {
   validateKeikka,
+  isMissingAsiakas,
+  UNKNOWN_ASIAKAS_ID,
   HARKKO_PATTERN,
   PRIORITY_LEVELS,
   CATEGORIES,

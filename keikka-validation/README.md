@@ -4,7 +4,7 @@ Shared rule engine for Keikkavalidointi: the warnings in the grid reminders draw
 
 ## Files
 
-- `src/keikkaValidator.js`: `validateKeikka(keikka, options)` and the rules. Returns `{ isValid, issues, dismissedIssues, summary }`, where `issues` are the active warnings and `isValid` / `summary` count only those.
+- `src/keikkaValidator.js`: `validateKeikka(keikka, options)` and the rules. Returns `{ isValid, issues, dismissedIssues, summary }`, where `issues` are the active warnings and `isValid` / `summary` count only those. Also `isMissingAsiakas(asiakasId)`: no customer, or the Betomik order-book placeholder Tuntematon asiakas (`UNKNOWN_ASIAKAS_ID` 1486), which the asiakas rules and the order step's customer row both treat as missing.
 - `src/validationRuleDefinitions.js`: the rule registry (names, categories, default priority and enabled state). The settings UI and the reminders drawer read it, so a new rule appears in both automatically.
 - `src/settings.js`: merges a tenant's saved rule settings with the defaults (key union, fail-open).
 - `src/dismissal.js`: per-order dismissal of a warning (fb#2802).
