@@ -5,6 +5,7 @@ const thresholds = require("./weatherThresholds.js");
 
 module.exports = {
   validateKeikka: validator.validateKeikka,
+  HARKKO_PATTERN: validator.HARKKO_PATTERN,
   PRIORITY_LEVELS: validator.PRIORITY_LEVELS,
   CATEGORIES: validator.CATEGORIES,
   getPriorityName: validator.getPriorityName,

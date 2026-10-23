@@ -35,6 +35,13 @@ const {
 } = require("./weatherThresholds.js");
 
 /**
+ * "Harkko" (concrete block fill) anywhere in a text, compounds included
+ * ("valuharkko", "Harkkoa", "harkot"; owner 2026-10-23). Shared with the
+ * Betomik order-book import (puminet5api betomikOrderbook/mapRow.js).
+ */
+const HARKKO_PATTERN = /hark+o/i;
+
+/**
  * Keikka (delivery order) object for validation
  *
  * @typedef {Object} Keikka
@@ -1124,9 +1131,9 @@ function validateBetoni(keikka, issues, ownerAsiakasId, validationSettings, step
   }
 
   // Harkko (block-fill) pour needs 8mm (raeKokoId 4) S4 (notkeusId 4) concrete; one
-  // matching row is enough. Same /hark+o/ match as the Betomik order-book import.
+  // matching row is enough.
   if (
-    [keikka.keikkaOtsikko, keikka.keikkaComment].some((t) => /\bhark+o/i.test(t || "")) &&
+    [keikka.keikkaOtsikko, keikka.keikkaComment].some((t) => HARKKO_PATTERN.test(t || "")) &&
     isRuleEnabled("HARKKO_CONCRETE_TYPE", validationSettings, keikka, ownerAsiakasId)
   ) {
     const has8mmS4 = keikka.betonit.some(
@@ -2341,4 +2348,4 @@ const getCategoryName = (category) => {
   }
 };
 
-module.exports = { validateKeikka, PRIORITY_LEVELS, CATEGORIES, getPriorityName, getPriorityColor, getCategoryName };
+module.exports = { validateKeikka, HARKKO_PATTERN, PRIORITY_LEVELS, CATEGORIES, getPriorityName, getPriorityColor, getCategoryName };

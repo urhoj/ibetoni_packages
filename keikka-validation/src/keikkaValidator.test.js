@@ -765,6 +765,12 @@ describe("HARKKO_CONCRETE_TYPE", () => {
     expect(harkkoIssue({ keikkaComment: "harkot ja oviaukot", betonit: [s3_16] })).toBeDefined();
   });
 
+  test("fires on one-word compounds and uppercase (fb#2800)", () => {
+    for (const t of ["Valuharkko", "kevytsoraharkko", "Eristeharkkoa", "HARKKO"]) {
+      expect(harkkoIssue({ keikkaOtsikko: t, betonit: [s3_16] })).toBeDefined();
+    }
+  });
+
   test("fires on 8mm but S3", () => {
     expect(harkkoIssue({ keikkaOtsikko: "harkko", betonit: [{ ...s4_8, notkeusId: 3 }] })).toBeDefined();
   });
