@@ -705,7 +705,7 @@ describe("validation rule registry coverage", () => {
     "INCOMPLETE_STATUS", "MISSING_OMA_ASIAKAS", "MISSING_VIERAS_ASIAKAS",
     "MISSING_ASIAKAS_NIMI", "MISSING_ASIAKAS_YTUNNUS", "MISSING_FACTORY",
     "NO_DRIVER", "DRIVER_NOT_AVAILABLE", "INCOMPLETE_CONCRETE", "MISSING_CONCRETE_M3",
-    "PUMP_LINE_CONCRETE_TYPE", "INCOMPLETE_BETONI_VALIDATION", "CONCRETE_DATA_NOT_SENT",
+    "PUMP_LINE_CONCRETE_TYPE", "HARKKO_CONCRETE_TYPE", "INCOMPLETE_BETONI_VALIDATION", "CONCRETE_DATA_NOT_SENT",
     "MISSING_WORKSITE", "MISSING_ADDRESS", "MISSING_WORKSITE_POST", "CITY_IS_HKI",
     "MISSING_WORKSITE_TOWN", "MISSING_CONTACT_PERSON", "MISSING_PHONE", "MISSING_CONTACT_EMAIL",
     "VEHICLE_BOOM_TOO_SHORT", "MISSING_BOOM_LENGTH", "MISSING_LINE_LENGTH",
@@ -744,6 +744,44 @@ describe("regression: production-style settings enable safety/vehicle/betoni rul
     });
     const result = validateKeikka(keikka, { ...testContext, validationSettings: prodSettings });
     expect(result.issues.some((i) => i.type === "PUMP_LINE_CONCRETE_TYPE")).toBe(true);
+  });
+});
+
+describe("HARKKO_CONCRETE_TYPE", () => {
+  const settings = { enabled: true, rules: getDefaultValidationRulesSettings() };
+  const s3_16 = { m3: 5, raeKokoId: 1, raeKokoSelite: "16mm", notkeusId: 3, notkeusSelite: "S3" };
+  const s4_8 = { m3: 3, raeKokoId: 4, raeKokoSelite: "8mm", notkeusId: 4, notkeusSelite: "S4" };
+  const harkkoIssue = (overrides, validationSettings = settings) =>
+    validateKeikka(createTestKeikka({ keikkaTilaId: 4, ...overrides }), { ...testContext, validationSettings })
+      .issues.find((i) => i.type === "HARKKO_CONCRETE_TYPE");
+
+  test("fires on harkko in otsikko with 16mm S3", () => {
+    expect(harkkoIssue({ keikkaOtsikko: "Harkkoa + tasausvalua", betonit: [s3_16] }).message)
+      .toBe("Harkkovalu: betoni 16mm S3 (pitäisi 8mm S4)");
+  });
+
+  test("fires on harkko in keikkaComment", () => {
+    expect(harkkoIssue({ keikkaComment: "Harkko + oviaukot", betonit: [s3_16] })).toBeDefined();
+    expect(harkkoIssue({ keikkaComment: "harkot ja oviaukot", betonit: [s3_16] })).toBeDefined();
+  });
+
+  test("fires on 8mm but S3", () => {
+    expect(harkkoIssue({ keikkaOtsikko: "harkko", betonit: [{ ...s4_8, notkeusId: 3 }] })).toBeDefined();
+  });
+
+  test("one 8mm S4 row among several is enough", () => {
+    expect(harkkoIssue({ keikkaOtsikko: "harkko", betonit: [s3_16, s4_8] })).toBeUndefined();
+  });
+
+  test("silent without harkko text or without betonit", () => {
+    expect(harkkoIssue({ keikkaOtsikko: "laatta", betonit: [s3_16] })).toBeUndefined();
+    expect(harkkoIssue({ keikkaOtsikko: "harkko", betonit: [] })).toBeUndefined();
+  });
+
+  test("silent when the rule is disabled", () => {
+    const rules = getDefaultValidationRulesSettings();
+    rules.HARKKO_CONCRETE_TYPE.enabled = false;
+    expect(harkkoIssue({ keikkaOtsikko: "harkko", betonit: [s3_16] }, { enabled: true, rules })).toBeUndefined();
   });
 });
 

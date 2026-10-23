@@ -60,6 +60,8 @@ const {
  * @property {string} [yhteyshenkiloEmail] - Contact email
  * @property {number} [pumppuPuomi] - Required pump boom length (meters)
  * @property {number} [pumppuLinja] - Pump line length (meters)
+ * @property {string} [keikkaOtsikko] - Short title, what is poured
+ * @property {string} [keikkaComment] - Free-text "Muita lisätietoja"
  * @property {boolean} [betonitiedotLahetetty] - Concrete data sent flag
  * @property {boolean} [tilausvahvistusLahetetty] - Order confirmation sent flag
  */
@@ -81,6 +83,8 @@ const {
  * @property {number} m3 - Volume in cubic meters
  * @property {number} [raeKokoId] - Aggregate size ID (2=hieno16mm, 4=8mm for pump lines)
  * @property {string} [raeKokoSelite] - Aggregate size description
+ * @property {number} [notkeusId] - Slump class ID (1-5 = S1-S5, 4=S4 for harkko)
+ * @property {string} [notkeusSelite] - Slump class description
  * @property {boolean|null} [betoniVahvistettu] - Validation status (true=confirmed, false=needs validation, null=unknown)
  */
 
@@ -1107,6 +1111,42 @@ function validateBetoni(keikka, issues, ownerAsiakasId, validationSettings, step
             action: "dismissPumpLineConcrete",
             label: "Ohita linjapumpattavuus-varoitus",
             description: "Merkitse linjapumpattavuus-varoitus käsitellyksi",
+          },
+        },
+      });
+    }
+  }
+
+  // Harkko (block-fill) pour needs 8mm (raeKokoId 4) S4 (notkeusId 4) concrete; one
+  // matching row is enough. Same /hark+o/ match as the Betomik order-book import.
+  if (
+    keikka.betonit.length > 0 &&
+    [keikka.keikkaOtsikko, keikka.keikkaComment].some((t) => /\bhark+o/i.test(t || "")) &&
+    isRuleEnabled("HARKKO_CONCRETE_TYPE", validationSettings, keikka, ownerAsiakasId)
+  ) {
+    const has8mmS4 = keikka.betonit.some((betoni) => betoni.raeKokoId === 4 && betoni.notkeusId === 4);
+
+    if (!has8mmS4) {
+      const first = keikka.betonit[0];
+      const current = [first.raeKokoSelite, first.notkeusSelite].filter(Boolean).join(" ") || "?";
+
+      issues.push({
+        id: "HARKKO_CONCRETE_TYPE",
+        type: "HARKKO_CONCRETE_TYPE",
+        message: `Harkkovalu: betoni ${current} (pitäisi 8mm S4)`,
+        category: CATEGORIES.BETONI,
+        priority: getRulePriority("HARKKO_CONCRETE_TYPE", validationSettings),
+        field: "betonit",
+        actions: {
+          click: {
+            action: "openBetoniEditor",
+            label: "Muokkaa betonia",
+            description: "Avaa betonin muokkausnäkymä",
+          },
+          dismiss: {
+            action: "dismissHarkkoConcrete",
+            label: "Ohita harkko-varoitus",
+            description: "Merkitse harkko-varoitus käsitellyksi",
           },
         },
       });

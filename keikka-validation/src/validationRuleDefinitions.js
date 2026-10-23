@@ -107,6 +107,13 @@ const VALIDATION_RULE_DEFINITIONS = {
     defaultPriority: LOCAL_PRIORITY_LEVELS.MEDIUM,
     defaultEnabled: true,
   },
+  HARKKO_CONCRETE_TYPE: {
+    name: "Harkkovalu ei ole 8 mm S4",
+    description: "Kun otsikossa tai lisätiedoissa lukee harkko, betonin tulee olla 8 mm ja S4",
+    category: LOCAL_CATEGORIES.BETONI,
+    defaultPriority: LOCAL_PRIORITY_LEVELS.MEDIUM,
+    defaultEnabled: true,
+  },
   INCOMPLETE_BETONI_VALIDATION: {
     name: "Betoni ei ole kokonainen",
     description: "Betoni vaatii määrän ja laadun vahvistusta",
