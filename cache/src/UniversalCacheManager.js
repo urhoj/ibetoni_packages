@@ -1835,6 +1835,8 @@ class UniversalCacheManager {
           // params.asiakasId is the writer's tenant, not either merged one (fb#2763).
           this.invalidateByPattern("subscription:*"),
           this.invalidateByPattern("subscriptionItems:*"),
+          // Same for holidaySubscriptions rows (asiakas_combinator_reassign_refs) (fb#2843).
+          this.invalidateByPattern("holidays:*"),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         break;

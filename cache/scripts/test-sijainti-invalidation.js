@@ -70,11 +70,12 @@ async function main() {
       `expected sweep of "sijainti:myProperties:*", got ${JSON.stringify(patterns)}`);
   });
 
-  // fb#2763: the merge moves asiakasSubscription to the main id, which params.asiakasId never names.
-  await test("ASIAKAS_MERGE sweeps every subscription + subscriptionItems key", async () => {
+  // fb#2763/fb#2843: the merge moves asiakasSubscription + holidaySubscriptions rows to the main id,
+  // which params.asiakasId never names.
+  await test("ASIAKAS_MERGE sweeps every subscription + subscriptionItems + holidays key", async () => {
     const { mgr, patterns } = newMgr();
     await mgr.invalidateCrossEntity("ASIAKAS_MERGE", { asiakasId: 8, mainAsiakasId: 62, secondaryAsiakasId: 63 });
-    for (const expected of ["subscription:*", "subscriptionItems:*"]) {
+    for (const expected of ["subscription:*", "subscriptionItems:*", "holidays:*"]) {
       assert.ok(patterns.includes(expected), `expected sweep of "${expected}", got ${JSON.stringify(patterns)}`);
     }
   });
