@@ -160,9 +160,9 @@ describe("betoni_getString", () => {
     expect(betoni_getString(null)).toBe("");
   });
 
-  it("returns empty string for very short result (length <= 4)", () => {
-    const minimal = { laatu: { laatuNimike: "AB" } };
-    expect(betoni_getString(minimal)).toBe("");
+  it("keeps a short lone value (the 50v that used to pad it is gone)", () => {
+    expect(betoni_getString({ notkeusSelite: "S3", kayttoIkaSelite: "50v", rasitusluokat: "" })).toBe("S3");
+    expect(betoni_getString({ laatu: { laatuNimike: "AB" } })).toBe("AB");
   });
 });
 
@@ -235,10 +235,10 @@ describe("betoni_getComprehensiveString_noAttr", () => {
 
 describe("käyttöikä is shown only with a rasitusluokka", () => {
   const builders = {
-    betoni_getString: (b) => betoni_getString(b),
+    betoni_getString,
     betoni_getString_noAttr,
     betoni_getComprehensiveString,
-    betoni_getComprehensiveString_noAttr: (b) => betoni_getComprehensiveString_noAttr(b),
+    betoni_getComprehensiveString_noAttr,
   };
   const line = (rasitus) => ({ ...baseBetoni, kayttoIka: { kayttoIkaSelite: "50v" }, ...rasitus });
 

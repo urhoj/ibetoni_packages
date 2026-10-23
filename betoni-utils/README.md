@@ -50,7 +50,7 @@ const withAttrs = betoni_getString(betoni);
 
 // Comprehensive format (includes volume, weather resistance, etc.)
 const comprehensive = betoni_getComprehensiveString(betoni);
-// Result: "Säänkestävä 2m³ Lattiabetoni hieno 16mm C25/30 S2 XF1,XC3 50 vuotta Lisä1,Lisä2"
+// Result: "Säänkestävä 2m³ Lattiabetoni hieno 16mm C25/30 S2 XF1,XC3 50v Lisä1,Lisä2"
 
 // Format multiple betonit
 const multiple = betoni_getString([betoni1, betoni2]);
@@ -149,6 +149,8 @@ const {
 
 ### String Formatting Functions
 
+**Käyttöikä rule (all four builders):** the käyttöikä (50v/100v/200v) is printed only when at least one rasitusluokka is set; X0 counts. Every line carries a käyttöikä (50v is the default), so on its own it says nothing and is omitted.
+
 #### `betoni_getString(betoni, noAttr, comprehensive)`
 
 Main betoni string formatting function with multiple options.
@@ -179,7 +181,7 @@ Get comprehensive betoni string with volume, weather resistance, and attributes.
 
 **Format:** "Säänkestävä Xm³ Nopea Laatutyyppi raeKoko lujuus notkeus rasitusluokat käyttöikä Lisät Comment"
 
-**Example:** "Säänkestävä 2m³ Nopea Lattiabetoni hieno 16mm C25/30 S2 XF1,XC3 50 vuotta Lisä1,Lisä2"
+**Example:** "Säänkestävä 2m³ Nopea Lattiabetoni hieno 16mm C25/30 S2 XF1,XC3 50v Lisä1,Lisä2"
 
 ---
 
@@ -313,7 +315,7 @@ The package handles multiple betoni object formats:
   lujuusSelite: "C25/30",
   notkeusSelite: "S2",
   rasitusluokat: "XF1,XC3",
-  kayttoIkaSelite: "50 vuotta",
+  kayttoIkaSelite: "50v",
   isNopea: false,
   m3: 2
 }
@@ -328,7 +330,7 @@ The package handles multiple betoni object formats:
   lujuus: { lujuusSelite: "C25/30", lujuusId: 2 },
   notkeus: { notkeusSelite: "S2", notkeusId: 2 },
   rasitus: { rasitusluokat: ["XF1", "XC3"] },
-  kayttoIka: { kayttoIkaSelite: "50 vuotta", kayttoIkaId: 3 },
+  kayttoIka: { kayttoIkaSelite: "50v", kayttoIkaId: 1 },
   isNopea: false,
   m3: 2,
   attr: {

@@ -125,18 +125,16 @@ function betoni_getString(betoni, noAttr = false, comprehensive = false) {
     }
   }
 
-  // Combine strings, clean up, and validate length
-  const combinedString = removeEiTietoaFromBetoniString(
-    [baseString, attrString].filter((s) => s).join(" ")
-  );
-  const a = combinedString.length > 4 ? combinedString : "";
-  return a;
+  // Combine strings and clean up. No minimum length: a lone "S3" or "16mm" is
+  // real information, and a bare käyttöikä can no longer occur (see hasRasitus).
+  return removeEiTietoaFromBetoniString([baseString, attrString].filter((s) => s).join(" "));
 }
 
 /**
  * Get standard betoni string without attributes
  * Format: "Laatutyyppi isNopea raeKoko lujuus notkeus rasitusluokat käyttöikä"
- * Example: "Lattiabetoni hieno 16mm C25/30 S2"
+ * (käyttöikä only alongside a rasitusluokka, see hasRasitus)
+ * Example: "Lattiabetoni hieno 16mm C25/30 S2", "Rakennebetoni 16mm C30/37 S3 XC3,XF1 50v"
  *
  * @param {Object} betoni - Betoni object with various format support
  * @returns {string} Formatted betoni string without attributes
@@ -177,8 +175,8 @@ function betoni_getString_noAttr(betoni) {
   } else {
     rasitusLuokat = [];
   }
-  // A string betoni.rasitusluokat was already split and joined above, so it is
-  // not a fallback here; an empty ARRAY there used to reach .trim() and throw.
+  // A string betoni.rasitusluokat is already split and joined above, so it is not
+  // a fallback here (and a flat array must never reach .trim()).
   const rasitus = (rasitusLuokat.join(",") || betoni.rasitus?.rasitusluokatString || "").trim();
   // Define properties to extract and join
   const parts = [
@@ -200,7 +198,8 @@ function betoni_getString_noAttr(betoni) {
 
 /**
  * Get comprehensive betoni string with volume, weather resistance, and attributes
- * Format: "Säänkestävä 2m³ Nopea Lattiabetoni hieno 16mm C25/30 S2 XF1,XC3 50 vuotta Lisä1,Lisä2 Comment"
+ * Format: "Säänkestävä 2m³ Nopea Lattiabetoni hieno 16mm C25/30 S2 XF1,XC3 50v Lisä1,Lisä2 Comment"
+ * (käyttöikä only alongside a rasitusluokka, see hasRasitus)
  *
  * @param {Object} betoni - Betoni object
  * @returns {string} Comprehensive formatted betoni string with all details
