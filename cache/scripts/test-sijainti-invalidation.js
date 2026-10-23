@@ -70,6 +70,15 @@ async function main() {
       `expected sweep of "sijainti:myProperties:*", got ${JSON.stringify(patterns)}`);
   });
 
+  // fb#2763: the merge moves asiakasSubscription to the main id, which params.asiakasId never names.
+  await test("ASIAKAS_MERGE sweeps every subscription + subscriptionItems key", async () => {
+    const { mgr, patterns } = newMgr();
+    await mgr.invalidateCrossEntity("ASIAKAS_MERGE", { asiakasId: 8, mainAsiakasId: 62, secondaryAsiakasId: 63 });
+    for (const expected of ["subscription:*", "subscriptionItems:*"]) {
+      assert.ok(patterns.includes(expected), `expected sweep of "${expected}", got ${JSON.stringify(patterns)}`);
+    }
+  });
+
   await test("SIJAINTI_UPDATE falls back to a wildcard row key with no id", async () => {
     const { mgr, patterns } = newMgr();
     await mgr.invalidateCrossEntity("SIJAINTI_UPDATE", { asiakasId: 8 });

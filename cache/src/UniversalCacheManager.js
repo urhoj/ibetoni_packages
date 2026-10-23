@@ -1831,6 +1831,10 @@ class UniversalCacheManager {
           // A merge rewrites owner FKs, so ownerAsiakasId/ownerName in the
           // cross-tenant property list change; the tenant-SET key needs this sweep.
           this.invalidateByPattern("sijainti:myProperties:*"),
+          // The merge moves the asiakasSubscription row to the main asiakasId, and
+          // params.asiakasId is the writer's tenant, not either merged one (fb#2763).
+          this.invalidateByPattern("subscription:*"),
+          this.invalidateByPattern("subscriptionItems:*"),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
         break;
