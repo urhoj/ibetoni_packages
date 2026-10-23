@@ -28,6 +28,17 @@ function removeEiTietoaFromBetoniString(betoniString) {
 }
 
 /**
+ * Käyttöikä is printed only alongside at least one rasitusluokka (X0 counts).
+ * Every line carries one (50v is the default), so on its own it says nothing:
+ * an order with no concrete info read just "50v" on /oma.
+ * @param {string} rasitusString - the rasitusluokat part as it will be printed
+ * @returns {boolean}
+ */
+function hasRasitus(rasitusString) {
+  return removeEiTietoaFromBetoniString(rasitusString).replace(/,/g, "") !== "";
+}
+
+/**
  * Get an array of all betoni string components including attributes
  * @param {Object} betoni - Betoni object
  * @param {Object} options - Optional settings
@@ -166,6 +177,9 @@ function betoni_getString_noAttr(betoni) {
   } else {
     rasitusLuokat = [];
   }
+  // A string betoni.rasitusluokat was already split and joined above, so it is
+  // not a fallback here; an empty ARRAY there used to reach .trim() and throw.
+  const rasitus = (rasitusLuokat.join(",") || betoni.rasitus?.rasitusluokatString || "").trim();
   // Define properties to extract and join
   const parts = [
     (betoni.laatu?.laatuNimike || betoni.laatu?.nimike || betoni.laatuNimike)?.trim() || "",
@@ -174,12 +188,8 @@ function betoni_getString_noAttr(betoni) {
     (betoni.lujuus?.lujuusSelite || betoni.lujuus?.lujuusString || betoni.lujuusSelite)?.trim() ||
       "",
     notkeus,
-    (
-      rasitusLuokat.join(",") ||
-      betoni.rasitus?.rasitusluokatString ||
-      betoni.rasitusluokat
-    )?.trim() || "",
-    kayttoIka,
+    rasitus,
+    hasRasitus(rasitus) ? kayttoIka : "",
   ];
 
   // Join non-empty parts with a single space
@@ -257,8 +267,8 @@ function betoni_getComprehensiveString(betoni) {
   }
 
   // Add exposure classes (rasitusluokat) - reuse the already parsed rasitusLuokat
+  let rasitusString = "";
   if (rasitusLuokat) {
-    let rasitusString = "";
     if (typeof rasitusLuokat === "string") {
       rasitusString = rasitusLuokat.trim();
     } else if (Array.isArray(rasitusLuokat)) {
@@ -271,12 +281,12 @@ function betoni_getComprehensiveString(betoni) {
     }
   }
 
-  // Add service life
+  // Add service life (only alongside a rasitusluokka, see hasRasitus)
   const kayttoIka =
     betoni.kayttoIka?.kayttoIkaSelite ||
     betoni.kayttoIka?.kayttoIkaString ||
     betoni.kayttoIkaSelite;
-  if (kayttoIka && kayttoIka.trim() && !kayttoIka.includes("Ei tietoa")) {
+  if (hasRasitus(rasitusString) && kayttoIka && kayttoIka.trim() && !kayttoIka.includes("Ei tietoa")) {
     parts.push(kayttoIka.trim());
   }
 
@@ -371,8 +381,8 @@ function betoni_getComprehensiveString_noAttr(betoni, excludeVolume = false) {
   }
 
   // Add exposure classes (rasitusluokat)
+  let rasitusString = "";
   if (rasitusLuokat) {
-    let rasitusString = "";
     if (typeof rasitusLuokat === "string") {
       rasitusString = rasitusLuokat.trim();
     } else if (Array.isArray(rasitusLuokat)) {
@@ -385,12 +395,12 @@ function betoni_getComprehensiveString_noAttr(betoni, excludeVolume = false) {
     }
   }
 
-  // Add service life
+  // Add service life (only alongside a rasitusluokka, see hasRasitus)
   const kayttoIka =
     betoni.kayttoIka?.kayttoIkaSelite ||
     betoni.kayttoIka?.kayttoIkaString ||
     betoni.kayttoIkaSelite;
-  if (kayttoIka && kayttoIka.trim() && !kayttoIka.includes("Ei tietoa")) {
+  if (hasRasitus(rasitusString) && kayttoIka && kayttoIka.trim() && !kayttoIka.includes("Ei tietoa")) {
     parts.push(kayttoIka.trim());
   }
 

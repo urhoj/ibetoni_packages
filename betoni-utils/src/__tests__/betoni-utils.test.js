@@ -229,6 +229,43 @@ describe("betoni_getComprehensiveString_noAttr", () => {
   });
 });
 
+// --- käyttöikä only alongside a rasitusluokka ---
+// Every line carries a käyttöikä (50v is the default), so on its own it says
+// nothing; it is printed only once at least one rasitusluokka is set (X0 counts).
+
+describe("käyttöikä is shown only with a rasitusluokka", () => {
+  const builders = {
+    betoni_getString: (b) => betoni_getString(b),
+    betoni_getString_noAttr,
+    betoni_getComprehensiveString,
+    betoni_getComprehensiveString_noAttr: (b) => betoni_getComprehensiveString_noAttr(b),
+  };
+  const line = (rasitus) => ({ ...baseBetoni, kayttoIka: { kayttoIkaSelite: "50v" }, ...rasitus });
+
+  for (const [name, build] of Object.entries(builders)) {
+    it(`${name}: hidden without rasitusluokat`, () => {
+      expect(build(line({ rasitusluokat: "" }))).not.toContain("50v");
+      expect(build(line({ rasitusluokat: [] }))).not.toContain("50v");
+      expect(build(line({ rasitusluokat: undefined, rasitus: { rasitusluokat: [""] } }))).not.toContain("50v");
+      expect(build(line({ rasitusluokat: "Ei tietoa" }))).not.toContain("50v");
+    });
+
+    it(`${name}: shown with X0 only`, () => {
+      expect(build(line({ rasitusluokat: "X0" }))).toMatch(/X0 50v/);
+    });
+
+    it(`${name}: shown with XC3,XF1`, () => {
+      expect(build(line({ rasitusluokat: ["XC3", "XF1"] }))).toMatch(/XC3,XF1 50v/);
+    });
+  }
+
+  it("a line with no info at all prints nothing instead of a bare 50v", () => {
+    const empty = { kayttoIka: { kayttoIkaSelite: "50v" }, rasitusluokat: "" };
+    expect(betoni_getComprehensiveString(empty)).toBe("");
+    expect(betoni_getString_noAttr(empty)).toBe("");
+  });
+});
+
 // --- betoni_isComplete ---
 
 describe("betoni_isComplete", () => {
