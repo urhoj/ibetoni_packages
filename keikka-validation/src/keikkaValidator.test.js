@@ -880,3 +880,103 @@ const hasNodeModuleSupport =
 if (hasNodeModuleSupport && globalThis.require.main === globalThis.module) {
   exampleUsage();
 }
+
+describe("dismissal partitioning (fb#2802)", () => {
+  const now = new Date("2026-10-23T10:00:00Z");
+  const s3_16 = { m3: 5, raeKokoId: 1, raeKokoSelite: "16mm", notkeusId: 3, notkeusSelite: "S3" };
+  const ctx = { ...testContext, validationSettings: null, now };
+  const harkkoKeikka = (overrides = {}) =>
+    createTestKeikka({ keikkaTilaId: 4, keikkaOtsikko: "harkko", betonit: [s3_16], pumppuAika: "2026-10-24T06:00:00Z", ...overrides });
+  const dismissRow = (issueId, fingerprint, overrides = {}) => ({
+    stepLogId: 991,
+    keikkaId: 1,
+    stepLogTypeId: 34,
+    entryTime: "2026-10-23T11:05:00Z",
+    personFirstName: "Matti",
+    personLastName: "Virtanen",
+    data2: JSON.stringify({ issueId, fingerprint }),
+    ...overrides,
+  });
+  const HARKKO_MSG = "Harkkovalu: betoni 16mm S3 (pitäisi 8mm S4)";
+
+  test("a matching dismissal moves the issue to dismissedIssues", () => {
+    const result = validateKeikka(harkkoKeikka(), { ...ctx, stepLogData: [dismissRow("HARKKO_CONCRETE_TYPE", HARKKO_MSG)] });
+    expect(result.issues.some((i) => i.id === "HARKKO_CONCRETE_TYPE")).toBe(false);
+    const dismissed = result.dismissedIssues.find((i) => i.id === "HARKKO_CONCRETE_TYPE");
+    expect(dismissed.dismissal).toEqual({ stepLogId: 991, personName: "Matti Virtanen", entryTime: "2026-10-23T11:05:00Z" });
+    expect(result.summary.totalIssues).toBe(result.issues.length);
+  });
+
+  test("isValid ignores dismissed issues", () => {
+    const keikka = harkkoKeikka();
+    const first = validateKeikka(keikka, ctx);
+    const rows = first.issues.map((i) => dismissRow(i.id, i.dismissKey ?? i.message));
+    const result = validateKeikka(keikka, { ...ctx, stepLogData: rows });
+    expect(result.issues).toEqual([]);
+    expect(result.isValid).toBe(true);
+    expect(result.dismissedIssues.length).toBe(first.issues.length);
+  });
+
+  test("a changed message brings the issue back", () => {
+    const keikka = harkkoKeikka({ betonit: [{ ...s3_16, notkeusId: 5, notkeusSelite: "S5" }] });
+    const result = validateKeikka(keikka, { ...ctx, stepLogData: [dismissRow("HARKKO_CONCRETE_TYPE", HARKKO_MSG)] });
+    expect(result.issues.some((i) => i.id === "HARKKO_CONCRETE_TYPE")).toBe(true);
+  });
+
+  test("a dismissal on another order does not apply", () => {
+    const result = validateKeikka(harkkoKeikka(), {
+      ...ctx,
+      stepLogData: [dismissRow("HARKKO_CONCRETE_TYPE", HARKKO_MSG, { keikkaId: 2 })],
+    });
+    expect(result.issues.some((i) => i.id === "HARKKO_CONCRETE_TYPE")).toBe(true);
+  });
+
+  test("weather dismissal sticks when the forecast moves", () => {
+    const cold = (t) => harkkoKeikka({ weatherTemp: t });
+    const first = validateKeikka(cold(-21.3), ctx).issues.find((i) => i.id === "SEVERE_COLD_WARNING");
+    expect(first.dismissKey).toBe("SEVERE_COLD_WARNING");
+    const result = validateKeikka(cold(-22.0), { ...ctx, stepLogData: [dismissRow("SEVERE_COLD_WARNING", "SEVERE_COLD_WARNING")] });
+    expect(result.issues.some((i) => i.id === "SEVERE_COLD_WARNING")).toBe(false);
+  });
+
+  test("boom message names the vehicle, so a swap to an equal boom changes it", () => {
+    const vehicles = [
+      { vehicleId: 1, vehicleNimi: "Betoni-1", vehiclePuomi: 28 },
+      { vehicleId: 3, vehicleNimi: "Betoni-3", vehiclePuomi: 28 },
+    ];
+    const boom = (vehicleId) =>
+      validateKeikka(harkkoKeikka({ vehicleId, pumppuPuomi: 32 }), { ...ctx, vehicles })
+        .issues.find((i) => i.id === "VEHICLE_BOOM_TOO_SHORT").message;
+    expect(boom(1)).toBe("Puomi ei riitä: Betoni-1 (32m > 28m)");
+    expect(boom(3)).not.toBe(boom(1));
+  });
+
+  test("order confirmation is not satisfied by a lone type-4 step log", () => {
+    const keikka = harkkoKeikka({ yhteyshenkiloNimi: "Pekka", yhteyshenkiloEmail: "pekka@example.fi" });
+    const has = (stepLogData, k = keikka) =>
+      validateKeikka(k, { ...ctx, stepLogData }).issues.some((i) => i.id === "ORDER_CONFIRMATION_NOT_SENT");
+    expect(has([{ keikkaId: 1, stepLogTypeId: 4 }])).toBe(true);
+    expect(has([{ keikkaId: 1, stepLogTypeId: 20 }])).toBe(false);
+    expect(has([], { ...keikka, tilausvahvistusLahetetty: true })).toBe(false);
+  });
+
+  test("missing contact email is no longer skipped by a type 4/20 step log", () => {
+    const keikka = harkkoKeikka({ yhteyshenkiloNimi: "Pekka", yhteyshenkiloEmail: "" });
+    const result = validateKeikka(keikka, { ...ctx, stepLogData: [{ keikkaId: 1, stepLogTypeId: 20 }] });
+    expect(result.issues.some((i) => i.id === "MISSING_CONTACT_EMAIL")).toBe(true);
+  });
+
+  test("an order more than 30 days old shows no warnings", () => {
+    const result = validateKeikka(harkkoKeikka({ pumppuAika: "2026-09-01T06:00:00Z" }), ctx);
+    expect(result.issues).toEqual([]);
+    expect(result.dismissedIssues).toEqual([]);
+    expect(result.isValid).toBe(true);
+  });
+
+  test("no issue carries a per-rule dismiss action any more", () => {
+    const keikka = harkkoKeikka({ pumppuPuomi: 40, pumppuLinja: 30, yhteyshenkiloNimi: "Pekka", kaupunki: "HKI" });
+    const { issues } = validateKeikka(keikka, ctx);
+    expect(issues.length).toBeGreaterThan(5);
+    for (const issue of issues) expect(issue.actions?.dismiss).toBeUndefined();
+  });
+});

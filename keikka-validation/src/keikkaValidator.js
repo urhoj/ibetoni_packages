@@ -33,6 +33,14 @@ const {
   isSevereHot,
   SEVERE_HOT_THRESHOLD,
 } = require("./weatherThresholds.js");
+const {
+  VALIDATION_DISMISSED_STEP_LOG_TYPE,
+  DISMISS_WINDOW_DAYS,
+  getIssueFingerprint,
+  buildDismissalData,
+  parseDismissal,
+  isOutsideDismissWindow,
+} = require("./dismissal.js");
 
 /**
  * "Harkko" (concrete block fill) anywhere in a text, compounds included
@@ -122,7 +130,7 @@ const HARKKO_PATTERN = /hark+o/i;
  *
  * @typedef {Object} StepLog
  * @property {number} keikkaId - Related order ID
- * @property {number} stepLogTypeId - Log type (4,20=order confirmation dismissed, 5=concrete data sent)
+ * @property {number} stepLogTypeId - Log type (20=order confirmation sent, 5=concrete data sent, 34=validation warning dismissed)
  */
 
 /**
@@ -151,7 +159,8 @@ const HARKKO_PATTERN = /hark+o/i;
  * @property {Array<DayDriver>} [dayDrivers] - Driver availability status
  * @property {number} [ownerAsiakasId] - Current user's customer ID
  * @property {ValidationSettings} [validationSettings] - Rule configurations
- * @property {Array<StepLog>} [stepLogData] - Step log entries for dismissed reminders
+ * @property {Array<StepLog>} [stepLogData] - Step log entries: sent markers (5, 20) and per-order dismissals (34, fb#2802)
+ * @property {Date} [now] - Clock for the 30-day window (test seam; defaults to new Date())
  * @property {Map<number, CustomerPaymentStatus>} [customerPaymentData] - Customer payment status map (requires Fennoa + Laskutus modules)
  */
 
@@ -176,6 +185,7 @@ const HARKKO_PATTERN = /hark+o/i;
  * @property {string|null} field - Related field name for focusing UI
  * @property {ValidationActions} actions - Actionable remediation steps
  * @property {number} [betoniIndex] - Concrete line index if issue relates to specific betoni
+ * @property {string} [dismissKey] - Dismissal fingerprint override; default is `message` (fb#2802)
  */
 
 /**
@@ -228,8 +238,9 @@ const HARKKO_PATTERN = /hark+o/i;
  * Validation result with issues and summary
  *
  * @typedef {Object} ValidationResult
- * @property {boolean} isValid - True if no issues found
- * @property {Array<ValidationIssue>} issues - Array of validation issues
+ * @property {boolean} isValid - True if no ACTIVE issues
+ * @property {Array<ValidationIssue>} issues - Active (not dismissed) issues
+ * @property {Array<ValidationIssue & { dismissal: { stepLogId: number, personName: string, entryTime: string } }>} dismissedIssues - Issues silenced by a per-order dismissal (fb#2802)
  * @property {ValidationSummary} summary - Aggregated summary statistics
  */
 
@@ -355,6 +366,7 @@ const validateKeikka = (keikka, options = {}) => {
           },
         },
       ],
+      dismissedIssues: [],
       summary: {
         totalIssues: 1,
         critical: 1,
@@ -376,13 +388,21 @@ const validateKeikka = (keikka, options = {}) => {
     ownerAsiakasId = null,
     validationSettings = null,
     stepLogData = null,
+    now = new Date(),
   } = options;
+
+  // Orders older than the dismissal window show no warnings at all (fb#2802): the
+  // nightly purge drops their dismissals, which must never bring a warning back.
+  if (isOutsideDismissWindow(keikka, now)) {
+    return { isValid: true, issues: [], dismissedIssues: [], summary: calculateSummary([]) };
+  }
 
   // Check if validation is enabled at all
   if (validationSettings && validationSettings.enabled === false) {
     return {
       isValid: true,
       issues: [],
+      dismissedIssues: [],
       summary: {
         totalIssues: 0,
         critical: 0,
@@ -439,14 +459,53 @@ const validateKeikka = (keikka, options = {}) => {
   // A post-pass that re-filtered on `!ruleConfig.enabled` used to suppress
   // rules whose saved config lacked an `enabled` key — see the fail-open
   // regression test.
-  const summary = calculateSummary(issues);
+  const { active, dismissedIssues } = partitionDismissed(issues, keikka.keikkaId, stepLogData);
 
   return {
-    isValid: issues.length === 0,
-    issues,
-    summary,
+    isValid: active.length === 0,
+    issues: active,
+    dismissedIssues,
+    summary: calculateSummary(active),
   };
 };
+
+/**
+ * Split issues into active and dismissed (fb#2802). A type-34 step log row on this
+ * keikka dismisses the issue whose id AND current fingerprint match its payload.
+ *
+ * @param {Array<ValidationIssue>} issues
+ * @param {number} keikkaId
+ * @param {Array<StepLog>|null} stepLogData
+ * @returns {{ active: Array<ValidationIssue>, dismissedIssues: Array<ValidationIssue & { dismissal: { stepLogId: number, personName: string, entryTime: string } }> }}
+ */
+function partitionDismissed(issues, keikkaId, stepLogData) {
+  const byKey = new Map();
+  for (const row of Array.isArray(stepLogData) ? stepLogData : []) {
+    if (row.keikkaId !== keikkaId) continue;
+    const parsed = parseDismissal(row);
+    if (parsed) byKey.set(`${parsed.issueId}\u0000${parsed.fingerprint}`, row);
+  }
+  if (byKey.size === 0) return { active: issues, dismissedIssues: [] };
+
+  const active = [];
+  const dismissedIssues = [];
+  for (const issue of issues) {
+    const row = byKey.get(`${issue.id}\u0000${getIssueFingerprint(issue)}`);
+    if (!row) {
+      active.push(issue);
+      continue;
+    }
+    dismissedIssues.push({
+      ...issue,
+      dismissal: {
+        stepLogId: row.stepLogId,
+        personName: [row.personFirstName, row.personLastName].filter(Boolean).join(" "),
+        entryTime: row.entryTime,
+      },
+    });
+  }
+  return { active, dismissedIssues };
+}
 
 /**
  * Check if validation rule should execute
@@ -1120,11 +1179,6 @@ function validateBetoni(keikka, issues, ownerAsiakasId, validationSettings, step
             label: "Muokkaa betonia",
             description: "Avaa betonin muokkausnäkymä",
           },
-          dismiss: {
-            action: "dismissPumpLineConcrete",
-            label: "Ohita linjapumpattavuus-varoitus",
-            description: "Merkitse linjapumpattavuus-varoitus käsitellyksi",
-          },
         },
       });
     }
@@ -1156,11 +1210,6 @@ function validateBetoni(keikka, issues, ownerAsiakasId, validationSettings, step
             action: "openBetoniEditor",
             label: "Muokkaa betonia",
             description: "Avaa betonin muokkausnäkymä",
-          },
-          dismiss: {
-            action: "dismissHarkkoConcrete",
-            label: "Ohita harkko-varoitus",
-            description: "Merkitse harkko-varoitus käsitellyksi",
           },
         },
       });
@@ -1229,11 +1278,6 @@ function validateBetoni(keikka, issues, ownerAsiakasId, validationSettings, step
           action: "sendBetonitiedot",
           label: "Lähetä heti",
           description: "Lähetä betonitiedot automaattisesti",
-        },
-        dismiss: {
-          action: "dismissBetonitiedot",
-          label: "Ohita lähetys-varoitus",
-          description: "Merkitse lähetys-varoitus käsitellyksi",
         },
       },
     });
@@ -1401,11 +1445,6 @@ function validateTyomaa(keikka, issues, validationSettings, ownerAsiakasId) {
             label: "Valitse työmaa",
             description: "Avaa työmaiden valitsin",
           },
-          dismiss: {
-            action: "dismissTyomaa",
-            label: "Ohita työmaa-varoitus",
-            description: "Merkitse työmaa-varoitus käsitellyksi",
-          },
         },
       });
     }
@@ -1431,11 +1470,6 @@ function validateTyomaa(keikka, issues, validationSettings, ownerAsiakasId) {
           action: "openTyomaaEditor",
           label: "Muokkaa työmaata",
           description: "Avaa työmaiden muokkausnäkymä",
-        },
-        dismiss: {
-          action: "dismissAddress",
-          label: "Ohita osoite-varoitus",
-          description: "Merkitse osoite-varoitus käsitellyksi",
         },
       },
     });
@@ -1470,11 +1504,6 @@ function validateTyomaa(keikka, issues, validationSettings, ownerAsiakasId) {
         action: "openTyomaaEditor",
         label: "Muokkaa työmaata",
         description: "Avaa työmaiden muokkausnäkymä",
-      },
-      dismiss: {
-        action: "dismissPostinumero",
-        label: "Ohita postinumero-varoitus",
-        description: "Merkitse postinumero-varoitus käsitellyksi",
       },
     };
 
@@ -1520,11 +1549,6 @@ function validateTyomaa(keikka, issues, validationSettings, ownerAsiakasId) {
           label: "Korjaa HKI → Helsinki",
           description: "Muuta HKI-lyhenne Helsingiksi",
         },
-        dismiss: {
-          action: "dismissHki",
-          label: "Ohita HKI-varoitus",
-          description: "Merkitse HKI-varoitus käsitellyksi",
-        },
       },
       // @ts-ignore
       hasHkiFix: true,
@@ -1540,11 +1564,6 @@ function validateTyomaa(keikka, issues, validationSettings, ownerAsiakasId) {
         action: "openTyomaaEditor",
         label: "Muokkaa työmaata",
         description: "Avaa työmaiden muokkausnäkymä",
-      },
-      dismiss: {
-        action: "dismissKaupunki",
-        label: "Ohita kaupunki-varoitus",
-        description: "Merkitse kaupunki-varoitus käsitellyksi",
       },
     };
 
@@ -1676,11 +1695,6 @@ function validateContact(keikka, issues, validationSettings, ownerAsiakasId, ste
           label: "Lisää yhteyshenkilö",
           description: "Avaa yhteyshenkilön muokkausnäkymä",
         },
-        dismiss: {
-          action: "dismissContact",
-          label: "Ohita yhteyshenkilö-varoitus",
-          description: "Merkitse yhteyshenkilö-varoitus käsitellyksi",
-        },
       },
     });
     return; // Early return - no contact person to validate phone for
@@ -1713,11 +1727,6 @@ function validateContact(keikka, issues, validationSettings, ownerAsiakasId, ste
           label: "Hae puhelinnumero",
           description: "Hae puhelinnumero yhteyshenkilötiedoista",
         },
-        dismiss: {
-          action: "dismissPhone",
-          label: "Ohita puhelin-varoitus",
-          description: "Merkitse puhelin-varoitus käsitellyksi",
-        },
       },
     });
   }
@@ -1732,13 +1741,11 @@ function validateContact(keikka, issues, validationSettings, ownerAsiakasId, ste
   // Check if there's any email field with content (even if invalid)
   const hasAnyEmailContent = contactEmailFields.some((email) => email && email.trim() !== "");
 
-  // Check if contact email reminder has been dismissed via stepLog (uses same stepLogTypeId as order confirmation)
-  const hasContactEmailDismissed = hasStepLog(keikka.keikkaId, [4, 20], stepLogData);
-
+  // Dismissed per order like every other rule (fb#2802); the old type 4/20 step-log
+  // skip also silenced the order-confirmation warning as a side effect.
   if (
     hasContactName && // Only check email if contact person exists
     !hasValidContactEmail &&
-    !hasContactEmailDismissed && // Skip if reminder has been dismissed
     isRuleEnabled("MISSING_CONTACT_EMAIL", validationSettings, keikka, ownerAsiakasId)
   ) {
     // Determine message based on whether email exists but is invalid, or is completely missing
@@ -1758,11 +1765,6 @@ function validateContact(keikka, issues, validationSettings, ownerAsiakasId, ste
           action: "openPersonEditor",
           label: "Muokkaa yhteyshenkilöä",
           description: "Avaa henkilön muokkausnäkymä",
-        },
-        dismiss: {
-          action: "dismissContactEmail",
-          label: "Poista muistutus",
-          description: "Merkitse sähköposti-varoitus käsitellyksi",
         },
       },
     });
@@ -1803,7 +1805,7 @@ function validateContact(keikka, issues, validationSettings, ownerAsiakasId, ste
  * const issues = [];
  * validateVehicle(keikka, issues, vehicleMap, null, 100);
  * logger.category('keikkaValidator').info(issues[0].type); // "VEHICLE_BOOM_TOO_SHORT"
- * logger.category('keikkaValidator').info(issues[0].message); // "Puomi ei riitä (20m > 15m)"
+ * logger.category('keikkaValidator').info(issues[0].message); // "Puomi ei riitä: Betoni-1 (20m > 15m)"
  * logger.category('keikkaValidator').info(issues[0].actions.autoFix.requiredPuomi); // 20
  *
  * @performance O(1) - single Map lookup
@@ -1824,7 +1826,9 @@ function validateVehicle(keikka, issues, vehicleMap, validationSettings, ownerAs
     issues.push({
       id: "VEHICLE_BOOM_TOO_SHORT",
       type: "VEHICLE_BOOM_TOO_SHORT",
-      message: `Puomi ei riitä (${requiredPuomi}m > ${vehiclePuomi}m)`,
+      // Names the vehicle so a swap to another short-boom vehicle changes the text and
+      // un-dismisses the warning (fb#2802).
+      message: `Puomi ei riitä: ${vehicle?.vehicleNimi || "?"} (${requiredPuomi}m > ${vehiclePuomi}m)`,
       category: CATEGORIES.VEHICLE,
       priority: getRulePriority("VEHICLE_BOOM_TOO_SHORT", validationSettings),
       field: "vehicleId",
@@ -1833,11 +1837,6 @@ function validateVehicle(keikka, issues, vehicleMap, validationSettings, ownerAs
           action: "openVehicleSelector",
           label: "Vaihda ajoneuvo",
           description: "Avaa ajoneuvon valitsin",
-        },
-        dismiss: {
-          action: "dismissBoom",
-          label: "Ohita puomi-varoitus",
-          description: "Merkitse puomi-varoitus käsitellyksi",
         },
       },
     });
@@ -1950,9 +1949,11 @@ function validateVehicle(keikka, issues, vehicleMap, validationSettings, ownerAs
  */
 function validateMuut(keikka, issues, validationSettings, stepLogData, ownerAsiakasId) {
   const k = /** @type {any} */ (keikka);
-  // Order confirmation not sent - check both flag and step log
+  // Order confirmation not sent - flag or an ORDER_CONFIRMATION_SENT (20) step log.
+  // Not type 4 (EMAIL_SENT): every keikka email writes one, so the concrete-order
+  // email alone used to clear this warning (fb#2802).
   const hasOrderConfirmationSent =
-    k.tilausvahvistusLahetetty || hasStepLog(k.keikkaId, [4, 20], stepLogData);
+    k.tilausvahvistusLahetetty || hasStepLog(k.keikkaId, [20], stepLogData);
 
   // Check if there's a valid email address to send confirmation to
   const contactEmailFields = [k.yhteyshenkiloEmail, k.personEmail, k.contactPersonEmail];
@@ -1984,11 +1985,6 @@ function validateMuut(keikka, issues, validationSettings, stepLogData, ownerAsia
           action: "sendTilausvahvistus",
           label: "Lähetä heti",
           description: "Lähetä tilausvahvistus automaattisesti",
-        },
-        dismiss: {
-          action: "dismissTilausvahvistus",
-          label: "Ohita vahvistus-varoitus",
-          description: "Merkitse vahvistus-varoitus käsitellyksi",
         },
       },
     });
@@ -2124,6 +2120,9 @@ function validateWeather(keikka, issues, validationSettings, ownerAsiakasId) {
     if (isSevereCold(coldTemp)) {
       issues.push({
         id: "SEVERE_COLD_WARNING",
+        // Matched on the rule alone: the forecast temperature in the message moves
+        // several times a day, and a dismissal sticks for the order (fb#2802).
+        dismissKey: "SEVERE_COLD_WARNING",
         type: "SEVERE_COLD_WARNING",
         message: `Pakkasvaroitus: Pumppaus ei suositella (${coldTemp.toFixed(1)}°C < ${SEVERE_COLD_THRESHOLD}°C)`,
         category: CATEGORIES.MUU,
@@ -2148,6 +2147,9 @@ function validateWeather(keikka, issues, validationSettings, ownerAsiakasId) {
     if (isSevereHot(hotTemp)) {
       issues.push({
         id: "SEVERE_HOT_WARNING",
+        // Matched on the rule alone: the forecast temperature in the message moves
+        // several times a day, and a dismissal sticks for the order (fb#2802).
+        dismissKey: "SEVERE_HOT_WARNING",
         type: "SEVERE_HOT_WARNING",
         message: `Hellevaroitus: Tauotus vaaditaan (${hotTemp.toFixed(1)}°C ≥ ${SEVERE_HOT_THRESHOLD}°C)`,
         category: CATEGORIES.MUU,
@@ -2348,4 +2350,18 @@ const getCategoryName = (category) => {
   }
 };
 
-module.exports = { validateKeikka, HARKKO_PATTERN, PRIORITY_LEVELS, CATEGORIES, getPriorityName, getPriorityColor, getCategoryName };
+module.exports = {
+  validateKeikka,
+  HARKKO_PATTERN,
+  PRIORITY_LEVELS,
+  CATEGORIES,
+  getPriorityName,
+  getPriorityColor,
+  getCategoryName,
+  VALIDATION_DISMISSED_STEP_LOG_TYPE,
+  DISMISS_WINDOW_DAYS,
+  getIssueFingerprint,
+  buildDismissalData,
+  parseDismissal,
+  isOutsideDismissWindow,
+};
