@@ -104,6 +104,13 @@ async function main() {
     assert.deepStrictEqual(await mgr.get("k6", "data"), { v: "new" });
   });
 
+  await test("a producer that throws synchronously rejects with its own error and is not kept (fb#2871)", async () => {
+    const mgr = newMgr();
+    const boom = () => { throw new Error("boom"); };
+    await assert.rejects(mgr.getOrCompute("k7", "data", boom, 60), /boom/);
+    assert.strictEqual(mgr._inflight.size, 0);
+  });
+
   finish();
 }
 main();

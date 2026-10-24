@@ -940,6 +940,9 @@ class UniversalCacheManager {
   /**
    * Read-through with in-process singleflight. Concurrent callers for the same key
    * share a single producer call. On cache hit, producer is never invoked.
+   * Exception (fb#2826): a caller arriving after an invalidation (invalidateByPattern /
+   * invalidate / clearAllCache) does not join a compute that started before it, and that
+   * earlier compute still answers its own caller but does not write the cache.
    *
    * @param {string} key           Full cache key (use generateKey to build)
    * @param {string} entityType    TTL/L1 classification (e.g. 'betoniPrices', 'auth')
@@ -955,22 +958,23 @@ class UniversalCacheManager {
     const existing = this._inflight.get(key);
     if (existing && existing.generation === this.invalidationGeneration) return existing.promise;
 
-    const generation = this.invalidationGeneration;
-    const promise = (async () => {
+    // Registered before the producer runs, so a producer that throws synchronously
+    // still finds (and releases) its own entry (fb#2871).
+    const entry = { generation: this.invalidationGeneration, promise: null };
+    this._inflight.set(key, entry);
+    entry.promise = (async () => {
       try {
         const value = await producer();
-        if (value !== null && value !== undefined && generation === this.invalidationGeneration) {
+        if (value !== null && value !== undefined && entry.generation === this.invalidationGeneration) {
           const ttl = ttlSeconds || this.TTL[entityType] || this.TTL.default;
           await this.set(key, value, ttl, entityType);
         }
         return value;
       } finally {
-        if (this._inflight.get(key)?.promise === promise) this._inflight.delete(key);
+        if (this._inflight.get(key) === entry) this._inflight.delete(key);
       }
     })();
-
-    this._inflight.set(key, { promise, generation });
-    return promise;
+    return entry.promise;
   }
 
   /**
