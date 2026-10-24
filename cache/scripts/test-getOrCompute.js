@@ -90,6 +90,20 @@ async function main() {
     assert.strictEqual(bCalls, 1);
   });
 
+  await test("invalidation during a compute: no re-cache, later caller does not join (fb#2826)", async () => {
+    const mgr = newMgr();
+    let release;
+    const gate = new Promise((r) => { release = r; });
+    const first = mgr.getOrCompute("k6", "data", async () => { await gate; return { v: "old" }; }, 60);
+    await new Promise((r) => setImmediate(r)); // let the first caller register in _inflight
+    mgr.invalidationGeneration++; // what every invalidation does first
+    const second = mgr.getOrCompute("k6", "data", async () => ({ v: "new" }), 60);
+    release();
+    assert.deepStrictEqual(await first, { v: "old" });
+    assert.deepStrictEqual(await second, { v: "new" });
+    assert.deepStrictEqual(await mgr.get("k6", "data"), { v: "new" });
+  });
+
   finish();
 }
 main();

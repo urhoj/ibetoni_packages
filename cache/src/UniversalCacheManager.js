@@ -151,8 +151,17 @@ class UniversalCacheManager {
     this.redisConfigOverride = options.redisConfig;
     this._onError = typeof options.onError === 'function' ? options.onError : null;
 
-    /** @type {Map<string, Promise<any>>} In-process singleflight for getOrCompute */
+    /** @type {Map<string, {promise: Promise<any>, generation: number}>} In-process singleflight for getOrCompute */
     this._inflight = new Map();
+
+    /**
+     * Bumped at the START of every invalidation (fb#2826). A reader that began before a
+     * sweep must not write its pre-write result back afterwards: the sweep found no key
+     * to delete while the read was still in flight, so the stale copy would live until
+     * TTL. Readers snapshot this and skip their cache write if it moved. In-process only,
+     * which covers puminet7api (one instance).
+     */
+    this.invalidationGeneration = 0;
 
     this.client = null;
     this.isConnected = false;
@@ -942,23 +951,25 @@ class UniversalCacheManager {
     const cached = await this.get(key, entityType);
     if (cached !== null && cached !== undefined) return cached;
 
+    // Never join, or re-cache, a computation that began before an invalidation (fb#2826).
     const existing = this._inflight.get(key);
-    if (existing) return existing;
+    if (existing && existing.generation === this.invalidationGeneration) return existing.promise;
 
+    const generation = this.invalidationGeneration;
     const promise = (async () => {
       try {
         const value = await producer();
-        if (value !== null && value !== undefined) {
+        if (value !== null && value !== undefined && generation === this.invalidationGeneration) {
           const ttl = ttlSeconds || this.TTL[entityType] || this.TTL.default;
           await this.set(key, value, ttl, entityType);
         }
         return value;
       } finally {
-        this._inflight.delete(key);
+        if (this._inflight.get(key)?.promise === promise) this._inflight.delete(key);
       }
     })();
 
-    this._inflight.set(key, promise);
+    this._inflight.set(key, { promise, generation });
     return promise;
   }
 
@@ -1076,6 +1087,7 @@ class UniversalCacheManager {
    * Invalidate cache keys by pattern. Clears matching L1 entries first, then Redis via scan+delete.
    */
   async invalidateByPattern(pattern) {
+    this.invalidationGeneration++;
     // Clear matching L1 entries (isolated so a failure doesn't block Redis invalidation)
     try {
       if (pattern.includes("*")) {
@@ -1134,6 +1146,7 @@ class UniversalCacheManager {
    * @returns {Promise<number>} Total Redis keys actually deleted (post-filter).
    */
   async clearAllCache() {
+    this.invalidationGeneration++;
     const baseTtlPatterns = Object.keys(this.BASE_TTL)
       .filter((entityType) => entityType !== "default")
       .map((entityType) => `${entityType}:*`);
@@ -1207,6 +1220,7 @@ class UniversalCacheManager {
    * @returns {Promise<number>} Number of cache keys invalidated
    */
   async invalidate(operation, entityType, params = {}) {
+    this.invalidationGeneration++;
     // Safely extract parameters
     const asiakasId = params.asiakasId;
     const pumppuAika = params.pumppuAika;
