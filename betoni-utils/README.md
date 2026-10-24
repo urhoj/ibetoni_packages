@@ -169,7 +169,7 @@ Main betoni string formatting function with multiple options.
 
 Get standard betoni string without attributes.
 
-**Format:** "Laatutyyppi isNopea raeKoko lujuus notkeus rasitusluokat käyttöikä"
+**Format:** "Laatutyyppi isNopea raeKoko lujuus notkeus rasitusluokat käyttöikä" (käyttöikä only when a rasitusluokka is set, see the rule above)
 
 **Example:** "Lattiabetoni hieno 16mm C25/30 S2"
 
@@ -179,7 +179,7 @@ Get standard betoni string without attributes.
 
 Get comprehensive betoni string with volume, weather resistance, and attributes.
 
-**Format:** "Säänkestävä Xm³ Nopea Laatutyyppi raeKoko lujuus notkeus rasitusluokat käyttöikä Lisät Comment"
+**Format:** "Säänkestävä Xm³ Nopea Laatutyyppi raeKoko lujuus notkeus rasitusluokat käyttöikä Lisät Comment" (käyttöikä only when a rasitusluokka is set, see the rule above)
 
 **Example:** "Säänkestävä 2m³ Nopea Lattiabetoni hieno 16mm C25/30 S2 XF1,XC3 50v Lisä1,Lisä2"
 
