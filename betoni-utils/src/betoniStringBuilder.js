@@ -28,14 +28,33 @@ function removeEiTietoaFromBetoniString(betoniString) {
 }
 
 /**
- * Käyttöikä is printed only alongside at least one rasitusluokka (X0 counts).
- * Every line carries one (50v is the default), so on its own it says nothing:
- * an order with no concrete info read just "50v" on /oma.
- * @param {string} rasitusString - the rasitusluokat part as it will be printed
- * @returns {boolean}
+ * The one place rasitusluokat are read (fb#2848). Sources differ: nested
+ * `rasitus.rasitusluokat` (frontend class) or flat `rasitusluokat` (DB row),
+ * each a comma string, an array, or `{rasitusluokat}`. Takes the first NON-EMPTY
+ * source, so an empty nested array does not hide a flat "XC3".
+ *
+ * Käyttöikä is printed only when this is non-empty (X0 counts). Every line
+ * carries one (50v is the default), so on its own it says nothing: an order
+ * with no concrete info read just "50v" on /oma.
+ * @param {Object} betoni
+ * @returns {string[]} trimmed, sorted classes without empty/null/"Ei tietoa"
  */
-function hasRasitus(rasitusString) {
-  return removeEiTietoaFromBetoniString(rasitusString).replace(/,/g, "") !== "";
+function getRasitusArray(betoni) {
+  const toArray = (v) => {
+    if (v?.rasitusluokat) v = v.rasitusluokat;
+    if (typeof v === "string") v = v.split(",");
+    if (!Array.isArray(v)) return [];
+    return v
+      .map((r) => (typeof r === "string" ? r.trim() : ""))
+      .filter((r) => r && !/ei tietoa/i.test(r));
+  };
+  const nested = toArray(betoni.rasitus?.rasitusluokat);
+  return (nested.length ? nested : toArray(betoni.rasitusluokat)).sort();
+}
+
+/** @param {string[]} rasitusArray - from getRasitusArray */
+function isWeatherResistant(rasitusArray) {
+  return rasitusArray.some((r) => WEATHER_RESISTANT_CLASSES.includes(r.toUpperCase()));
 }
 
 /**
@@ -50,22 +69,8 @@ function betoni_getStrings(betoni, options = {}) {
   const { includeWeatherResistant = false } = options;
   const betoniStrings = [];
 
-  // Check weather resistance if requested
-  let weatherPrefix = "";
-  if (includeWeatherResistant) {
-    const rasitusLuokat = betoni.rasitus?.rasitusluokat || betoni.rasitusluokat;
-    if (rasitusLuokat) {
-      let rasitusArray = [];
-      if (typeof rasitusLuokat === "string") {
-        rasitusArray = rasitusLuokat.split(",").map((r) => r.trim().toUpperCase());
-      } else if (Array.isArray(rasitusLuokat)) {
-        rasitusArray = rasitusLuokat.map((r) => r.trim().toUpperCase());
-      }
-      if (rasitusArray.some((r) => WEATHER_RESISTANT_CLASSES.includes(r))) {
-        weatherPrefix = "Säänkestävä ";
-      }
-    }
-  }
+  const weatherPrefix =
+    includeWeatherResistant && isWeatherResistant(getRasitusArray(betoni)) ? "Säänkestävä " : "";
 
   betoniStrings.push(weatherPrefix + betoni_getString_noAttr(betoni));
   if (betoni.betoniComment) betoniStrings.push(betoni.betoniComment);
@@ -108,32 +113,28 @@ function betoni_getString(betoni, noAttr = false, comprehensive = false) {
 
   // Get the base concrete string
   const baseString = betoni_getString_noAttr(betoni);
-  // Extract attributes using standardized nested structure
-  const attrs = betoni.attr?.attr || [];
-  let attrString = "";
-  if (!noAttr) {
-    try {
-      attrs.forEach((attr) => {
-        if (attr.attrNimike) attrString += attr.attrNimike;
-        if (attr.keikkaBetoniAttrComment) attrString += ": " + attr.keikkaBetoniAttrComment;
-        // add comma if not last
-        if (attr.keikkaBetoniAttrId !== attrs[attrs.length - 1].keikkaBetoniAttrId)
-          attrString += ", ";
-      });
-    } catch (e) {
-      console.error("Error processing betoni attributes:", e);
-    }
-  }
+  // Attributes: named ones only, joined by position (unsaved quick-edit attrs
+  // have no keikkaBetoniAttrId to compare, fb#2856)
+  const attrString = noAttr
+    ? ""
+    : (betoni.attr?.attr || [])
+        .filter((attr) => attr.attrNimike?.trim() && !attr.attrNimike.includes("Ei tietoa"))
+        .map(
+          (attr) =>
+            attr.attrNimike.trim() +
+            (attr.keikkaBetoniAttrComment ? ": " + attr.keikkaBetoniAttrComment : "")
+        )
+        .join(", ");
 
   // Combine strings and clean up. No minimum length: a lone "S3" or "16mm" is
-  // real information, and a bare käyttöikä can no longer occur (see hasRasitus).
+  // real information, and a bare käyttöikä can no longer occur (see getRasitusArray).
   return removeEiTietoaFromBetoniString([baseString, attrString].filter((s) => s).join(" "));
 }
 
 /**
  * Get standard betoni string without attributes
  * Format: "Laatutyyppi isNopea raeKoko lujuus notkeus rasitusluokat käyttöikä"
- * (käyttöikä only alongside a rasitusluokka, see hasRasitus)
+ * (käyttöikä only alongside a rasitusluokka, see getRasitusArray)
  * Example: "Lattiabetoni hieno 16mm C25/30 S2", "Rakennebetoni 16mm C30/37 S3 XC3,XF1 50v"
  *
  * @param {Object} betoni - Betoni object with various format support
@@ -161,23 +162,7 @@ function betoni_getString_noAttr(betoni) {
       betoni.raeKokoSelite
     )?.trim() || "";
 
-  let rasitusLuokat = betoni.rasitus?.rasitusluokat || betoni.rasitusluokat || [];
-  // if rasitusluokat is string, convert to array and sort
-  if (typeof rasitusLuokat === "string") {
-    rasitusLuokat = rasitusLuokat.split(",").map((r) => r.trim());
-    rasitusLuokat.sort();
-  } else if (Array.isArray(rasitusLuokat)) {
-    rasitusLuokat = rasitusLuokat.map((r) => r.trim());
-    rasitusLuokat.sort();
-  } else if (rasitusLuokat.rasitusluokat) {
-    rasitusLuokat = rasitusLuokat.rasitusluokat.map((r) => r.trim());
-    rasitusLuokat.sort();
-  } else {
-    rasitusLuokat = [];
-  }
-  // A string betoni.rasitusluokat is already split and joined above, so it is not
-  // a fallback here (and a flat array must never reach .trim()).
-  const rasitus = (rasitusLuokat.join(",") || betoni.rasitus?.rasitusluokatString || "").trim();
+  const rasitus = getRasitusArray(betoni).join(",");
   // Define properties to extract and join
   const parts = [
     (betoni.laatu?.laatuNimike || betoni.laatu?.nimike || betoni.laatuNimike)?.trim() || "",
@@ -187,7 +172,7 @@ function betoni_getString_noAttr(betoni) {
       "",
     notkeus,
     rasitus,
-    hasRasitus(rasitus) ? kayttoIka : "",
+    rasitus ? kayttoIka : "",
   ];
 
   // Join non-empty parts with a single space
@@ -199,7 +184,7 @@ function betoni_getString_noAttr(betoni) {
 /**
  * Get comprehensive betoni string with volume, weather resistance, and attributes
  * Format: "Säänkestävä 2m³ Nopea Lattiabetoni hieno 16mm C25/30 S2 XF1,XC3 50v Lisä1,Lisä2 Comment"
- * (käyttöikä only alongside a rasitusluokka, see hasRasitus)
+ * (käyttöikä only alongside a rasitusluokka, see getRasitusArray)
  *
  * @param {Object} betoni - Betoni object
  * @returns {string} Comprehensive formatted betoni string with all details
@@ -208,24 +193,10 @@ function betoni_getComprehensiveString(betoni) {
   if (!betoni) return "";
 
   const parts = [];
-
-  // Check if concrete is weather-resistant (säänkestävä) based on exposure classes
-  let rasitusLuokat = betoni.rasitus?.rasitusluokat || betoni.rasitusluokat;
-  let isWeatherResistant = false;
-  if (rasitusLuokat) {
-    let rasitusArray = [];
-    if (typeof rasitusLuokat === "string") {
-      rasitusArray = rasitusLuokat.split(",").map((r) => r.trim().toUpperCase());
-    } else if (Array.isArray(rasitusLuokat)) {
-      rasitusArray = rasitusLuokat.map((r) => r.trim().toUpperCase());
-    } else if (rasitusLuokat.rasitusluokat) {
-      rasitusArray = rasitusLuokat.rasitusluokat.map((r) => r.trim().toUpperCase());
-    }
-    isWeatherResistant = rasitusArray.some((r) => WEATHER_RESISTANT_CLASSES.includes(r));
-  }
+  const rasitusArray = getRasitusArray(betoni);
 
   // Add weather resistance indicator first if applicable
-  if (isWeatherResistant) {
+  if (isWeatherResistant(rasitusArray)) {
     parts.push("Säänkestävä");
   }
 
@@ -265,28 +236,16 @@ function betoni_getComprehensiveString(betoni) {
     parts.push(notkeus.trim());
   }
 
-  // Add exposure classes (rasitusluokat) - reuse the already parsed rasitusLuokat
-  let rasitusString = "";
-  if (rasitusLuokat) {
-    if (typeof rasitusLuokat === "string") {
-      rasitusString = rasitusLuokat.trim();
-    } else if (Array.isArray(rasitusLuokat)) {
-      rasitusString = rasitusLuokat.filter((r) => r && r.trim()).join(",");
-    } else if (rasitusLuokat.rasitusluokat) {
-      rasitusString = rasitusLuokat.rasitusluokat.filter((r) => r && r.trim()).join(",");
+  // Add exposure classes, and service life only alongside them (see getRasitusArray)
+  if (rasitusArray.length) {
+    parts.push(rasitusArray.join(","));
+    const kayttoIka =
+      betoni.kayttoIka?.kayttoIkaSelite ||
+      betoni.kayttoIka?.kayttoIkaString ||
+      betoni.kayttoIkaSelite;
+    if (kayttoIka && kayttoIka.trim() && !kayttoIka.includes("Ei tietoa")) {
+      parts.push(kayttoIka.trim());
     }
-    if (rasitusString && !rasitusString.includes("Ei tietoa")) {
-      parts.push(rasitusString);
-    }
-  }
-
-  // Add service life (only alongside a rasitusluokka, see hasRasitus)
-  const kayttoIka =
-    betoni.kayttoIka?.kayttoIkaSelite ||
-    betoni.kayttoIka?.kayttoIkaString ||
-    betoni.kayttoIkaSelite;
-  if (hasRasitus(rasitusString) && kayttoIka && kayttoIka.trim() && !kayttoIka.includes("Ei tietoa")) {
-    parts.push(kayttoIka.trim());
   }
 
   // Add additives (Lisät)
@@ -328,23 +287,10 @@ function betoni_getComprehensiveString_noAttr(betoni, excludeVolume = false) {
     parts.push(`${betoni.m3}m³`);
   }
 
-  // Check if concrete is weather-resistant (säänkestävä) based on exposure classes
-  let rasitusLuokat = betoni.rasitus?.rasitusluokat || betoni.rasitusluokat;
-  let isWeatherResistant = false;
-  if (rasitusLuokat) {
-    let rasitusArray = [];
-    if (typeof rasitusLuokat === "string") {
-      rasitusArray = rasitusLuokat.split(",").map((r) => r.trim().toUpperCase());
-    } else if (Array.isArray(rasitusLuokat)) {
-      rasitusArray = rasitusLuokat.map((r) => r.trim().toUpperCase());
-    } else if (rasitusLuokat.rasitusluokat) {
-      rasitusArray = rasitusLuokat.rasitusluokat.map((r) => r.trim().toUpperCase());
-    }
-    isWeatherResistant = rasitusArray.some((r) => WEATHER_RESISTANT_CLASSES.includes(r));
-  }
+  const rasitusArray = getRasitusArray(betoni);
 
   // Add weather resistance indicator if applicable
-  if (isWeatherResistant) {
+  if (isWeatherResistant(rasitusArray)) {
     parts.push("Säänkestävä");
   }
 
@@ -379,28 +325,16 @@ function betoni_getComprehensiveString_noAttr(betoni, excludeVolume = false) {
     parts.push(notkeus.trim());
   }
 
-  // Add exposure classes (rasitusluokat)
-  let rasitusString = "";
-  if (rasitusLuokat) {
-    if (typeof rasitusLuokat === "string") {
-      rasitusString = rasitusLuokat.trim();
-    } else if (Array.isArray(rasitusLuokat)) {
-      rasitusString = rasitusLuokat.filter((r) => r && r.trim()).join(",");
-    } else if (rasitusLuokat.rasitusluokat) {
-      rasitusString = rasitusLuokat.rasitusluokat.filter((r) => r && r.trim()).join(",");
+  // Add exposure classes, and service life only alongside them (see getRasitusArray)
+  if (rasitusArray.length) {
+    parts.push(rasitusArray.join(","));
+    const kayttoIka =
+      betoni.kayttoIka?.kayttoIkaSelite ||
+      betoni.kayttoIka?.kayttoIkaString ||
+      betoni.kayttoIkaSelite;
+    if (kayttoIka && kayttoIka.trim() && !kayttoIka.includes("Ei tietoa")) {
+      parts.push(kayttoIka.trim());
     }
-    if (rasitusString && !rasitusString.includes("Ei tietoa")) {
-      parts.push(rasitusString);
-    }
-  }
-
-  // Add service life (only alongside a rasitusluokka, see hasRasitus)
-  const kayttoIka =
-    betoni.kayttoIka?.kayttoIkaSelite ||
-    betoni.kayttoIka?.kayttoIkaString ||
-    betoni.kayttoIkaSelite;
-  if (hasRasitus(rasitusString) && kayttoIka && kayttoIka.trim() && !kayttoIka.includes("Ei tietoa")) {
-    parts.push(kayttoIka.trim());
   }
 
   return parts.filter((part) => part && part !== "").join(" ");

@@ -266,6 +266,59 @@ describe("käyttöikä is shown only with a rasitusluokka", () => {
   });
 });
 
+// --- rasitusluokat parsed one way in every builder (fb#2848) ---
+
+describe("rasitusluokat are normalised the same in every builder", () => {
+  const builders = {
+    betoni_getString,
+    betoni_getString_noAttr,
+    betoni_getComprehensiveString,
+    betoni_getComprehensiveString_noAttr,
+  };
+  const line = (rasitus) => ({
+    lujuusSelite: "C30/37",
+    kayttoIkaSelite: "50v",
+    rasitusluokat: undefined,
+    ...rasitus,
+  });
+
+  for (const [name, build] of Object.entries(builders)) {
+    it(`${name}: an empty nested array falls back to the flat value`, () => {
+      expect(build(line({ rasitus: { rasitusluokat: [] }, rasitusluokat: "XC3" }))).toMatch(/C30\/37 XC3 50v/);
+    });
+
+    it(`${name}: drops Ei tietoa, empty and null entries`, () => {
+      expect(build(line({ rasitusluokat: "XC3,Ei tietoa" }))).toMatch(/C30\/37 XC3 50v/);
+      expect(build(line({ rasitusluokat: ",XC1,XC2" }))).toMatch(/C30\/37 XC1,XC2 50v/);
+      expect(build(line({ rasitus: { rasitusluokat: [null, "XC1"] } }))).toMatch(/C30\/37 XC1 50v/);
+      expect(build(line({ rasitusluokat: ", ," }))).toBe("C30/37");
+    });
+
+    it(`${name}: classes are sorted`, () => {
+      expect(build(line({ rasitusluokat: ["XF1", "XC3"] }))).toMatch(/XC3,XF1 50v/);
+    });
+  }
+});
+
+// --- betoni_getString attr join (fb#2856) ---
+
+describe("betoni_getString attr join", () => {
+  const withAttrs = (attr) => ({ notkeusSelite: "S3", attr: { attr } });
+
+  it("skips empty and Ei tietoa names", () => {
+    expect(betoni_getString(withAttrs([{ attrNimike: "" }, { attrNimike: "" }]))).toBe("S3");
+    expect(betoni_getString(withAttrs([{ attrNimike: "Ei tietoa" }, { attrNimike: "K" }]))).toBe("S3 K");
+  });
+
+  it("separates unsaved (id-less) quick-edit attrs", () => {
+    const attrs = [
+      { attrNimike: "A", keikkaBetoniAttrId: null },
+      { attrNimike: "B", keikkaBetoniAttrId: null, keikkaBetoniAttrComment: "x" },
+    ];
+    expect(betoni_getString(withAttrs(attrs))).toBe("S3 A, B: x");
+  });
+});
+
 // --- betoni_isComplete ---
 
 describe("betoni_isComplete", () => {
