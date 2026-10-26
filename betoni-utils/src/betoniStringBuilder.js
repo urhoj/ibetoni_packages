@@ -113,17 +113,19 @@ function betoni_getString(betoni, noAttr = false, comprehensive = false) {
 
   // Get the base concrete string
   const baseString = betoni_getString_noAttr(betoni);
-  // Attributes: named ones only, joined by position (unsaved quick-edit attrs
-  // have no keikkaBetoniAttrId to compare, fb#2856)
+  // Attributes joined by position (unsaved quick-edit attrs have no
+  // keikkaBetoniAttrId to compare, fb#2856). An empty/"Ei tietoa" name is
+  // skipped but its comment is kept (fb#2902).
   const attrString = noAttr
     ? ""
     : (betoni.attr?.attr || [])
-        .filter((attr) => attr.attrNimike?.trim() && !/ei tietoa/i.test(attr.attrNimike))
-        .map(
-          (attr) =>
-            attr.attrNimike.trim() +
-            (attr.keikkaBetoniAttrComment ? ": " + attr.keikkaBetoniAttrComment : "")
-        )
+        .map((attr) => {
+          const name = attr.attrNimike?.trim();
+          const comment = attr.keikkaBetoniAttrComment?.trim();
+          const label = name && !/ei tietoa/i.test(name) ? name : "";
+          return label && comment ? `${label}: ${comment}` : label || comment || "";
+        })
+        .filter(Boolean)
         .join(", ");
 
   // Combine strings and clean up. No minimum length: a lone "S3" or "16mm" is

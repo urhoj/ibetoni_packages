@@ -311,6 +311,11 @@ describe("betoni_getString attr join", () => {
     expect(betoni_getString(withAttrs([{ attrNimike: "ei tietoa" }, { attrNimike: "K" }]))).toBe("S3 K");
   });
 
+  it("keeps the comment of an unnamed attr (fb#2902)", () => {
+    expect(betoni_getString(withAttrs([{ attrNimike: "", keikkaBetoniAttrComment: "kuitu 2kg" }]))).toBe("S3 kuitu 2kg");
+    expect(betoni_getString(withAttrs([{ attrNimike: "Ei tietoa", keikkaBetoniAttrComment: "x" }, { attrNimike: "K" }]))).toBe("S3 x, K");
+  });
+
   it("separates unsaved (id-less) quick-edit attrs", () => {
     const attrs = [
       { attrNimike: "A", keikkaBetoniAttrId: null },
