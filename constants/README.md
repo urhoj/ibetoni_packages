@@ -155,6 +155,20 @@ const isDone = KEIKKA_DONE_TILA_IDS.includes(Number(keikkaTilaId));
 const { GPS_STALE_MIN, GPS_STALE_ENGINE_OFF_MIN } = require('@ibetoni/constants');
 ```
 
+### Driver day (`src/driverDay.js` / `src/driverDay.cjs`, subexport `./driverDay`)
+
+Answers "has the day driver seen the CURRENT schedule": one signature over a vehicle's day, so the grid (puminet4 `utils/driverDaySignature.js`, `pages/keikkaGrid/components/gridConstants.js`) and the driver day message (puminet5api `modules/driverDayMessage/dayText.js`) compute the same value.
+
+- **DRIVER_DAY_TILA_IDS**: the `keikkaTilaId`s that count toward a driver's day
+- **helsinkiYyyymmdd(date)**: Helsinki-local `yyyymmdd` number of a date
+- **driverDayStart(k)** / **driverDayCounts(k)**: a keikka's start (`pumppuAika ?? timeStart`) / whether its tila counts
+- **driverDaySignature(keikat, { pvm, vehicleId }, palkit = [])**: 8-hex FNV-1a over the vehicle's counted keikat (truck, start minute, worksite, cancelled) and palkit (start, type, text; which types count is the caller's filter) on that Helsinki day, or `null` when there are none. A comment or m³ edit keeps the signature
+- Dual ESM/CJS pair — edit both halves in the same commit; `src/__tests__/driverDay.test.js` asserts they agree
+
+```javascript
+import { driverDaySignature } from '@ibetoni/constants/driverDay';
+```
+
 ## Maintenance
 
 ### Adding New Domains
