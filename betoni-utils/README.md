@@ -151,6 +151,8 @@ const {
 
 **Käyttöikä rule (all four builders):** the käyttöikä (50v/100v/200v) is printed only when at least one rasitusluokka is set; X0 counts. Every line carries a käyttöikä (50v is the default), so on its own it says nothing and is omitted.
 
+**Rasitusluokat are read one way in every builder** (`getRasitusArray`): the first NON-EMPTY of `rasitus.rasitusluokat` / `rasitusluokat` (comma string, array or `{rasitusluokat}`), trimmed, with empty / `null` / `Ei tietoa` entries dropped and the rest sorted — so `["XF1","XC3"]` prints `XC3,XF1` everywhere. Attributes in `betoni_getString` are the named ones joined with `", "`.
+
 #### `betoni_getString(betoni, noAttr, comprehensive)`
 
 Main betoni string formatting function with multiple options.
