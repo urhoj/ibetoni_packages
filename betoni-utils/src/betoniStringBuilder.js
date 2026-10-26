@@ -118,7 +118,7 @@ function betoni_getString(betoni, noAttr = false, comprehensive = false) {
   const attrString = noAttr
     ? ""
     : (betoni.attr?.attr || [])
-        .filter((attr) => attr.attrNimike?.trim() && !attr.attrNimike.includes("Ei tietoa"))
+        .filter((attr) => attr.attrNimike?.trim() && !/ei tietoa/i.test(attr.attrNimike))
         .map(
           (attr) =>
             attr.attrNimike.trim() +

@@ -308,6 +308,7 @@ describe("betoni_getString attr join", () => {
   it("skips empty and Ei tietoa names", () => {
     expect(betoni_getString(withAttrs([{ attrNimike: "" }, { attrNimike: "" }]))).toBe("S3");
     expect(betoni_getString(withAttrs([{ attrNimike: "Ei tietoa" }, { attrNimike: "K" }]))).toBe("S3 K");
+    expect(betoni_getString(withAttrs([{ attrNimike: "ei tietoa" }, { attrNimike: "K" }]))).toBe("S3 K");
   });
 
   it("separates unsaved (id-less) quick-edit attrs", () => {
