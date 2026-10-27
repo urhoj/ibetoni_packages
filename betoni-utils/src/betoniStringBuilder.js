@@ -343,6 +343,7 @@ function betoni_getComprehensiveString_noAttr(betoni, excludeVolume = false) {
 }
 
 module.exports = {
+  getRasitusArray,
   removeEiTietoaFromBetoniString,
   betoni_getStrings,
   betoni_getString,

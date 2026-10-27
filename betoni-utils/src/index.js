@@ -7,7 +7,7 @@
  * @module @ibetoni/betoni-utils
  */
 
-const { betoni_getString, betoni_getString_noAttr, betoni_getStrings, betoni_getComprehensiveString, betoni_getComprehensiveString_noAttr, removeEiTietoaFromBetoniString } = require("./betoniStringBuilder.js");
+const { betoni_getString, betoni_getString_noAttr, betoni_getStrings, betoni_getComprehensiveString, betoni_getComprehensiveString_noAttr, removeEiTietoaFromBetoniString, getRasitusArray } = require("./betoniStringBuilder.js");
 const { betoni_isComplete } = require("./betoniValidator.js");
 const { RasitusLuokatArr, WEATHER_RESISTANT_CLASSES } = require("./constants.js");
 const { formatPersonName } = require("./personUtils.js");
@@ -26,6 +26,7 @@ module.exports = {
   betoni_getComprehensiveString,
   betoni_getComprehensiveString_noAttr,
   removeEiTietoaFromBetoniString,
+  getRasitusArray,
   betoni_isComplete,
   RasitusLuokatArr,
   WEATHER_RESISTANT_CLASSES,
