@@ -1262,11 +1262,8 @@ class UniversalCacheManager {
         // modules/cache/gridScope.js in puminet5api) sweep only keys whose CSV contains one of
         // them, every date and both modes (list-mode keys hold a multi-day range under their
         // START date, so the date segment cannot be used). Without one, today's broad sweep.
-        const scoped = this._gridScopePatterns(params.gridScope);
-        if (scoped) {
-          const counts = await Promise.all(scoped.map((p) => this.invalidateByPattern(p)));
-          return counts.reduce((sum, c) => sum + c, 0);
-        }
+        const scoped = this._gridScopeTenants(params.gridScope);
+        if (scoped) return await this._invalidateGridTenants(scoped);
         const dateKey = pumppuAika ? this.formatGridDate(pumppuAika) : null;
         return await this.invalidateByPattern(`grid:v7tenant:${dateKey || "*"}:*`);
       }
@@ -1338,16 +1335,32 @@ class UniversalCacheManager {
   }
 
   /**
-   * Globs selecting every grid:v7tenant key whose visible-tenant CSV contains one of the
-   * scoped tenants — one glob per tenant, `[:,]` a one-character class matching either
-   * boundary so a tenant sitting alone, first, middle or last in the CSV all match; anchored
-   * on both sides so 8 never matches 18 or 80. Null (= "sweep broadly") when the scope is
-   * absent or names no tenant: missing knowledge must never narrow a sweep.
+   * The scoped tenant set, or null (= "sweep broadly") when the scope is absent or names no
+   * tenant: missing knowledge must never narrow a sweep.
    */
-  _gridScopePatterns(scope) {
-    const tenants = [...new Set((scope?.tenants || []).map(Number).filter((n) => Number.isInteger(n) && n > 0))];
-    if (!tenants.length) return null;
-    return tenants.map((t) => `grid:v7tenant:*[:,]${t}[:,]*`);
+  _gridScopeTenants(scope) {
+    const tenants = (scope?.tenants || []).map(Number).filter((n) => Number.isInteger(n) && n > 0);
+    return tenants.length ? new Set(tenants) : null;
+  }
+
+  /**
+   * Delete every grid:v7tenant key whose visible-tenant CSV (logical segment 3) contains one
+   * of `tenants` — every date and both modes. ONE keyspace scan plus exact set membership
+   * (8 never matches 18 or 80), instead of a glob and a full SCAN per tenant (fb#1239).
+   */
+  async _invalidateGridTenants(tenants) {
+    this.invalidationGeneration++;
+    const hit = (logicalKey) =>
+      logicalKey.startsWith("grid:v7tenant:") &&
+      (logicalKey.split(":")[3] || "").split(",").some((id) => tenants.has(Number(id)));
+    for (const key of this.l1Cache.keys()) {
+      if (hit(key)) this.l1Cache.delete(key);
+    }
+    const keys = (await this.scanKeys("grid:v7tenant:*")).filter((k) => hit(this.stripNamespace(k)));
+    if (!keys.length) return 0;
+    const deletedCount = await this.batchDelete(keys);
+    this.cacheMetrics.recordInvalidation("grid", "grid:v7tenant:*", deletedCount);
+    return deletedCount;
   }
 
   /**
@@ -1387,7 +1400,7 @@ class UniversalCacheManager {
 
     // A resolved scope is authoritative: it already unions the old and new rows, so the
     // date guessing below (which only ever narrowed by date, never by tenant) is bypassed.
-    if (this._gridScopePatterns(params.gridScope)) {
+    if (this._gridScopeTenants(params.gridScope)) {
       return await this.invalidate(operation, "grid", params);
     }
 
@@ -1594,7 +1607,7 @@ class UniversalCacheManager {
             }),
             // Redundant with the scoped sweep above when a scope resolved; the tenant-blind
             // date sweep is the fallback only.
-            this._gridScopePatterns(params.gridScope)
+            this._gridScopeTenants(params.gridScope)
               ? Promise.resolve(0)
               : this.invalidateByPattern(`grid:v7tenant:${datePattern}:*`),
           ]);
@@ -1871,7 +1884,7 @@ class UniversalCacheManager {
           params.vehicleId
             ? this.invalidate(operation, "vehicle", params)
             : Promise.resolve(0),
-          this._gridScopePatterns(params.gridScope)
+          this._gridScopeTenants(params.gridScope)
             ? Promise.resolve(0)
             : this.invalidateByPattern(`grid:v7tenant:${datePattern}:*`),
         ]);
