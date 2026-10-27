@@ -1206,16 +1206,17 @@ function validateBetoni(keikka, issues, ownerAsiakasId, validationSettings, step
       betoni.betoniVahvistettu === false &&
       isRuleEnabled("INCOMPLETE_BETONI_VALIDATION", validationSettings, keikka, ownerAsiakasId)
     ) {
-      // Show "Määrä / laatu varmistus" message for false values
+      // The message does not name the row, so both the issue id and the dismissal key
+      // use the row's own id (index only for an unsaved row): deleting an earlier row
+      // must neither hand its dismissal to the row shifting into its place nor drop the
+      // shifted row's own (fb#2820). The key adds what is being verified, so a changed
+      // m3 / grain / slump brings the warning back (fb#2802).
+      const id = `INCOMPLETE_BETONI_VALIDATION_${betoni.keikkaBetoniId ?? `i${index}`}`;
       issues.push({
-        id: `INCOMPLETE_BETONI_VALIDATION_${index}`,
+        id,
         type: "INCOMPLETE_BETONI_VALIDATION",
         message: "Määrä / laatu varmistus",
-        // The message does not name the row, so a dismissal keys on the row's own id
-        // (index only for an unsaved row, fb#2820 — a shifted row must not inherit
-        // another's dismissal) and what is being verified: a changed m3 / grain /
-        // slump brings the warning back (fb#2802).
-        dismissKey: `INCOMPLETE_BETONI_VALIDATION_${betoni.keikkaBetoniId ?? `i${index}`}|${[betoni.m3, betoni.raeKokoId, betoni.notkeusId]
+        dismissKey: `${id}|${[betoni.m3, betoni.raeKokoId, betoni.notkeusId]
           .map((v) => (v == null || v === "" ? "" : Number(v)))
           .join("|")}`,
         category: CATEGORIES.BETONI,

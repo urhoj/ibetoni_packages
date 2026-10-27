@@ -1010,38 +1010,47 @@ describe("INCOMPLETE_BETONI_VALIDATION dismissal key (fb#2802 review #7)", () =>
   const now = new Date("2026-10-23T10:00:00Z");
   const row = { m3: 5, raeKokoId: 1, raeKokoSelite: "16mm", notkeusId: 3, notkeusSelite: "S3", betoniVahvistettu: false };
   const keikka = (betoni) => createTestKeikka({ keikkaTilaId: 4, betonit: [betoni], pumppuAika: "2026-10-24T06:00:00Z" });
-  const issueOf = (k) => validateKeikka(k, { ...testContext, validationSettings: null, now }).issues.find((i) => i.id === "INCOMPLETE_BETONI_VALIDATION_0");
-  const dismissed = (k, key) =>
-    validateKeikka(k, {
-      ...testContext,
-      validationSettings: null,
-      now,
-      stepLogData: [{ stepLogId: 1, keikkaId: 1, stepLogTypeId: 34, data2: JSON.stringify({ issueId: "INCOMPLETE_BETONI_VALIDATION_0", fingerprint: key }) }],
-    }).issues.some((i) => i.id === "INCOMPLETE_BETONI_VALIDATION_0") === false;
+  const validate = (k, stepLogData) => validateKeikka(k, { ...testContext, validationSettings: null, now, stepLogData }).issues;
+  const issueOf = (k) => validate(k).find((i) => i.type === "INCOMPLETE_BETONI_VALIDATION");
+  // the grid sends issueId: issue.id and fingerprint: dismissKey (validationDismissApi)
+  const dismissalOf = (issue) => ({ stepLogId: 1, keikkaId: 1, stepLogTypeId: 34, data2: JSON.stringify({ issueId: issue.id, fingerprint: issue.dismissKey }) });
+  const dismissed = (k, issue) => !validate(k, [dismissalOf(issue)]).some((i) => i.type === "INCOMPLETE_BETONI_VALIDATION");
 
-  test("the message stays the same but the key names m3 / grain / slump", () => {
+  test("the message stays the same but the id and key name the row and m3 / grain / slump", () => {
     const issue = issueOf(keikka(row));
     expect(issue.message).toBe("Määrä / laatu varmistus");
+    expect(issue.id).toBe("INCOMPLETE_BETONI_VALIDATION_i0");
     expect(issue.dismissKey).toBe("INCOMPLETE_BETONI_VALIDATION_i0|5|1|3");
-    expect(issueOf(keikka({ ...row, keikkaBetoniId: 812 })).dismissKey).toBe("INCOMPLETE_BETONI_VALIDATION_812|5|1|3");
+    expect(issue.betoniIndex).toBe(0);
+    const saved = issueOf(keikka({ ...row, keikkaBetoniId: 812 }));
+    expect(saved.id).toBe("INCOMPLETE_BETONI_VALIDATION_812");
+    expect(saved.dismissKey).toBe("INCOMPLETE_BETONI_VALIDATION_812|5|1|3");
   });
 
   test("a row shifted into a deleted row's place does not inherit its dismissal (fb#2820)", () => {
     const first = { ...row, keikkaBetoniId: 811 };
     const second = { ...row, keikkaBetoniId: 812 };
-    const key = issueOf(keikka(first)).dismissKey;
     // row 811 deleted, 812 (identical m3 / grain / slump) is now at index 0
-    expect(dismissed(keikka(second), key)).toBe(false);
+    expect(dismissed(keikka(second), issueOf(keikka(first)))).toBe(false);
+  });
+
+  test("a shifted row keeps its own dismissal (fb#2820)", () => {
+    const first = { ...row, keikkaBetoniId: 811 };
+    const second = { ...row, keikkaBetoniId: 812 };
+    const both = createTestKeikka({ keikkaTilaId: 4, betonit: [first, second], pumppuAika: "2026-10-24T06:00:00Z" });
+    const secondIssue = validate(both).find((i) => i.betoniIndex === 1);
+    // row 811 deleted, 812 is now at index 0
+    expect(dismissed(keikka(second), secondIssue)).toBe(true);
   });
 
   test("a dismissal survives an unchanged row (string ids from a socket merge too)", () => {
-    const key = issueOf(keikka(row)).dismissKey;
-    expect(dismissed(keikka({ ...row, m3: "5", raeKokoId: "1", notkeusId: "3" }), key)).toBe(true);
+    const issue = issueOf(keikka(row));
+    expect(dismissed(keikka({ ...row, m3: "5", raeKokoId: "1", notkeusId: "3" }), issue)).toBe(true);
   });
 
   test("a changed m3 or quality brings it back", () => {
-    const key = issueOf(keikka(row)).dismissKey;
-    expect(dismissed(keikka({ ...row, m3: 7 }), key)).toBe(false);
-    expect(dismissed(keikka({ ...row, notkeusId: 4 }), key)).toBe(false);
+    const issue = issueOf(keikka(row));
+    expect(dismissed(keikka({ ...row, m3: 7 }), issue)).toBe(false);
+    expect(dismissed(keikka({ ...row, notkeusId: 4 }), issue)).toBe(false);
   });
 });

@@ -59,6 +59,9 @@ function parseDismissal(row) {
 
 /**
  * True when a parsed dismissal still applies on the order's current vehicle (fb#2820).
+ * Two exceptions match any vehicle: weather (VEHICLE_INDEPENDENT_ISSUE_IDS) and rows
+ * written before fb#2820, which carry no vehicleId. The backend reads dbo.keikka.vehicleId
+ * (NOT NULL, 0 = no vehicle), so a row written for an existing order always carries one.
  *
  * @param {{ issueId: string, vehicleId: number|null }} parsed - from parseDismissal
  * @param {number|null|undefined} vehicleId - the order's current vehicle
