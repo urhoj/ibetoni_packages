@@ -941,6 +941,29 @@ describe("dismissal partitioning (fb#2802)", () => {
     expect(result.issues.some((i) => i.id === "SEVERE_COLD_WARNING")).toBe(false);
   });
 
+  test("moving the order to another vehicle brings a dismissed warning back (fb#2820)", () => {
+    const row = dismissRow("HARKKO_CONCRETE_TYPE", HARKKO_MSG, {
+      data2: JSON.stringify({ issueId: "HARKKO_CONCRETE_TYPE", fingerprint: HARKKO_MSG, vehicleId: 1 }),
+    });
+    const has = (vehicleId) =>
+      validateKeikka(harkkoKeikka({ vehicleId }), { ...ctx, stepLogData: [row] }).issues.some((i) => i.id === "HARKKO_CONCRETE_TYPE");
+    expect(has(1)).toBe(false);
+    expect(has(3)).toBe(true);
+  });
+
+  test("weather and pre-fb#2820 dismissals ignore the vehicle", () => {
+    const cold = validateKeikka(harkkoKeikka({ vehicleId: 3, weatherTemp: -22 }), {
+      ...ctx,
+      stepLogData: [
+        dismissRow("SEVERE_COLD_WARNING", "SEVERE_COLD_WARNING", {
+          data2: JSON.stringify({ issueId: "SEVERE_COLD_WARNING", fingerprint: "SEVERE_COLD_WARNING", vehicleId: 1 }),
+        }),
+        dismissRow("HARKKO_CONCRETE_TYPE", HARKKO_MSG, { stepLogId: 992 }),
+      ],
+    });
+    expect(cold.issues.some((i) => i.id === "SEVERE_COLD_WARNING" || i.id === "HARKKO_CONCRETE_TYPE")).toBe(false);
+  });
+
   test("boom message names the vehicle, so a swap to an equal boom changes it", () => {
     const vehicles = [
       { vehicleId: 1, vehicleNimi: "Betoni-1", vehiclePuomi: 28 },
@@ -999,7 +1022,16 @@ describe("INCOMPLETE_BETONI_VALIDATION dismissal key (fb#2802 review #7)", () =>
   test("the message stays the same but the key names m3 / grain / slump", () => {
     const issue = issueOf(keikka(row));
     expect(issue.message).toBe("Määrä / laatu varmistus");
-    expect(issue.dismissKey).toBe("INCOMPLETE_BETONI_VALIDATION_0|5|1|3");
+    expect(issue.dismissKey).toBe("INCOMPLETE_BETONI_VALIDATION_i0|5|1|3");
+    expect(issueOf(keikka({ ...row, keikkaBetoniId: 812 })).dismissKey).toBe("INCOMPLETE_BETONI_VALIDATION_812|5|1|3");
+  });
+
+  test("a row shifted into a deleted row's place does not inherit its dismissal (fb#2820)", () => {
+    const first = { ...row, keikkaBetoniId: 811 };
+    const second = { ...row, keikkaBetoniId: 812 };
+    const key = issueOf(keikka(first)).dismissKey;
+    // row 811 deleted, 812 (identical m3 / grain / slump) is now at index 0
+    expect(dismissed(keikka(second), key)).toBe(false);
   });
 
   test("a dismissal survives an unchanged row (string ids from a socket merge too)", () => {

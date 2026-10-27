@@ -14,6 +14,7 @@ module.exports = {
   getIssueFingerprint: dismissal.getIssueFingerprint,
   buildDismissalData: dismissal.buildDismissalData,
   parseDismissal: dismissal.parseDismissal,
+  isDismissalForVehicle: dismissal.isDismissalForVehicle,
   isOutsideDismissWindow: dismissal.isOutsideDismissWindow,
   PRIORITY_LEVELS: validator.PRIORITY_LEVELS,
   CATEGORIES: validator.CATEGORIES,

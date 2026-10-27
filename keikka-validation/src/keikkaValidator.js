@@ -35,7 +35,12 @@ const {
   isSevereHot,
   SEVERE_HOT_THRESHOLD,
 } = require("./weatherThresholds.js");
-const { getIssueFingerprint, parseDismissal, isOutsideDismissWindow } = require("./dismissal.js");
+const {
+  getIssueFingerprint,
+  parseDismissal,
+  isDismissalForVehicle,
+  isOutsideDismissWindow,
+} = require("./dismissal.js");
 
 /**
  * "Harkko" (concrete block fill) anywhere in a text, compounds included
@@ -436,7 +441,7 @@ const validateKeikka = (keikka, options = {}) => {
   // A post-pass that re-filtered on `!ruleConfig.enabled` used to suppress
   // rules whose saved config lacked an `enabled` key — see the fail-open
   // regression test.
-  const { active, dismissedIssues } = partitionDismissed(issues, keikka.keikkaId, stepLogData);
+  const { active, dismissedIssues } = partitionDismissed(issues, keikka, stepLogData);
 
   return {
     isValid: active.length === 0,
@@ -448,19 +453,22 @@ const validateKeikka = (keikka, options = {}) => {
 
 /**
  * Split issues into active and dismissed (fb#2802). A type-34 step log row on this
- * keikka dismisses the issue whose id AND current fingerprint match its payload.
+ * keikka dismisses the issue whose id AND current fingerprint match its payload, while
+ * the order is still on the vehicle it was dismissed on (fb#2820, isDismissalForVehicle).
  *
  * @param {Array<ValidationIssue>} issues
- * @param {number} keikkaId
+ * @param {Keikka} keikka
  * @param {Array<StepLog>|null} stepLogData
  * @returns {{ active: Array<ValidationIssue>, dismissedIssues: Array<ValidationIssue & { dismissal: { stepLogId: number, personName: string, entryTime: string } }> }}
  */
-function partitionDismissed(issues, keikkaId, stepLogData) {
+function partitionDismissed(issues, keikka, stepLogData) {
   const byKey = new Map();
   for (const row of Array.isArray(stepLogData) ? stepLogData : []) {
-    if (row.keikkaId !== keikkaId) continue;
+    if (row.keikkaId !== keikka.keikkaId) continue;
     const parsed = parseDismissal(row);
-    if (parsed) byKey.set(`${parsed.issueId}\u0000${parsed.fingerprint}`, row);
+    if (parsed && isDismissalForVehicle(parsed, keikka.vehicleId)) {
+      byKey.set(`${parsed.issueId}\u0000${parsed.fingerprint}`, row);
+    }
   }
   if (byKey.size === 0) return { active: issues, dismissedIssues: [] };
 
@@ -1203,9 +1211,11 @@ function validateBetoni(keikka, issues, ownerAsiakasId, validationSettings, step
         id: `INCOMPLETE_BETONI_VALIDATION_${index}`,
         type: "INCOMPLETE_BETONI_VALIDATION",
         message: "Määrä / laatu varmistus",
-        // The message does not name the row, so a dismissal keys on what is being
-        // verified: a changed m3 / grain / slump brings the warning back (fb#2802).
-        dismissKey: `INCOMPLETE_BETONI_VALIDATION_${index}|${[betoni.m3, betoni.raeKokoId, betoni.notkeusId]
+        // The message does not name the row, so a dismissal keys on the row's own id
+        // (index only for an unsaved row, fb#2820 — a shifted row must not inherit
+        // another's dismissal) and what is being verified: a changed m3 / grain /
+        // slump brings the warning back (fb#2802).
+        dismissKey: `INCOMPLETE_BETONI_VALIDATION_${betoni.keikkaBetoniId ?? `i${index}`}|${[betoni.m3, betoni.raeKokoId, betoni.notkeusId]
           .map((v) => (v == null || v === "" ? "" : Number(v)))
           .join("|")}`,
         category: CATEGORIES.BETONI,

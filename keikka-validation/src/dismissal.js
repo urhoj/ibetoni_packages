@@ -6,6 +6,9 @@
  * keikka while the issue's fingerprint still matches: the fingerprint is the issue's
  * message (so a changed vehicle, concrete or amount brings the warning back) unless the
  * rule sets `dismissKey` (weather: matched on the rule alone, owner ruling 2026-10-23).
+ * It also records the order's `vehicleId`: moving the order to another vehicle brings
+ * every warning back except weather (fb#2820). Rows written before that carry no
+ * vehicleId and match any vehicle.
  *
  * Orders whose date is more than DISMISS_WINDOW_DAYS in the past show no warnings at all,
  * and the nightly SQL cleanup (cleanup_validationDismissals) purges their dismissal rows
@@ -15,6 +18,8 @@
 const VALIDATION_DISMISSED_STEP_LOG_TYPE = 34;
 const DISMISS_WINDOW_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
+/** Weather depends on the day, not the truck: these stay dismissed across a vehicle change. */
+const VEHICLE_INDEPENDENT_ISSUE_IDS = new Set(["SEVERE_COLD_WARNING", "SEVERE_HOT_WARNING"]);
 
 /** @param {{ message: string, dismissKey?: string }} issue */
 function getIssueFingerprint(issue) {
@@ -22,27 +27,45 @@ function getIssueFingerprint(issue) {
 }
 
 /**
- * @param {{ issueId: string, fingerprint: string, reason?: string }} dismissal
+ * @param {{ issueId: string, fingerprint: string, vehicleId?: number|null, reason?: string }} dismissal
  * @returns {string} JSON stored in stepLog.data2; `reason` is audit-only, never matched
  */
-function buildDismissalData({ issueId, fingerprint, reason }) {
-  return JSON.stringify(reason ? { issueId, fingerprint, reason } : { issueId, fingerprint });
+function buildDismissalData({ issueId, fingerprint, vehicleId, reason }) {
+  return JSON.stringify({
+    issueId,
+    fingerprint,
+    ...(vehicleId != null && { vehicleId: Number(vehicleId) }),
+    ...(reason && { reason }),
+  });
 }
 
 /**
  * @param {{ stepLogTypeId?: number, data2?: string|null }} row - a stepLog row
- * @returns {{ issueId: string, fingerprint: string } | null} null for any other type or a
- *   malformed payload (a hand-edited row must not crash the drawer, it just stops matching)
+ * @returns {{ issueId: string, fingerprint: string, vehicleId: number|null } | null} null for
+ *   any other type or a malformed payload (a hand-edited row must not crash the drawer, it
+ *   just stops matching)
  */
 function parseDismissal(row) {
   if (!row || Number(row.stepLogTypeId) !== VALIDATION_DISMISSED_STEP_LOG_TYPE) return null;
   try {
     const parsed = JSON.parse(row.data2);
     if (typeof parsed?.issueId !== "string" || typeof parsed?.fingerprint !== "string") return null;
-    return { issueId: parsed.issueId, fingerprint: parsed.fingerprint };
+    const vehicleId = parsed.vehicleId == null ? null : Number(parsed.vehicleId);
+    return { issueId: parsed.issueId, fingerprint: parsed.fingerprint, vehicleId };
   } catch {
     return null;
   }
+}
+
+/**
+ * True when a parsed dismissal still applies on the order's current vehicle (fb#2820).
+ *
+ * @param {{ issueId: string, vehicleId: number|null }} parsed - from parseDismissal
+ * @param {number|null|undefined} vehicleId - the order's current vehicle
+ */
+function isDismissalForVehicle(parsed, vehicleId) {
+  if (parsed.vehicleId == null || VEHICLE_INDEPENDENT_ISSUE_IDS.has(parsed.issueId)) return true;
+  return parsed.vehicleId === (vehicleId == null ? null : Number(vehicleId));
 }
 
 /**
@@ -69,5 +92,6 @@ module.exports = {
   getIssueFingerprint,
   buildDismissalData,
   parseDismissal,
+  isDismissalForVehicle,
   isOutsideDismissWindow,
 };

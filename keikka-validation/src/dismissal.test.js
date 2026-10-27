@@ -4,6 +4,7 @@ import {
   getIssueFingerprint,
   buildDismissalData,
   parseDismissal,
+  isDismissalForVehicle,
   isOutsideDismissWindow,
 } from "./dismissal.js";
 
@@ -22,7 +23,25 @@ describe("dismissal helpers (fb#2802)", () => {
 
   test("parseDismissal round-trips buildDismissalData on a type-34 row", () => {
     const data2 = buildDismissalData({ issueId: "X", fingerprint: "m", reason: "asiakas haluaa" });
-    expect(parseDismissal({ stepLogTypeId: 34, data2 })).toEqual({ issueId: "X", fingerprint: "m" });
+    expect(parseDismissal({ stepLogTypeId: 34, data2 })).toEqual({ issueId: "X", fingerprint: "m", vehicleId: null });
+    const withVehicle = buildDismissalData({ issueId: "X", fingerprint: "m", vehicleId: "53" });
+    expect(parseDismissal({ stepLogTypeId: 34, data2: withVehicle })).toEqual({ issueId: "X", fingerprint: "m", vehicleId: 53 });
+  });
+
+  describe("isDismissalForVehicle (fb#2820)", () => {
+    test("matches only the vehicle it was made on", () => {
+      expect(isDismissalForVehicle({ issueId: "NO_DRIVER", vehicleId: 53 }, 53)).toBe(true);
+      expect(isDismissalForVehicle({ issueId: "NO_DRIVER", vehicleId: 53 }, "53")).toBe(true);
+      expect(isDismissalForVehicle({ issueId: "NO_DRIVER", vehicleId: 53 }, 54)).toBe(false);
+      expect(isDismissalForVehicle({ issueId: "NO_DRIVER", vehicleId: 53 }, null)).toBe(false);
+    });
+    test("weather stays dismissed on any vehicle", () => {
+      expect(isDismissalForVehicle({ issueId: "SEVERE_COLD_WARNING", vehicleId: 53 }, 54)).toBe(true);
+      expect(isDismissalForVehicle({ issueId: "SEVERE_HOT_WARNING", vehicleId: 53 }, 54)).toBe(true);
+    });
+    test("a pre-fb#2820 row without vehicleId matches any vehicle", () => {
+      expect(isDismissalForVehicle({ issueId: "NO_DRIVER", vehicleId: null }, 54)).toBe(true);
+    });
   });
 
   test("parseDismissal ignores other types and malformed data2", () => {
