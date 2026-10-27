@@ -12,7 +12,7 @@ Shared rule engine for Keikkavalidointi: the warnings in the grid reminders draw
 
 ## Per-order dismissal
 
-A dismissal is a `dbo.stepLog` row of type `VALIDATION_DISMISSED_STEP_LOG_TYPE` (34) whose `data2` is `{ issueId, fingerprint }`. `validateKeikka` moves an issue to `dismissedIssues` when a row on the same keikka matches its `id` and `getIssueFingerprint(issue)`, which is `issue.dismissKey ?? issue.message`. A rule whose message does not name what it depends on must set `dismissKey` or reword its message. The weather rules use their id, so a dismissal survives forecast changes.
+A dismissal is a `dbo.stepLog` row of type `VALIDATION_DISMISSED_STEP_LOG_TYPE` (34) whose `data2` is `{ issueId, fingerprint }`. `validateKeikka` moves an issue to `dismissedIssues` when a row on the same keikka matches its `id` and `getIssueFingerprint(issue)`, which is `issue.dismissKey ?? issue.message`. A rule whose message does not name what it depends on must set `dismissKey` or reword its message. The weather rules use their id, so a dismissal survives forecast changes. A row may also carry `vehicleId` (fb#2820): it then applies only while the order is on that vehicle (`isDismissalForVehicle`), except the weather rules; rows without it match any vehicle.
 
 Orders dated before the (UTC) start of the day `DISMISS_WINDOW_DAYS` (30) days ago get no warnings at all (`isOutsideDismissWindow`); the nightly SQL cleanup purges their dismissals with the same day boundary.
 
