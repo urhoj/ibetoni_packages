@@ -1378,6 +1378,9 @@ class UniversalCacheManager {
    * and their route extractors carry no date, so the fallback would sweep
    * every tenant (fb#761).
    *
+   * Every op that reaches the grid sweep is named in a `case`; an unlisted op
+   * still sweeps broadly but reports to Sentry (fb#1211).
+   *
    * @param {string} operation - Operation type (KEIKKA_UPDATE, KEIKKA_COPY, PERSON_PVM_*, PALKKI_*)
    * @param {Object} body - Request body containing date fields
    * @param {Object} params - Additional parameters including asiakasId
@@ -1497,10 +1500,26 @@ class UniversalCacheManager {
         return await this.invalidate(operation, "grid", { asiakasId });
       }
 
+      // Known ops that rely on the broad sweep (no gridScope resolver, or one that found
+      // nothing). Narrowing any of them needs its own scope decision, not a date: list-mode
+      // keys hold a multi-day range under their START date (fb#1211).
+      case "KEIKKA_CREATE":
+      case "KEIKKA_DELETE":
+      case "KEIKKA_BULK_UPDATE":
+      case "GRID_UPDATE":
+      case "ATTACHMENT_UPDATE":
+      case "VEHICLE_CREATE":
+      case "VEHICLE_UPDATE":
+      case "VEHICLE_DELETE":
+        return await this.invalidate(operation, "grid", { asiakasId });
+
       default:
-        console.log("Unknown grid operation, using broad invalidation", {
-          operation,
-          asiakasId,
+        // fb#1211: an op nobody listed above still sweeps every tenant's grid (fresh beats
+        // stale), but reports so it gets a case of its own instead of a silent global wipe.
+        captureError(new Error(`invalidateGridSmart: unlisted operation ${operation} swept every tenant's grid`), {
+          tags: { feature: "cache", operation: "grid-unlisted-op" },
+          extra: { gridOperation: operation, asiakasId },
+          fingerprint: ["cache", "grid-unlisted-op", operation],
         });
         return await this.invalidate(operation, "grid", { asiakasId });
     }
