@@ -196,7 +196,7 @@ const PERSON_SETTING_TYPE_IDS = {
   NOTIFY_ADMIN_WORKSITE_CREATED: 32,
   NOTIFY_ADMIN_ORDER_CANCELLED: 33,
   NOTIFY_DAILY_CONFIRMED: 34,
-  NOTIFY_ONLY_UNDER_14H: 35,
+  // 35 = NOTIFY_ONLY_UNDER_14H, retired 2026-10-28 (fb#2978); rows left unread in the DB.
   IS_GLOBAL_EDITOR: 36,
   NOTIFY_DAY_CONFIRMED: 37,
   HAPTIC_FEEDBACK: 38,
@@ -211,9 +211,8 @@ const PERSON_SETTING_TYPE_IDS = {
   // 47 = Betonijerry TOS, 48 = Betonijerry Privacy (legal; DB-only, not enumerated here).
   IS_GLOBAL_VIEWER: 49,
   // 50 = UI_LANGUAGE (preferences; DB-only, not enumerated here).
-  NOTIFY_DEV_NEW_FEEDBACK: 51,
-  NOTIFY_ONLY_IF_INVOLVED: 52,
-  NOTIFY_ONLY_FUTURE: 53,
+  // 51 = NOTIFY_DEV_NEW_FEEDBACK, 52 = NOTIFY_ONLY_IF_INVOLVED, 53 = NOTIFY_ONLY_FUTURE: retired
+  // 2026-10-28 (fb#2978) — the feedback push is gone and 52/53 always apply. Do not reuse the ids.
   // Push when a pump truck leaves a worksite geofence (Mapon tenants, admins + keikkahandlers).
   NOTIFY_VEHICLE_LEFT_WORKSITE: 54,
   // Post-login "Täydennä tietosi" prompt state: timeVar = do not ask before,
