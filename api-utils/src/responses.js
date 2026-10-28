@@ -131,6 +131,11 @@ function handleRouteError(res, error, operation, extra = {}) {
   if (error?.code === "ROW_DELETED") {
     return sendError(res, error.message, error.statusCode || 409, error.code);
   }
+  // fb#2963: a former employee (every company role ended) trying to log in — an
+  // expected refusal whose code the login screens read to show its message.
+  if (error?.code === "ACCESS_ENDED") {
+    return sendError(res, error.message, error.statusCode || 403, error.code);
+  }
 
   const { _entity = "unknown", _tags = {}, ...sentryExtra } = extra;
   const req = res.req || {};

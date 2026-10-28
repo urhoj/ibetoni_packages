@@ -67,6 +67,25 @@ describe("sendError", () => {
     });
 });
 
+describe("handleRouteError on a former employee's login (fb#2963)", () => {
+    it("answers 403 WITH the code and message, and books no Sentry event", () => {
+        const spy = vi.spyOn(sentry, "captureException").mockImplementation(() => {});
+        try {
+            const error = new Error("Sinulla ei ole enää voimassa olevaa käyttöoikeutta.");
+            error.code = "ACCESS_ENDED";
+            error.statusCode = 403;
+            const res = mockRes();
+            handleRouteError(res, error, "login-email-password", { _entity: "person" });
+            expect(res.statusCode).toBe(403);
+            expect(res.body.code).toBe("ACCESS_ENDED");
+            expect(res.body.message || res.body.error).toContain("käyttöoikeutta");
+            expect(spy).not.toHaveBeenCalled();
+        } finally {
+            spy.mockRestore();
+        }
+    });
+});
+
 describe("handleRouteError on a vanished row (fb#644)", () => {
     function rowDeleted() {
         const error = new Error("Keikka no longer exists (deleted); nothing was saved");
