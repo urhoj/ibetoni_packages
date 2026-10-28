@@ -1,6 +1,6 @@
 {
   "name": "@ibetoni/api-utils",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Shared Express response helpers, route error handler, and request validators",
   "main": "src/index.js",
   "private": true,
@@ -8,7 +8,13 @@
   "engines": {
     "node": "^22.18.0 || >=24.11.0"
   },
-  "keywords": ["express", "api", "validation", "error-handling", "betoni"],
+  "keywords": [
+    "express",
+    "api",
+    "validation",
+    "error-handling",
+    "betoni"
+  ],
   "author": "betoni.online",
   "scripts": {
     "test": "vitest run"
