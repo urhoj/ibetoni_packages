@@ -1381,7 +1381,7 @@ class UniversalCacheManager {
    * Every op that reaches the grid sweep is named in a `case`; an unlisted op
    * still sweeps broadly but reports to Sentry (fb#1211).
    *
-   * @param {string} operation - Operation type (KEIKKA_UPDATE, KEIKKA_COPY, PERSON_PVM_*, PALKKI_*)
+   * @param {string} operation - Operation type (KEIKKA_*, PERSON_PVM_*, PALKKI_*, TYOMAA_*, VEHICLE_*, GRID_UPDATE, ATTACHMENT_UPDATE)
    * @param {Object} body - Request body containing date fields
    * @param {Object} params - Additional parameters including asiakasId
    * @returns {Promise<number>} Number of cache keys invalidated
@@ -2250,7 +2250,6 @@ class UniversalCacheManager {
       case "VEHICLE_UPDATE":
       case "VEHICLE_CREATE":
       case "VEHICLE_DELETE": {
-        const dateKey = this._extractYYYYMMDD(params);
         // The foreign-key read (`vehicle:foreignKey:<vehicleId>:<sourceId>`) carries no
         // tenant segment, so the generic `vehicle:*:<tenant>*` sweep never matches it
         // (fb#1683) — sweep it by vehicle explicitly.
@@ -2260,9 +2259,9 @@ class UniversalCacheManager {
           this._sweepAllKeikkaDetails(), // vehicleView renders on every order of the vehicle
           // Historiakartta pins carry vehicleNimi/No/RegNo (fb#2508).
           this.invalidateByPattern("keikka:listByAsiakases:*"),
+          // Sweeps every grid key (no gridScope for vehicles), so no extra date sweep (fb#2995).
           this.invalidateGridSmart(operation, params.body || {}, params),
           this.invalidate(operation, "person", params),
-          this.invalidateByPattern(`grid:v7tenant:${dateKey}:*`),
           vehicleId ? this.invalidateByPattern(`vehicle:foreignKey:${vehicleId}:*`) : Promise.resolve(0),
         ]);
         totalInvalidated += counts.reduce((sum, c) => sum + c, 0);
