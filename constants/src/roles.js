@@ -441,8 +441,8 @@ export const PERSON_SETTING_TYPE_IDS = {
   // 50 = UI_LANGUAGE (preferences; DB-only, not enumerated here).
   // 51 = NOTIFY_DEV_NEW_FEEDBACK, 52 = NOTIFY_ONLY_IF_INVOLVED, 53 = NOTIFY_ONLY_FUTURE: retired
   // 2026-10-28 (fb#2978) — the feedback push is gone and 52/53 always apply. Do not reuse the ids.
-  // Push when a pump truck leaves a worksite geofence (Mapon tenants, admins + keikkahandlers).
-  NOTIFY_VEHICLE_LEFT_WORKSITE: 54,
+  // 54 = NOTIFY_VEHICLE_LEFT_WORKSITE: retired 2026-10-28 (fb#2979) — now a per-keikka watch
+  // (dbo.keikkaDepartureWatch), set from the grid context menu. Do not reuse the id.
   // Post-login "Täydennä tietosi" prompt state: timeVar = do not ask before,
   // stringVar = JSON array of question ids the person chose never to see again.
   PROFILE_PROMPT: 55,
