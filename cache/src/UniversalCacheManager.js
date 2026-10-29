@@ -1203,7 +1203,8 @@ class UniversalCacheManager {
    * Entity-specific behaviors:
    * - keikka: Targets individual keikka + list caches by date/personId
    * - asiakas: Pattern-based by asiakasId
-   * - grid: Invalidates grid:v7tenant:{dateKey}:* (list_v7tenant endpoint)
+   * - grid: Invalidates the grid:v7tenant keys of a gridScope's tenants, else every key that can
+   *   hold the date (single-day keys of it + multi-day list/upcoming keys covering it), else all
    * - stat: Clears all stat caches (varying segment counts)
    * - attachment: Multiple patterns for different attachment key formats
    * - default: Pattern-based `{entityType}:*:{asiakasId}*` for all other types
@@ -1265,7 +1266,8 @@ class UniversalCacheManager {
         const scoped = this._gridScopeTenants(params.gridScope);
         if (scoped) return await this._invalidateGridTenants(scoped);
         const dateKey = pumppuAika ? this.formatGridDate(pumppuAika) : null;
-        return await this.invalidateByPattern(`grid:v7tenant:${dateKey || "*"}:*`);
+        if (dateKey) return await this._invalidateGridDate(dateKey);
+        return await this.invalidateByPattern("grid:v7tenant:*:*");
       }
       case "attachment": {
         // Attachments have multiple key formats:
@@ -1360,6 +1362,34 @@ class UniversalCacheManager {
     if (!keys.length) return 0;
     const deletedCount = await this.batchDelete(keys);
     this.cacheMetrics.recordInvalidation("grid", "grid:v7tenant:*", deletedCount);
+    return deletedCount;
+  }
+
+  /**
+   * Delete every grid:v7tenant key that can hold `dateKey` (yyyymmdd): the single-day keys of that
+   * date, AND the multi-day keys whose range covers it. A multi-day key — `list` mode
+   * (grid:v7tenant:{start}:{csv}:list:{end}:…) or the /oma upcoming list
+   * (grid:v7tenant:{start}:{owner}:upcoming:{end}:…) — sits under its START date, so the old
+   * `grid:v7tenant:{dateKey}:*` glob missed every write on its later days and the entry stayed
+   * stale until TTL. This is the path every DATED write without a resolved gridScope takes (a
+   * PERSON_PVM / KEIKKA_COPY / PALKKI_* route write whose scope lookup found nothing). One
+   * keyspace scan, like the glob it replaces.
+   */
+  async _invalidateGridDate(dateKey) {
+    this.invalidationGeneration++;
+    const hit = (logicalKey) => {
+      if (!logicalKey.startsWith("grid:v7tenant:")) return false;
+      const [, , start, , mode, end] = logicalKey.split(":");
+      if (start === dateKey) return true;
+      return (mode === "list" || mode === "upcoming") && /^\d{8}$/.test(end || "") && start <= dateKey && dateKey <= end;
+    };
+    for (const key of this.l1Cache.keys()) {
+      if (hit(key)) this.l1Cache.delete(key);
+    }
+    const keys = (await this.scanKeys("grid:v7tenant:*")).filter((k) => hit(this.stripNamespace(k)));
+    if (!keys.length) return 0;
+    const deletedCount = await this.batchDelete(keys);
+    this.cacheMetrics.recordInvalidation("grid", `grid:v7tenant:${dateKey}`, deletedCount);
     return deletedCount;
   }
 
