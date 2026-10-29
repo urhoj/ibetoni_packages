@@ -449,6 +449,10 @@ export const PERSON_SETTING_TYPE_IDS = {
   // How the driver wants the day's details (stringVar: sms|whatsapp|email|push|none_self|none_manual;
   // missing = sms). docs/development/projects/driver-day-message/README.md §1.
   DAY_MESSAGE_CHANNEL: 56,
+  // Driver push question state (DriverPushQuestion): stringVar = last outcome
+  // (shown|later|declined|denied|token_failed|sw_failed|ios_unsupported|subscribed),
+  // timeVar = do not ask before, intVar = times closed. Own snooze, apart from 55.
+  PUSH_PROMPT: 57,
 };
 
 /**
