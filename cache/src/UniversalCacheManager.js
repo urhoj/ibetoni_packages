@@ -1347,22 +1347,13 @@ class UniversalCacheManager {
 
   /**
    * Delete every grid:v7tenant key whose visible-tenant CSV (logical segment 3) contains one
-   * of `tenants` — every date and both modes. ONE keyspace scan plus exact set membership
-   * (8 never matches 18 or 80), instead of a glob and a full SCAN per tenant (fb#1239).
+   * of `tenants` — every date and both modes. Exact set membership: 8 never matches 18 or 80.
    */
-  async _invalidateGridTenants(tenants) {
-    this.invalidationGeneration++;
-    const hit = (logicalKey) =>
-      logicalKey.startsWith("grid:v7tenant:") &&
-      (logicalKey.split(":")[3] || "").split(",").some((id) => tenants.has(Number(id)));
-    for (const key of this.l1Cache.keys()) {
-      if (hit(key)) this.l1Cache.delete(key);
-    }
-    const keys = (await this.scanKeys("grid:v7tenant:*")).filter((k) => hit(this.stripNamespace(k)));
-    if (!keys.length) return 0;
-    const deletedCount = await this.batchDelete(keys);
-    this.cacheMetrics.recordInvalidation("grid", "grid:v7tenant:*", deletedCount);
-    return deletedCount;
+  _invalidateGridTenants(tenants) {
+    return this._invalidateGridWhere(
+      (segments) => (segments[3] || "").split(",").some((id) => tenants.has(Number(id))),
+      "grid:v7tenant:*",
+    );
   }
 
   /**
@@ -1372,24 +1363,32 @@ class UniversalCacheManager {
    * (grid:v7tenant:{start}:{owner}:upcoming:{end}:…) — sits under its START date, so the old
    * `grid:v7tenant:{dateKey}:*` glob missed every write on its later days and the entry stayed
    * stale until TTL. This is the path every DATED write without a resolved gridScope takes (a
-   * PERSON_PVM / KEIKKA_COPY / PALKKI_* route write whose scope lookup found nothing). One
-   * keyspace scan, like the glob it replaces.
+   * PERSON_PVM / KEIKKA_COPY / PALKKI_* route write whose scope lookup found nothing).
+   * formatGridDate passes an 8-digit NUMBER through unchanged, hence String() (fb#3067).
    */
-  async _invalidateGridDate(dateKey) {
+  _invalidateGridDate(dateKey) {
+    const date = String(dateKey);
+    return this._invalidateGridWhere(([, , start, , mode, end]) => {
+      if (start === date) return true;
+      return (mode === "list" || mode === "upcoming") && /^\d{8}$/.test(end || "") && start <= date && date <= end;
+    }, `grid:v7tenant:${date}`);
+  }
+
+  /**
+   * Delete the grid:v7tenant keys whose `:`-split logical segments satisfy `hit`, from L1 and
+   * Redis: ONE keyspace scan filtered in JS, instead of a glob and a full SCAN per tenant
+   * (fb#1239). `label` names the sweep in the invalidation metrics.
+   */
+  async _invalidateGridWhere(hit, label) {
     this.invalidationGeneration++;
-    const hit = (logicalKey) => {
-      if (!logicalKey.startsWith("grid:v7tenant:")) return false;
-      const [, , start, , mode, end] = logicalKey.split(":");
-      if (start === dateKey) return true;
-      return (mode === "list" || mode === "upcoming") && /^\d{8}$/.test(end || "") && start <= dateKey && dateKey <= end;
-    };
+    const matches = (logicalKey) => logicalKey.startsWith("grid:v7tenant:") && hit(logicalKey.split(":"));
     for (const key of this.l1Cache.keys()) {
-      if (hit(key)) this.l1Cache.delete(key);
+      if (matches(key)) this.l1Cache.delete(key);
     }
-    const keys = (await this.scanKeys("grid:v7tenant:*")).filter((k) => hit(this.stripNamespace(k)));
+    const keys = (await this.scanKeys("grid:v7tenant:*")).filter((k) => matches(this.stripNamespace(k)));
     if (!keys.length) return 0;
     const deletedCount = await this.batchDelete(keys);
-    this.cacheMetrics.recordInvalidation("grid", `grid:v7tenant:${dateKey}`, deletedCount);
+    this.cacheMetrics.recordInvalidation("grid", label, deletedCount);
     return deletedCount;
   }
 
@@ -1908,6 +1907,9 @@ class UniversalCacheManager {
           this.invalidateByPattern("asiakas:list:*"),
           this.invalidateByPattern("grid:v7tenant:*:*"),
           this.invalidateByPattern("grid:palkki:list:*"),
+          // The merge proc re-owns the secondary customer's grid_palkkiTypes to the main one,
+          // so every tenant's cached palkki-type list may change (fb#3065).
+          this.invalidateByPattern("grid:staticData:*"),
           // A merge rewrites owner FKs, so ownerAsiakasId/ownerName in the
           // cross-tenant property list change; the tenant-SET key needs this sweep.
           this.invalidateByPattern("sijainti:myProperties:*"),

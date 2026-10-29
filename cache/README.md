@@ -147,7 +147,9 @@ Invalidate cache for complex cross-entity operations.
   sweeps for `KEIKKA_*`, `PALKKI_*`, `PERSON_PVM_*`, `KEIKKA_PERSON_UPDATE` and worksite ops narrow
   to keys whose visible-tenant CSV contains one of those tenants, at any date, instead of the
   date-scoped or tenant-blind fallback. Absent or empty → today's broader sweep (never narrower
-  than what the caller can prove).
+  than what the caller can prove). That fallback, when a date is known, clears the date's
+  single-day grid keys PLUS multi-day `list`/`upcoming` keys whose `start..end` covers it (such keys
+  sit under their START date); with no date it clears `grid:v7tenant:*:*`.
 
 **Returns:** `Promise<number>` - Number of keys invalidated
 

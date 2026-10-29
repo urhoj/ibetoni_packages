@@ -81,12 +81,25 @@ async function main() {
     const { mgr, store } = newMgr();
     await seed(mgr);
     await mgr.invalidateGridSmart("PALKKI_UPDATE", { timeStart: "20261031" }, { asiakasId: 27 });
-    // 20261031 is covered by listCovering + upcomingCovering + upcomingAfter? (starts 20261030 → yes)
-    assert.ok(!left(mgr, store).includes(KEYS.upcomingCovering));
-    assert.ok(!left(mgr, store).includes(KEYS.upcomingAfter));
-    assert.ok(!left(mgr, store).includes(KEYS.listCovering));
-    assert.ok(left(mgr, store).includes(KEYS.dayOfWrite), "a single-day key of another date survives");
-    assert.ok(left(mgr, store).includes(KEYS.upcomingEndsOnDate), "a range that ended before the date survives");
+    // 20261031 lies in listCovering, upcomingCovering and upcomingAfter (20261030..20261105).
+    assert.deepStrictEqual(
+      left(mgr, store),
+      [KEYS.dayOfWrite, KEYS.listBefore, KEYS.notGrid, KEYS.otherDay, KEYS.upcomingEndsOnDate].sort(),
+    );
+  });
+
+  await test("a numeric dateKey matches single-day keys too (formatGridDate passes numbers through)", async () => {
+    const { mgr, store } = newMgr();
+    await seed(mgr);
+    await mgr._invalidateGridDate(mgr.formatGridDate(20261029));
+    assert.ok(!left(mgr, store).includes(KEYS.dayOfWrite));
+  });
+
+  await test("ASIAKAS_MERGE sweeps every cached palkki-type list (the merge re-owns grid_palkkiTypes)", async () => {
+    const { mgr, store } = newMgr();
+    await seed(mgr);
+    await mgr.invalidateCrossEntity("ASIAKAS_MERGE", { asiakasId: 27, entityId: 30 });
+    assert.ok(!left(mgr, store).includes(KEYS.notGrid));
   });
 
   await test("a range key with a malformed end segment is matched on its start date only", async () => {
