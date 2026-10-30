@@ -185,9 +185,9 @@ app.use(cors({
 
 **Included Origins:**
 - Production domains: `betoni.online`, `ibetoni.fi`, `pumppukone.fi`
-- Staging domains: `latest`, `stable`, `staging` slots
-- Development: `localhost:5173` (puminet4), `localhost:5174` (betonijerry), `localhost:3000`-`3002`, `127.0.0.1:*`
-- Azure environments: `*.azurewebsites.net`, `*.azurestaticapps.net`
+- Staging domains: the `staging` slot / SWA staging environment
+- Development: localhost `:3000`-`:3003`, `:5173` (puminet4), `:5174` (betonijerry), `:8080`; 127.0.0.1 `:3000`, `:3001`, `:5173`, `:5174`, `:8080` (exact list: `constants/src/domains.js`)
+- Azure environments: the named `*.azurewebsites.net` / `*.azurestaticapps.net` hosts (exact matches, no wildcards)
 
 **Benefits:**
 - Single source of truth for CORS configuration (44+ domains)

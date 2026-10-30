@@ -47,7 +47,7 @@ const { allowedOrigins } = require('@ibetoni/constants/domains');
   - Staging, Latest, Stable environments
   - Functions app domains
   - API and data domains
-  - Localhost for development (`localhost:3000`-`3002`, `5173` for puminet4, `5174` for betonijerry, `8080`)
+  - Localhost for development (localhost `:3000`-`:3003`, `:5173` for puminet4, `:5174` for betonijerry, `:8080`; 127.0.0.1 `:3000`, `:3001`, `:5173`, `:5174`, `:8080`)
 
 ### HTTP Status Codes (`src/http.js`)
 
