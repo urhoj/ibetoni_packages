@@ -778,6 +778,10 @@ class UniversalCacheManager {
   /**
    * Format dates for grid cache keys (yyyymmdd only)
    * Used for personId + pumppuAika grid cache pattern
+   *
+   * Read in UTC: a body date carries the Helsinki wall-clock day as its UTC day (the DB stores
+   * wall-clock datetimes that mssql returns with a `Z`; copy's newDate is Date.UTC(yyyymmdd)), so
+   * local getters swept the wrong day for a 21:00–24:00 write on any non-UTC host (fb#3067).
    */
   formatGridDate(dateInput) {
     if (!dateInput) return null;
@@ -788,9 +792,9 @@ class UniversalCacheManager {
     const date = new Date(dateInput);
     if (isNaN(date.getTime())) return null;
 
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(date.getUTCDate()).padStart(2, "0");
 
     return `${year}${month}${day}`;
   }
@@ -1410,7 +1414,8 @@ class UniversalCacheManager {
    * Smart grid invalidation based on operation type and request body.
    *
    * Date extraction priority for different operations:
-   * - KEIKKA_UPDATE/COPY: Uses `pumppuAika` or `newDate` from body (ISO datetime format)
+   * - KEIKKA_UPDATE: no date — without a scope the old date of a move is unknown (fb#3067)
+   * - KEIKKA_COPY: Uses `newDate` from body (ISO datetime format)
    * - PERSON_PVM_*: Uses `pvm` or `yyyymmdd` from body/params (YYYYMMDD format)
    * - PALKKI_*: Uses `pumppuAika`, `timeStart`, or `body.pumppuAika` (ISO datetime format)
    *
@@ -1451,15 +1456,10 @@ class UniversalCacheManager {
     }
 
     switch (operation) {
-      case "KEIKKA_UPDATE": {
-        if (newDate) {
-          return await this.invalidate(operation, "grid", { asiakasId, pumppuAika: newDate });
-        }
-        if (pumppuAika) {
-          return await this.invalidate(operation, "grid", { asiakasId, pumppuAika });
-        }
+      // An update may MOVE the keikka, and with no resolved scope the old date is unknown, so a
+      // body date sweeping only the new day left the old day's grid stale until TTL (fb#3067).
+      case "KEIKKA_UPDATE":
         return await this.invalidate(operation, "grid", { asiakasId });
-      }
 
       case "KEIKKA_COPY":
         if (newDate) {

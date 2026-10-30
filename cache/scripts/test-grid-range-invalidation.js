@@ -52,17 +52,31 @@ const left = (mgr, store) => [...store.keys()].map((k) => mgr.stripNamespace(k))
 async function main() {
   console.log("grid date-range invalidation tests:");
 
-  await test("a dated KEIKKA_UPDATE with no gridScope clears the day's keys AND every multi-day key covering it", async () => {
+  await test("a dated PERSON_PVM write with no gridScope clears the day's keys AND every multi-day key covering it", async () => {
     const { mgr, store } = newMgr();
     await seed(mgr);
-    // Route-shaped (createKeikkaParamsExtractor): the date rides in the body.
-    await mgr.invalidateCrossEntity("KEIKKA_UPDATE", {
-      asiakasId: 27, entityType: "keikka", entityId: 5, body: { keikkaId: 5, pumppuAika: "20261029" },
-    });
+    await mgr.invalidateGridSmart("PERSON_PVM_UPDATE", { pvm: "20261029" }, { asiakasId: 27 });
     assert.deepStrictEqual(
       left(mgr, store),
       [KEYS.listBefore, KEYS.notGrid, KEYS.otherDay, KEYS.upcomingAfter].sort(),
     );
+  });
+
+  await test("a KEIKKA_UPDATE with no gridScope sweeps every grid key, even with a body date (fb#3067)", async () => {
+    const { mgr, store } = newMgr();
+    await seed(mgr);
+    // Route-shaped (createKeikkaParamsExtractor). The body date is the NEW one: a move from
+    // 20261020 would leave listBefore stale if only the new day were swept.
+    await mgr.invalidateCrossEntity("KEIKKA_UPDATE", {
+      asiakasId: 27, entityType: "keikka", entityId: 5, body: { keikkaId: 5, pumppuAika: "20261029" },
+    });
+    assert.deepStrictEqual(left(mgr, store), [KEYS.notGrid]);
+  });
+
+  await test("formatGridDate reads the UTC day: a wall-clock 23:00Z stays on its own date (fb#3067)", () => {
+    const { mgr } = newMgr();
+    assert.strictEqual(mgr.formatGridDate("2026-10-29T23:30:00.000Z"), "20261029");
+    assert.strictEqual(mgr.formatGridDate("2026-10-30T00:00:00.000Z"), "20261030");
   });
 
   await test("the Betomik sync shape (date outside the body) sweeps every grid key, upcoming included", async () => {

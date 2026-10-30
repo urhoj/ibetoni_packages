@@ -122,8 +122,8 @@ async function main() {
   }
 
   // Guard the guard: the /_DATE_/ test must not swallow the ops that legitimately
-  // DO invalidate the grid. KEIKKA_UPDATE with a date narrows to that one day.
-  await test("invalidateGridSmart still narrows KEIKKA_UPDATE to its own date", async () => {
+  // DO invalidate the grid.
+  await test("invalidateGridSmart still invalidates the grid for a dated KEIKKA_UPDATE", async () => {
     const { mgr, scopedCalls } = newMgr();
     await mgr.invalidateGridSmart("KEIKKA_UPDATE", { pumppuAika: "2026-08-30T09:00:00.000Z" },
       { asiakasId: 8 });
