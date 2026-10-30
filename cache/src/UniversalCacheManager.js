@@ -1375,6 +1375,20 @@ class UniversalCacheManager {
   }
 
   /**
+   * Delete only the /oma upcoming lists (grid:v7tenant:{start}:{owner}:upcoming:…) of the given
+   * owner tenants, in ONE keyspace scan — the grid's own keys stay. Used by a weather store, where
+   * stale grid weather is accepted but a stale upcoming row re-POSTs its refresh (fb#3068).
+   */
+  invalidateUpcomingForTenants(tenants) {
+    const owners = this._gridScopeTenants({ tenants });
+    if (!owners) return Promise.resolve(0);
+    return this._invalidateGridWhere(
+      ([, , , owner, mode]) => mode === "upcoming" && owners.has(Number(owner)),
+      "grid:v7tenant:*:upcoming",
+    );
+  }
+
+  /**
    * Delete the grid:v7tenant keys whose `:`-split logical segments satisfy `hit`, from L1 and
    * Redis: ONE keyspace scan filtered in JS, instead of a glob and a full SCAN per tenant
    * (fb#1239). `label` names the sweep in the invalidation metrics.

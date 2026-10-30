@@ -126,6 +126,22 @@ async function main() {
     assert.deepStrictEqual(left(mgr, store), ["grid:v7tenant:20261029:8:grid:p11:h1a0", KEYS.notGrid].sort());
   });
 
+  await test("invalidateUpcomingForTenants clears only those owners' upcoming lists (fb#3068)", async () => {
+    const { mgr, store } = newMgr();
+    await seed(mgr);
+    await mgr.set("grid:v7tenant:20261027:8:upcoming:20261102:d316:s", {}, 60);
+    await mgr.set("grid:v7tenant:20261027:270:upcoming:20261102:d316:s", {}, 60);
+    await mgr.invalidateUpcomingForTenants([27]);
+    assert.deepStrictEqual(
+      left(mgr, store),
+      [
+        KEYS.dayOfWrite, KEYS.otherDay, KEYS.listCovering, KEYS.listBefore, KEYS.notGrid,
+        "grid:v7tenant:20261027:8:upcoming:20261102:d316:s", "grid:v7tenant:20261027:270:upcoming:20261102:d316:s",
+      ].sort(),
+    );
+    assert.strictEqual(await mgr.invalidateUpcomingForTenants([]), 0);
+  });
+
   finish("\nAll grid date-range invalidation tests passed");
 }
 main();
