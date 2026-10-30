@@ -73,10 +73,14 @@ async function main() {
     assert.deepStrictEqual(left(mgr, store), [KEYS.notGrid]);
   });
 
-  await test("formatGridDate reads the UTC day: a wall-clock 23:00Z stays on its own date (fb#3067)", () => {
+  await test("formatGridDate reads the Helsinki day of a UTC instant on any host (fb#3095)", () => {
     const { mgr } = newMgr();
-    assert.strictEqual(mgr.formatGridDate("2026-10-29T23:30:00.000Z"), "20261029");
-    assert.strictEqual(mgr.formatGridDate("2026-10-30T00:00:00.000Z"), "20261030");
+    // 01:30 Helsinki on 30.10 (EET) and 01:30 on 30.6 (EEST): the previous UTC day.
+    assert.strictEqual(mgr.formatGridDate("2026-10-29T23:30:00.000Z"), "20261030");
+    assert.strictEqual(mgr.formatGridDate("2026-06-29T22:30:00.000Z"), "20260630");
+    assert.strictEqual(mgr.formatGridDate("2026-10-29T20:59:00.000Z"), "20261029");
+    // KEIKKA_COPY's body newDate is a date-only string: keeps its own day.
+    assert.strictEqual(mgr.formatGridDate("2026-10-29"), "20261029");
   });
 
   await test("the Betomik sync shape (date outside the body) sweeps every grid key, upcoming included", async () => {

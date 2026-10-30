@@ -127,6 +127,11 @@ const MAX_TTL_SECONDS = 604800; // 7 days
 // clears them too.
 const AUTHZ_SWEPT_FAMILIES = new Set(["asiakas", "tyomaa", "vehicle", "sijainti", "person"]);
 
+// en-CA formats as YYYY-MM-DD; the grid's days are Helsinki days (formatGridDate).
+const HELSINKI_DAY = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Helsinki", year: "numeric", month: "2-digit", day: "2-digit",
+});
+
 /**
  * Shared by invalidateGridSmart's compliance-date guard and invalidateCrossEntity's
  * authz sweep: a `*_DATE_*`/`*_REQUIRED_DATE_TYPE_*` op touches only an entity's
@@ -779,9 +784,10 @@ class UniversalCacheManager {
    * Format dates for grid cache keys (yyyymmdd only)
    * Used for personId + pumppuAika grid cache pattern
    *
-   * Read in UTC: a body date carries the Helsinki wall-clock day as its UTC day (the DB stores
-   * wall-clock datetimes that mssql returns with a `Z`; copy's newDate is Date.UTC(yyyymmdd)), so
-   * local getters swept the wrong day for a 21:00–24:00 write on any non-UTC host (fb#3067).
+   * Read as the Helsinki day, the day the grid shows: pumppuAika and palkki starttime are true UTC
+   * instants (fb#1761), so a 00:00–03:00 Helsinki write is the previous UTC day. Host-local getters
+   * swept that previous day on the UTC prod host (fb#3067, fb#3095). A date-only "YYYY-MM-DD"
+   * (copy's body newDate) parses as UTC midnight, i.e. 02:00/03:00 Helsinki, so it keeps its day.
    */
   formatGridDate(dateInput) {
     if (!dateInput) return null;
@@ -792,11 +798,7 @@ class UniversalCacheManager {
     const date = new Date(dateInput);
     if (isNaN(date.getTime())) return null;
 
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(date.getUTCDate()).padStart(2, "0");
-
-    return `${year}${month}${day}`;
+    return HELSINKI_DAY.format(date).replace(/-/g, "");
   }
 
   /**
@@ -1456,11 +1458,6 @@ class UniversalCacheManager {
     }
 
     switch (operation) {
-      // An update may MOVE the keikka, and with no resolved scope the old date is unknown, so a
-      // body date sweeping only the new day left the old day's grid stale until TTL (fb#3067).
-      case "KEIKKA_UPDATE":
-        return await this.invalidate(operation, "grid", { asiakasId });
-
       case "KEIKKA_COPY":
         if (newDate) {
           return await this.invalidate(operation, "grid", {
@@ -1545,7 +1542,10 @@ class UniversalCacheManager {
 
       // Known ops that rely on the broad sweep (no gridScope resolver, or one that found
       // nothing). Narrowing any of them needs its own scope decision, not a date: list-mode
-      // keys hold a multi-day range under their START date (fb#1211).
+      // keys hold a multi-day range under their START date (fb#1211). KEIKKA_UPDATE ignores its
+      // body date: an update may MOVE the keikka, and without a scope the old date is unknown, so
+      // sweeping only the new day left the old day's grid stale until TTL (fb#3067).
+      case "KEIKKA_UPDATE":
       case "KEIKKA_CREATE":
       case "KEIKKA_DELETE":
       case "KEIKKA_BULK_UPDATE":
